@@ -15,10 +15,8 @@ nova_exchange = kombu.entity.Exchange("nova", type="topic",
 
 task_queues = [
         kombu.Queue("scheduler", scheduler_exchange, durable=False, auto_delete=False),
-        kombu.Queue("monitor.info", nova_exchange, durable=False, auto_delete=False,
-                    exclusive=False, routing_key='monitor.info'),
-        kombu.Queue("monitor.error", nova_exchange, durable=False, auto_delete=False,
-                    exclusive=False, routing_key='monitor.error'),
+        kombu.Queue("monitor", nova_exchange, durable=False, auto_delete=False,
+                    exclusive=False, routing_key='monitor.*'),
     ]
 
 RABBIT_HOST = "localhost"
