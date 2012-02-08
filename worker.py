@@ -4,10 +4,17 @@ import kombu.entity
 import kombu.mixins
 
 # For now we'll just grab all the fanout messages from compute to scheduler ...
-task_exchange = kombu.entity.Exchange("scheduler_fanout", type="fanout",
+scheduler_exchange = kombu.entity.Exchange("scheduler_fanout", type="fanout",
                                       durable=False, auto_delete=True,
                                       exclusive=True)
-task_queues = [kombu.Queue("scheduler", task_exchange, durable=False, auto_delete=False), ]
+
+nova_exchange = kombu.entity.Exchange("nova", type="topic",
+                                      durable=False, auto_delete=False,
+                                      exclusive=False)
+task_queues = [
+#        kombu.Queue("scheduler", scheduler_exchange, durable=False, auto_delete=False),
+        kombu.Queue("monitor.info", nova_exchange, durable=False, auto_delete=False),
+    ]
 
 RABBIT_HOST = "localhost"
 RABBIT_PORT = 5672
@@ -16,7 +23,7 @@ RABBIT_PASSWORD = "guest"
 RABBIT_VIRTUAL_HOST = "/"
 
 
-class Worker(kombu.mixins.ConsumerMixin):
+class SchedulerFanoutConsumer(kombu.mixins.ConsumerMixin):
     def __init__(self, connection):
         self.connection = connection
 
@@ -25,14 +32,10 @@ class Worker(kombu.mixins.ConsumerMixin):
                 callbacks=[self.on_task])]
 
     def on_task(self, body, message):
-        self.info("Got task: %s / %s" % (body, message))
         message.ack()
 
 
 if __name__ == "__main__":
-     from kombu.utils.debug import setup_logging
-     setup_logging(loglevel="INFO")
-
      params = dict(hostname=RABBIT_HOST,
                    port=RABBIT_PORT,
                    userid=RABBIT_USERID,
@@ -41,6 +44,6 @@ if __name__ == "__main__":
 
      with kombu.connection.BrokerConnection(**params) as conn:
          try:
-             Worker(conn).run()
+             SchedulerFanoutConsumer(conn).run()
          except KeyboardInterrupt:
              print("bye bye")
