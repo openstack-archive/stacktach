@@ -1,0 +1,3 @@
+StackTach is a debugging tool for OpenStack Nova.
+
+It takes events from AMQP and sends them to the StackTach server for web display.

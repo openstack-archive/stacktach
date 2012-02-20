@@ -1,4 +1,20 @@
 # Copyright 2012 - Dark Secret Software Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
+# This is the worker you run in your OpenStack environment. You need
+# to set TENANT_ID and URL to point to your StackTach web server.
 
 import json
 import kombu
@@ -9,7 +25,9 @@ import threading
 import urllib
 import urllib2
 
-url = 'http://darksecretsoftware.com/stacktach/data/'
+# CHANGE THESE FOR YOUR INSTALLATION ...
+TENANT_ID = 1
+URL = 'http://darksecretsoftware.com/stacktach/%d/data/' % TENANT_ID
 
 # For now we'll just grab all the fanout messages from compute to scheduler ...
 scheduler_exchange = kombu.entity.Exchange("scheduler_fanout", type="fanout",
@@ -57,18 +75,21 @@ class SchedulerFanoutConsumer(kombu.mixins.ConsumerMixin):
         try:
             raw_data = dict(args=jvalues)
             cooked_data = urllib.urlencode(raw_data)
-            req = urllib2.Request(url, cooked_data)
+            req = urllib2.Request(URL, cooked_data)
             response = urllib2.urlopen(req)
             page = response.read()
             print page
         except urllib2.HTTPError, e:
+            if e.code == 401:
+                print "Unauthorized. Correct tenant id of %d?" % TENANT_ID
             print e
             page = e.read()
             print page
             raise
 
     def on_scheduler(self, body, message):
-        self._process(body, message)
+        # Uncomment if you want periodic compute node status updates.
+        # self._process(body, message)
         message.ack()
 
     def on_nova(self, body, message):

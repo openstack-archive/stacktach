@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+
+{% block extra_js %}
+            function details(tenant_id, column, row_id)
+            {
+                $("#detail").load('/' + tenant_id + '/details/' + column + '/' + row_id);
+            };
+
+            function expand(tenant_id, row_id)
+            {
+                $("#row_expansion_" + row_id).load('/' + tenant_id + '/expand/' + row_id);
+            };
+{% endblock %}
+
+{% block extra_init_js %}            
+                $('#host-box').resizable();
+                $('#instance-box').resizable();
+{% endblock %}                
+
+{% block body %}
+        <div style='float:right;'>{{state.tenant.email}} (TID:{{state.tenant.tenant_id}}) - {{state.tenant.project_name}} <a href='/logout'>logout</a></div>
+        <div class='status-title'>Recent Host Activity</div>
+        <div id='host-box' class='status std-height'>
+            <div id='host_activity' class='status-inner'>
+                {% include "host_status.html" %}
+            </div>
+        </div>
+
+        <div class='status-title'>Recent Instance Activity</div>
+        <div id='instance-box' class='status std-height'>
+            <div id='instance_activity' class='status-inner'>
+                {% include "instance_status.html" %}
+           </div>
+        </div>
+        <!--
+        <div class='status-title'>Commands</div>
+        <div class='status'>
+            <div class='status-inner'>
+                <input type=text style='width:100%; background-color:black;color:white;'
+                        value='<custom query here>'/>
+            </div>
+        </div>
+        -->
+        <div class='status-title'>Details</div>
+        <div class='status'>
+            <div id='detail' class='status-inner'>
+                <div>click on an item above to see more of the same type.</div>
+            </div>
+        </div>
+{% endblock %}        
