@@ -69,7 +69,7 @@ nova_queues = [
 class SchedulerFanoutConsumer(kombu.mixins.ConsumerMixin):
     def __init__(self, connection, url):
         self.connection = connection
-	self.url = url
+        self.url = url
 
     def get_consumers(self, Consumer, channel):
         return [Consumer(queues=scheduler_queues,
