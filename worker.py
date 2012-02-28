@@ -28,6 +28,16 @@ import urllib2
 # CHANGE THESE FOR YOUR INSTALLATION ...
 TENANT_ID = 1
 URL = 'http://darksecretsoftware.com/stacktach/%d/data/' % TENANT_ID
+RABBIT_HOST = "localhost"
+RABBIT_PORT = 5672
+RABBIT_USERID = "guest"
+RABBIT_PASSWORD = "guest"
+RABBIT_VIRTUAL_HOST = "/"
+
+try:
+    from worker_conf import *
+except ImportError:
+    pass
 
 # For now we'll just grab all the fanout messages from compute to scheduler ...
 scheduler_exchange = kombu.entity.Exchange("scheduler_fanout", type="fanout",
@@ -43,19 +53,13 @@ scheduler_queues = [
     ]
 
 nova_exchange = kombu.entity.Exchange("nova", type="topic",
-                                      durable=False, auto_delete=False,
+                                      durable=True, auto_delete=False,
                                       exclusive=False)
 
 nova_queues = [
         kombu.Queue("monitor", nova_exchange, durable=False, auto_delete=False,
                     exclusive=False, routing_key='monitor.*'),
     ]
-
-RABBIT_HOST = "localhost"
-RABBIT_PORT = 5672
-RABBIT_USERID = "guest"
-RABBIT_PASSWORD = "guest"
-RABBIT_VIRTUAL_HOST = "/"
 
 
 class SchedulerFanoutConsumer(kombu.mixins.ConsumerMixin):
@@ -89,7 +93,7 @@ class SchedulerFanoutConsumer(kombu.mixins.ConsumerMixin):
 
     def on_scheduler(self, body, message):
         # Uncomment if you want periodic compute node status updates.
-        # self._process(body, message)
+        #self._process(body, message)
         message.ack()
 
     def on_nova(self, body, message):
@@ -98,6 +102,9 @@ class SchedulerFanoutConsumer(kombu.mixins.ConsumerMixin):
 
 
 if __name__ == "__main__":
+    print "StackTach", URL
+    print "Rabbit", RABBIT_HOST, RABBIT_PORT, RABBIT_USERID, RABBIT_VIRTUAL_HOST
+
     params = dict(hostname=RABBIT_HOST,
                   port=RABBIT_PORT,
                   userid=RABBIT_USERID,
@@ -107,6 +114,7 @@ if __name__ == "__main__":
     with kombu.connection.BrokerConnection(**params) as conn:
         consumer = SchedulerFanoutConsumer(conn)
         try:
+            print "Listening"
             consumer.run()
         except KeyboardInterrupt:
             print("bye bye")

@@ -4,8 +4,9 @@ from django.shortcuts import render_to_response
 from django import http
 from django import template
 from django.utils.functional import wraps
+from django.views.decorators.csrf import csrf_protect
 
-from dss.stackmon import models
+from stacktach import models
 
 import datetime
 import json
@@ -148,22 +149,22 @@ def _default_context(state):
 
     
 def welcome(request):
-    state = _reset_state(request, None)
-    return render_to_response('stackmon/welcome.html', _default_context(state))
+    state = _reset_state(request)
+    return render_to_response('welcome.html', _default_context(state))
 
 
 @tenant_check
 def home(request, tenant_id):
     state = _get_state(request, tenant_id)
-    return render_to_response('stackmon/index.html', _default_context(state)) 
+    return render_to_response('index.html', _default_context(state)) 
 
 
 def logout(request):
     del request.session['state']
-    return render_to_response('stackmon/welcome.html', _default_context(None)) 
+    return render_to_response('welcome.html', _default_context(None)) 
 
 
-@tenant_check
+@csrf_protect
 def new_tenant(request):
     state = _get_state(request)
     context = _default_context(state)
@@ -172,12 +173,13 @@ def new_tenant(request):
         if form.is_valid():
             rec = models.Tenant(**form.cleaned_data)
             rec.save()
-            _reset_state(request, rec.tenant_id)
-            return http.HttpResponseRedirect('/stacktach/%d' % rec.tenant_id)
+            _reset_state(request)
+            return http.HttpResponseRedirect('/%d' % rec.tenant_id)
     else:
         form = models.TenantForm()
         context['form'] = form
-    return render_to_response('stackmon/new_tenant.html', context)
+    return render_to_response('new_tenant.html', context,
+                              context_instance=template.RequestContext(request))
 
 
 @tenant_check
@@ -188,7 +190,7 @@ def data(request, tenant_id):
     c = _default_context(state)
     fields = _parse(state.tenant, args, raw_args)
     c['cooked_args'] = fields
-    return render_to_response('stackmon/data.html', c)
+    return render_to_response('data.html', c)
 
 
 @tenant_check
@@ -197,7 +199,7 @@ def details(request, tenant_id, column, row_id):
     c = _default_context(state)
     row = models.RawData.objects.get(pk=row_id)
     value = getattr(row, column)
-    rows = models.RawData.objects.filter(tenant_id=tenant_id)
+    rows = models.RawData.objects.filter(tenant=tenant_id)
     if column != 'when':
         rows = rows.filter(**{column:value})
     else:
@@ -210,7 +212,7 @@ def details(request, tenant_id, column, row_id):
     c['rows'] = rows
     c['allow_expansion'] = True
     c['show_absolute_time'] = True
-    return render_to_response('stackmon/rows.html', c)
+    return render_to_response('rows.html', c)
 
 
 @tenant_check
@@ -221,29 +223,29 @@ def expand(request, tenant_id, row_id):
     payload = json.loads(row.json)
     pp = pprint.PrettyPrinter()
     c['payload'] = pp.pformat(payload)
-    return render_to_response('stackmon/expand.html', c)
+    return render_to_response('expand.html', c)
 
 
 @tenant_check
 def host_status(request, tenant_id):
     state = _get_state(request, tenant_id)
     c = _default_context(state)
-    hosts = models.RawData.objects.filter(tenant_id=tenant_id).\
+    hosts = models.RawData.objects.filter(tenant=tenant_id).\
                                    filter(host__gt='').\
                                    order_by('-when', '-microseconds')[:20]
     _post_process_raw_data(hosts)
     c['rows'] = hosts
-    return render_to_response('stackmon/host_status.html', c)
+    return render_to_response('host_status.html', c)
 
 
 @tenant_check
 def instance_status(request, tenant_id):
     state = _get_state(request, tenant_id)
     c = _default_context(state)
-    instances = models.RawData.objects.filter(tenant_id=tenant_id).\
+    instances = models.RawData.objects.filter(tenant=tenant_id).\
                                        exclude(instance='n/a').\
                                        exclude(instance__isnull=True).\
                                        order_by('-when', '-microseconds')[:20]
     _post_process_raw_data(instances)
     c['rows'] = instances
-    return render_to_response('stackmon/instance_status.html', c)
+    return render_to_response('instance_status.html', c)
