@@ -9,6 +9,9 @@
     <td class='title'>instance</td>
     <td class='title'>when</td>
 </th>
+{% if not rows %}
+<tr><td>No results</td></tr>
+{% endif %}
 {% for row in rows %}
 <tr {% if row.highlight %}style='background-color:#FFD88F;'{% endif %} >
     <td>
@@ -37,7 +40,7 @@
         {% endif %}
         </a>
     </td>
-    <td class='cell-border'><a href='#' onclick='details({{state.tenant.tenant_id}}, "when", {{row.id}});'>{% if show_absolute_time %}{{row.when}}{%else%}{{row.when|timesince:utc}} ago{%endif%}</a></td>
+    <td class='cell-border'><a href='#' onclick='details({{state.tenant.tenant_id}}, "when", {{row.id}});'>{% if show_absolute_time %}{{row.when}} (+{{row.when.microsecond}}){%else%}{{row.when|timesince:utc}} ago{%endif%}</a></td>
 </tr>
 {% if allow_expansion %}
 <tr>
