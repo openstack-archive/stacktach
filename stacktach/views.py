@@ -83,13 +83,22 @@ def _parse(tenant, args, json_args):
     return {}
 
 
-def _post_process_raw_data(rows, highlight=None):
+def _post_process_raw_data(rows, state, highlight=None):
     for row in rows:
         if "error" in row.routing_key:
             row.is_error = True
         if highlight and row.id == int(highlight):
             row.highlight = True
         row.when += datetime.timedelta(microseconds=row.microseconds)
+        novastats = state.tenant.nova_stats_template
+        if novastats and row.instance:
+            novastats = novastats.replace("[instance]", row.instance)
+        row.novastats = novastats
+        loggly = state.tenant.loggly_template
+        if loggly and row.instance:
+            loggly = loggly.replace("[instance]", row.instance)
+        row.loggly = loggly
+
 
 class State(object):
     def __init__(self):
@@ -203,12 +212,13 @@ def details(request, tenant_id, column, row_id):
     if column != 'when':
         rows = rows.filter(**{column:value})
     else:
+        value += datetime.timedelta(microseconds=row.microseconds)
         from_time = value - datetime.timedelta(minutes=1)
         to_time = value + datetime.timedelta(minutes=1)
         rows = rows.filter(when__range=(from_time, to_time))
                                   
     rows = rows.order_by('-when', '-microseconds')[:200]
-    _post_process_raw_data(rows, highlight=row_id)
+    _post_process_raw_data(rows, state, highlight=row_id)
     c['rows'] = rows
     c['allow_expansion'] = True
     c['show_absolute_time'] = True
@@ -231,21 +241,25 @@ def host_status(request, tenant_id):
     state = _get_state(request, tenant_id)
     c = _default_context(state)
     hosts = models.RawData.objects.filter(tenant=tenant_id).\
-                                   filter(host__gt='').\
                                    order_by('-when', '-microseconds')[:20]
-    _post_process_raw_data(hosts)
+    _post_process_raw_data(hosts, state)
     c['rows'] = hosts
     return render_to_response('host_status.html', c)
 
 
 @tenant_check
-def instance_status(request, tenant_id):
+def search(request, tenant_id):
     state = _get_state(request, tenant_id)
     c = _default_context(state)
-    instances = models.RawData.objects.filter(tenant=tenant_id).\
-                                       exclude(instance='n/a').\
-                                       exclude(instance__isnull=True).\
-                                       order_by('-when', '-microseconds')[:20]
-    _post_process_raw_data(instances)
-    c['rows'] = instances
-    return render_to_response('instance_status.html', c)
+    column = request.POST.get('field', None)
+    value = request.POST.get('value', None)
+    rows = None
+    if column != None and value != None:
+        rows = models.RawData.objects.filter(tenant=tenant_id).\
+               filter(**{column:value}).\
+               order_by('-when', '-microseconds')[:200]
+        _post_process_raw_data(rows, state)
+    c['rows'] = rows
+    c['allow_expansion'] = True
+    c['show_absolute_time'] = True
+    return render_to_response('rows.html', c)
