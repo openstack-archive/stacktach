@@ -34,11 +34,13 @@
     <td class='cell-border'><a href='#' onclick='details({{state.tenant.tenant_id}}, "host", {{row.id}});'>{{row.host}}</a></td>
     <td class='cell-border'><b><a href='#' onclick='details({{state.tenant.tenant_id}}, "event", {{row.id}});'>{{row.event}}</a></b></td>
     <td class='cell-border'>
-        <a href='#' onclick='details({{state.tenant.tenant_id}}, "instance", {{row.id}});'>
         {% if row.instance %}
+            <a href='{{row.loggly}}' target="_blank">(L)</a>
+            <a href='{{row.novastats}}' target="_blank">(S)</a>
+        <a href='#' onclick='details({{state.tenant.tenant_id}}, "instance", {{row.id}});'>
             {{row.instance}}
-        {% endif %}
         </a>
+        {% endif %}
     </td>
     <td class='cell-border'><a href='#' onclick='details({{state.tenant.tenant_id}}, "when", {{row.id}});'>{% if show_absolute_time %}{{row.when}} (+{{row.when.microsecond}}){%else%}{{row.when|timesince:utc}} ago{%endif%}</a></td>
 </tr>
