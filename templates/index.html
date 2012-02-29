@@ -10,6 +10,16 @@
             {
                 $("#row_expansion_" + row_id).load('/' + tenant_id + '/expand/' + row_id);
             };
+
+            function search_form(tenant_id)
+            {
+                var field = $("#field").val();
+                var value = $("#query").val();
+                var data = {'field':field, 'value':value};
+                $("#detail").load('/' + tenant_id + '/search/', data);
+                return false;
+            };
+
 {% endblock %}
 
 {% block extra_init_js %}            
@@ -19,28 +29,33 @@
 
 {% block body %}
         <div style='float:right;'>{{state.tenant.email}} (TID:{{state.tenant.tenant_id}}) - {{state.tenant.project_name}} <a href='/logout'>logout</a></div>
-        <div class='status-title'>Recent Host Activity</div>
+        <div class='status-title'>Recent Activity</div>
         <div id='host-box' class='status std-height'>
             <div id='host_activity' class='status-inner'>
                 {% include "host_status.html" %}
             </div>
         </div>
 
-        <div class='status-title'>Recent Instance Activity</div>
-        <div id='instance-box' class='status std-height'>
-            <div id='instance_activity' class='status-inner'>
-                {% include "instance_status.html" %}
-           </div>
-        </div>
-        <!--
         <div class='status-title'>Commands</div>
         <div class='status'>
-            <div class='status-inner'>
-                <input type=text style='width:100%; background-color:black;color:white;'
-                        value='<custom query here>'/>
+            <div class='status-inner' style='padding-bottom:0em; margin-bottom:0em; margin-top:1em'>
+                <div>
+                <form action="">
+                <select id='field'>
+                   <option value='routing_key'>source
+                   <option value='nova_tenant'>tenant
+                   <option>service
+                   <option>host
+                   <option>event
+                   <option selected='true'>instance
+                </select>
+                <input type='text' id='query' size='60' value=''/>
+                <input type='submit' value='Search' onclick='return search_form({{state.tenant.tenant_id}});'/>
+                </form>
+                </div>
             </div>
         </div>
-        -->
+
         <div class='status-title'>Details</div>
         <div class='status'>
             <div id='detail' class='status-inner'>
