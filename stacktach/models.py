@@ -20,6 +20,8 @@ from django.db import models
 class Tenant(models.Model):
     email = models.CharField(max_length=50)
     project_name = models.CharField(max_length=50)
+    nova_stats_template = models.CharField(max_length=200)
+    loggly_template = models.CharField(max_length=200)
     tenant_id = models.AutoField(primary_key=True, unique=True)
 
 
@@ -35,19 +37,31 @@ class RawData(models.Model):
                              blank=True, db_index=True)
     when = models.DateTimeField(db_index=True)
     microseconds = models.IntegerField(default=0)
-    publisher = models.CharField(max_length=50, null=True,
+    publisher = models.CharField(max_length=100, null=True,
                                  blank=True, db_index=True)
     event = models.CharField(max_length=50, null=True,
                                  blank=True, db_index=True)
     service = models.CharField(max_length=50, null=True,
                                  blank=True, db_index=True)
-    host = models.CharField(max_length=50, null=True,
+    host = models.CharField(max_length=100, null=True,
                                  blank=True, db_index=True)
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
+    value = models.FloatField(null=True, blank=True, db_index=True)
+    units = models.CharField(max_length=10, null=True,
+                                blank=True, db_index=True)
+    # Grouping ID is a number assigned and meant to fence-post
+    # a block of time. <set group id = 1> <do stuff> <set group id = 2> ...
+    # Later there will be REST call for setting this.
+    grouping_id = models.IntegerField(default=0, db_index=True)
+
+    # Nested calls can be grouped by a common transaction ID if you like.
+    # A calls B calls C calls D. These can all be linked with a common
+    # transaction ID if you like.
+    transaction_id = models.IntegerField(default=0, db_index=True)
 
 
 class TenantForm(forms.ModelForm):
     class Meta:
         model = Tenant
-        fields = ('email', 'project_name')
+        fields = ('email', 'project_name', 'nova_stats_template', 'loggly_template')

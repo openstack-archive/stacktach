@@ -36,8 +36,8 @@ def _monitor_message(routing_key, body):
     host = parts[1]
     payload = body['payload']
     request_spec = payload.get('request_spec', None)
-    instance = None
-    instance = payload.get('instance_id', instance)
+    instance = payload.get('instance_id', None)
+    instance = payload.get('instance_uuid', instance)
     nova_tenant = body.get('_context_project_id', None)
     nova_tenant = payload.get('tenant_id', nova_tenant)
     return dict(host=host, instance=instance, publisher=publisher,
@@ -56,9 +56,18 @@ def _compute_update_message(routing_key, body):
                 service=service, event=event, nova_tenant=nova_tenant)
 
 
+def _tach_message(routing_key, body):
+    event = body['event_type']
+    value = body['value']
+    units = body['units']
+    transaction_id = body['transaction_id']
+    return dict(event=event, value=value, units=units, transaction_id=transaction_id)
+ 
+
 # routing_key : handler
 HANDLERS = {'monitor.info':_monitor_message,
             'monitor.error':_monitor_message,
+            'tach':_tach_message,
             '':_compute_update_message}
 
 
@@ -72,9 +81,12 @@ def _parse(tenant, args, json_args):
 
         values['tenant'] = tenant
         when = body['_context_timestamp']
-        when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+        try:
+            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+            values['microseconds'] = when.microsecond
+        except Exception, e:
+            pass
         values['when'] = when
-        values['microseconds'] = when.microsecond
         values['routing_key'] = routing_key
         values['json'] = json_args
         record = models.RawData(**values)
@@ -83,13 +95,22 @@ def _parse(tenant, args, json_args):
     return {}
 
 
-def _post_process_raw_data(rows, highlight=None):
+def _post_process_raw_data(rows, state, highlight=None):
     for row in rows:
         if "error" in row.routing_key:
             row.is_error = True
         if highlight and row.id == int(highlight):
             row.highlight = True
         row.when += datetime.timedelta(microseconds=row.microseconds)
+        novastats = state.tenant.nova_stats_template
+        if novastats and row.instance:
+            novastats = novastats.replace("[instance]", row.instance)
+        row.novastats = novastats
+        loggly = state.tenant.loggly_template
+        if loggly and row.instance:
+            loggly = loggly.replace("[instance]", row.instance)
+        row.loggly = loggly
+
 
 class State(object):
     def __init__(self):
@@ -101,6 +122,7 @@ class State(object):
         if self.tenant:
             tenant = "'%s' - %s (%d)" % (self.tenant.project_name,
                                          self.tenant.email, self.tenant.id)
+        return "[Version %s, Tenant %s]" % (self.version, tenant)
         return "[Version %s, Tenant %s]" % (self.version, tenant)
  
 
@@ -203,12 +225,13 @@ def details(request, tenant_id, column, row_id):
     if column != 'when':
         rows = rows.filter(**{column:value})
     else:
+        value += datetime.timedelta(microseconds=row.microseconds)
         from_time = value - datetime.timedelta(minutes=1)
         to_time = value + datetime.timedelta(minutes=1)
         rows = rows.filter(when__range=(from_time, to_time))
                                   
     rows = rows.order_by('-when', '-microseconds')[:200]
-    _post_process_raw_data(rows, highlight=row_id)
+    _post_process_raw_data(rows, state, highlight=row_id)
     c['rows'] = rows
     c['allow_expansion'] = True
     c['show_absolute_time'] = True
@@ -231,21 +254,25 @@ def host_status(request, tenant_id):
     state = _get_state(request, tenant_id)
     c = _default_context(state)
     hosts = models.RawData.objects.filter(tenant=tenant_id).\
-                                   filter(host__gt='').\
                                    order_by('-when', '-microseconds')[:20]
-    _post_process_raw_data(hosts)
+    _post_process_raw_data(hosts, state)
     c['rows'] = hosts
     return render_to_response('host_status.html', c)
 
 
 @tenant_check
-def instance_status(request, tenant_id):
+def search(request, tenant_id):
     state = _get_state(request, tenant_id)
     c = _default_context(state)
-    instances = models.RawData.objects.filter(tenant=tenant_id).\
-                                       exclude(instance='n/a').\
-                                       exclude(instance__isnull=True).\
-                                       order_by('-when', '-microseconds')[:20]
-    _post_process_raw_data(instances)
-    c['rows'] = instances
-    return render_to_response('instance_status.html', c)
+    column = request.POST.get('field', None)
+    value = request.POST.get('value', None)
+    rows = None
+    if column != None and value != None:
+        rows = models.RawData.objects.filter(tenant=tenant_id).\
+               filter(**{column:value}).\
+               order_by('-when', '-microseconds')
+        _post_process_raw_data(rows, state)
+    c['rows'] = rows
+    c['allow_expansion'] = True
+    c['show_absolute_time'] = True
+    return render_to_response('rows.html', c)
