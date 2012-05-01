@@ -47,6 +47,18 @@ class RawData(models.Model):
                                  blank=True, db_index=True)
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
+    value = models.FloatField(null=True, blank=True, db_index=True)
+    units = models.CharField(max_length=10, null=True,
+                                blank=True, db_index=True)
+    # Grouping ID is a number assigned and meant to fence-post
+    # a block of time. <set group id = 1> <do stuff> <set group id = 2> ...
+    # Later there will be REST call for setting this.
+    grouping_id = models.IntegerField(default=0, db_index=True)
+
+    # Nested calls can be grouped by a common transaction ID if you like.
+    # A calls B calls C calls D. These can all be linked with a common
+    # transaction ID if you like.
+    transaction_id = models.IntegerField(default=0, db_index=True)
 
 
 class TenantForm(forms.ModelForm):

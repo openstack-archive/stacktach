@@ -36,8 +36,8 @@ def _monitor_message(routing_key, body):
     host = parts[1]
     payload = body['payload']
     request_spec = payload.get('request_spec', None)
-    instance = None
-    instance = payload.get('instance_id', instance)
+    instance = payload.get('instance_id', None)
+    instance = payload.get('instance_uuid', instance)
     nova_tenant = body.get('_context_project_id', None)
     nova_tenant = payload.get('tenant_id', nova_tenant)
     return dict(host=host, instance=instance, publisher=publisher,
@@ -56,9 +56,18 @@ def _compute_update_message(routing_key, body):
                 service=service, event=event, nova_tenant=nova_tenant)
 
 
+def _tach_message(routing_key, body):
+    event = body['event_type']
+    value = body['value']
+    units = body['units']
+    transaction_id = body['transaction_id']
+    return dict(event=event, value=value, units=units, transaction_id=transaction_id)
+ 
+
 # routing_key : handler
 HANDLERS = {'monitor.info':_monitor_message,
             'monitor.error':_monitor_message,
+            'tach':_tach_message,
             '':_compute_update_message}
 
 
@@ -72,9 +81,12 @@ def _parse(tenant, args, json_args):
 
         values['tenant'] = tenant
         when = body['_context_timestamp']
-        when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+        try:
+            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+            values['microseconds'] = when.microsecond
+        except Exception, e:
+            pass
         values['when'] = when
-        values['microseconds'] = when.microsecond
         values['routing_key'] = routing_key
         values['json'] = json_args
         record = models.RawData(**values)
@@ -110,6 +122,7 @@ class State(object):
         if self.tenant:
             tenant = "'%s' - %s (%d)" % (self.tenant.project_name,
                                          self.tenant.email, self.tenant.id)
+        return "[Version %s, Tenant %s]" % (self.version, tenant)
         return "[Version %s, Tenant %s]" % (self.version, tenant)
  
 
@@ -257,7 +270,7 @@ def search(request, tenant_id):
     if column != None and value != None:
         rows = models.RawData.objects.filter(tenant=tenant_id).\
                filter(**{column:value}).\
-               order_by('-when', '-microseconds')[:200]
+               order_by('-when', '-microseconds')
         _post_process_raw_data(rows, state)
     c['rows'] = rows
     c['allow_expansion'] = True
