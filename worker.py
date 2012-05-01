@@ -155,7 +155,8 @@ class Monitor(threading.Thread):
                     time.sleep(5)
 
 
-with daemon.DaemonContext(files_preserve=[handler.stream]):
+#with daemon.DaemonContext(files_preserve=[handler.stream]):
+if True:
     workers = []
     for deployment in DEPLOYMENTS:
         LOG.info("Starting deployment: %s", deployment)
