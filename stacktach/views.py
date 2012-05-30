@@ -14,6 +14,7 @@ import pprint
 import random
 import sys
 
+logging.basicConfig(filename='/tmp/stacktach_server.log')
 
 VERSION = 4
 
