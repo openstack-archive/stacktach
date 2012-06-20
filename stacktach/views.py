@@ -172,18 +172,18 @@ def _default_context(state):
     
 def welcome(request):
     state = _reset_state(request)
-    return render_to_response('welcome.html', _default_context(state))
+    return render_to_response('stacktach/welcome.html', _default_context(state))
 
 
 @tenant_check
 def home(request, tenant_id):
     state = _get_state(request, tenant_id)
-    return render_to_response('index.html', _default_context(state)) 
+    return render_to_response('stacktach/index.html', _default_context(state)) 
 
 
 def logout(request):
     del request.session['state']
-    return render_to_response('welcome.html', _default_context(None)) 
+    return render_to_response('stacktach/welcome.html', _default_context(None)) 
 
 
 @csrf_protect
@@ -200,7 +200,7 @@ def new_tenant(request):
     else:
         form = models.TenantForm()
         context['form'] = form
-    return render_to_response('new_tenant.html', context,
+    return render_to_response('stacktach/new_tenant.html', context,
                               context_instance=template.RequestContext(request))
 
 
@@ -212,7 +212,7 @@ def data(request, tenant_id):
     c = _default_context(state)
     fields = _parse(state.tenant, args, raw_args)
     c['cooked_args'] = fields
-    return render_to_response('data.html', c)
+    return render_to_response('stacktach/data.html', c)
 
 
 @tenant_check
@@ -235,7 +235,7 @@ def details(request, tenant_id, column, row_id):
     c['rows'] = rows
     c['allow_expansion'] = True
     c['show_absolute_time'] = True
-    return render_to_response('rows.html', c)
+    return render_to_response('stacktach/rows.html', c)
 
 
 @tenant_check
@@ -246,7 +246,7 @@ def expand(request, tenant_id, row_id):
     payload = json.loads(row.json)
     pp = pprint.PrettyPrinter()
     c['payload'] = pp.pformat(payload)
-    return render_to_response('expand.html', c)
+    return render_to_response('stacktach/expand.html', c)
 
 
 @tenant_check
@@ -257,7 +257,7 @@ def host_status(request, tenant_id):
                                    order_by('-when', '-microseconds')[:20]
     _post_process_raw_data(hosts, state)
     c['rows'] = hosts
-    return render_to_response('host_status.html', c)
+    return render_to_response('stacktach/host_status.html', c)
 
 
 @tenant_check
@@ -275,4 +275,4 @@ def search(request, tenant_id):
     c['rows'] = rows
     c['allow_expansion'] = True
     c['show_absolute_time'] = True
-    return render_to_response('rows.html', c)
+    return render_to_response('stacktach/rows.html', c)
