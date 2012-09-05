@@ -1,3 +1,66 @@
 StackTach is a debugging tool for OpenStack Nova.
 
-It takes events from AMQP and sends them to the StackTach server for web display.
+--------------------
+
+It takes events from AMQP and inserts them in a database for the StackTach django project server for web display.
+stacktach workers consume the monitor.info and monitor.error rabbit messape queues.
+
+It's important that they keep running otherwise the queues fill up and slow down the
+whole nova environment.
+
+--------------------
+
+There's a django app in the 'stacktach' directory that lets you see what's
+going on in your nova install, then there's two flavors of worker processes
+that collect the amqp messages for displaying in the stacktach django apps.
+
+The app was originally designed as a service so that different customers could
+monitor their nova deployments, so it has 'tenants'.
+
+After installing the django app like most django apps, if you navigate to it,
+it'll prompt you to make a new tenant. It'll be given the number 1. You can
+view it in the browser by appending /1 onto the end of the url.
+
+That tenant ID then needs to be passed to one of the worker setups.
+
+--------------------
+
+The original worker setup uses the single script 'worker.py'. It depends on
+the 'kombu' lib to talk to your amqp server and uses eventlet green threads,
+one for each nova deploy.
+
+--------------------
+
+The newer version consists of the scripts:
+
+ * start_workers.py - Starts up sub-processes of worker_new.py's
+ * worker_conf.py - Holds the configs for your nova deploys
+ * worker_new.py - The actual worker code
+
+This version was written to address stability issues in the original.
+
+It depends on 'amqplib' for talking to the amqp broker.
+
+It uses subprocess instead of threading to fire up the workers, one sub-proc
+for each nova deploy.
+
+The newer version seems to have a memory leak, so needs restarting
+occasionally, but seems to be overall more stabler than the original.
+
+--------------------
+
+Before use, put your nova install detail into 'worker_conf.py'
+
+If you need to start them manually: 
+ 
+sudo -i
+cd /path/to/stacktach/install
+export DJANGO_SETTINGS_MODULE=stacktach.settings 
+python start_workers.py 
+ 
+The start_workers.py imports the list of deployments to consume from worker_conf.py, 
+then it starts a sub process of worker.py for each deploy. 
+ 
+Nice way to see the logs in a screen session: 
+ 
+        ls *.log | grep "global\|cell" | xargs watch --differences tail -n2 

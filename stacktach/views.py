@@ -10,12 +10,10 @@ from stacktach import models
 
 import datetime
 import json
-import logging
 import pprint
 import random
 import sys
 
-logger = logging.getLogger(__name__)
 
 VERSION = 4
 
@@ -33,7 +31,11 @@ def _monitor_message(routing_key, body):
     publisher = body['publisher_id']
     parts = publisher.split('.')   
     service = parts[0]
-    host = parts[1]
+    if len(parts) > 1:
+        host = ".".join(parts[1:])
+    else:
+        host = None
+    #logging.error("publisher=%s, host=%s" % (publisher, host))
     payload = body['payload']
     request_spec = payload.get('request_spec', None)
     instance = payload.get('instance_id', None)
@@ -80,9 +82,15 @@ def _parse(tenant, args, json_args):
             return {}
 
         values['tenant'] = tenant
-        when = body['_context_timestamp']
         try:
-            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+            when = body['timestamp']
+        except KeyError:
+            when = body['_context_timestamp'] # Old way of doing it
+        try:
+            try:
+                when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
+            except ValueError:
+                when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f") # Old way of doing it
             values['microseconds'] = when.microsecond
         except Exception, e:
             pass
@@ -169,21 +177,21 @@ def _default_context(state):
     context = dict(utc=datetime.datetime.utcnow(), state=state)
     return context
 
-    
+
 def welcome(request):
     state = _reset_state(request)
-    return render_to_response('stacktach/welcome.html', _default_context(state))
+    return render_to_response('welcome.html', _default_context(state))
 
 
 @tenant_check
 def home(request, tenant_id):
     state = _get_state(request, tenant_id)
-    return render_to_response('stacktach/index.html', _default_context(state)) 
+    return render_to_response('index.html', _default_context(state)) 
 
 
 def logout(request):
     del request.session['state']
-    return render_to_response('stacktach/welcome.html', _default_context(None)) 
+    return render_to_response('welcome.html', _default_context(None)) 
 
 
 @csrf_protect
@@ -200,7 +208,7 @@ def new_tenant(request):
     else:
         form = models.TenantForm()
         context['form'] = form
-    return render_to_response('stacktach/new_tenant.html', context,
+    return render_to_response('new_tenant.html', context,
                               context_instance=template.RequestContext(request))
 
 
@@ -212,7 +220,7 @@ def data(request, tenant_id):
     c = _default_context(state)
     fields = _parse(state.tenant, args, raw_args)
     c['cooked_args'] = fields
-    return render_to_response('stacktach/data.html', c)
+    return render_to_response('data.html', c)
 
 
 @tenant_check
@@ -229,13 +237,13 @@ def details(request, tenant_id, column, row_id):
         from_time = value - datetime.timedelta(minutes=1)
         to_time = value + datetime.timedelta(minutes=1)
         rows = rows.filter(when__range=(from_time, to_time))
-                                  
+
     rows = rows.order_by('-when', '-microseconds')[:200]
     _post_process_raw_data(rows, state, highlight=row_id)
     c['rows'] = rows
     c['allow_expansion'] = True
     c['show_absolute_time'] = True
-    return render_to_response('stacktach/rows.html', c)
+    return render_to_response('rows.html', c)
 
 
 @tenant_check
@@ -246,7 +254,7 @@ def expand(request, tenant_id, row_id):
     payload = json.loads(row.json)
     pp = pprint.PrettyPrinter()
     c['payload'] = pp.pformat(payload)
-    return render_to_response('stacktach/expand.html', c)
+    return render_to_response('expand.html', c)
 
 
 @tenant_check
@@ -257,7 +265,7 @@ def host_status(request, tenant_id):
                                    order_by('-when', '-microseconds')[:20]
     _post_process_raw_data(hosts, state)
     c['rows'] = hosts
-    return render_to_response('stacktach/host_status.html', c)
+    return render_to_response('host_status.html', c)
 
 
 @tenant_check
@@ -270,9 +278,9 @@ def search(request, tenant_id):
     if column != None and value != None:
         rows = models.RawData.objects.filter(tenant=tenant_id).\
                filter(**{column:value}).\
-               order_by('-when', '-microseconds')
+               order_by('-when', '-microseconds')[:22]
         _post_process_raw_data(rows, state)
     c['rows'] = rows
     c['allow_expansion'] = True
     c['show_absolute_time'] = True
-    return render_to_response('stacktach/rows.html', c)
+    return render_to_response('rows.html', c)
