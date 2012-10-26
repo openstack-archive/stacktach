@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block body %}
+    {% if not deployments %}
+        <div class='status-title'>No deployments defined</div>
+        Do you have the worker configured and running?
+    {% else %}
+        <div class='status-title'>Choose the Deployment to monitor</div>
+        <div id='instance-box' class='status'>
+            <div id='instance_activity' class='status-inner'>
+                <ul>
+                    <li><a href='/0'>All</a></li>
+                    {% for d in deployments %}
+                    <li><a href='/{{d.id}}'>{{d.name}}</a></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    {% endif %}
+{% endblock %}       

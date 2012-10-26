@@ -17,26 +17,29 @@ from django import forms
 from django.db import models
 
 
-class Tenant(models.Model):
-    email = models.CharField(max_length=50)
-    project_name = models.CharField(max_length=50)
-    nova_stats_template = models.CharField(max_length=200)
-    loggly_template = models.CharField(max_length=200)
-    tenant_id = models.AutoField(primary_key=True, unique=True)
+class Deployment(models.Model):
+    name = models.CharField(max_length=50)
+
+
+def get_or_create_deployment(name):
+    return Deployment.objects.get_or_create(name=name)
 
 
 class RawData(models.Model):
-    tenant = models.ForeignKey(Tenant, db_index=True,
-                               to_field='tenant_id')
-    nova_tenant = models.CharField(max_length=50, null=True,
-                                   blank=True, db_index=True)
+    deployment = models.ForeignKey(Deployment)
+    tenant = models.CharField(max_length=50, null=True, blank=True,
+                              db_index=True)
     json = models.TextField()
     routing_key = models.CharField(max_length=50, null=True,
                                    blank=True, db_index=True)
-    state = models.CharField(max_length=50, null=True,
+    state = models.CharField(max_length=20, null=True,
+                             blank=True, db_index=True)
+    old_state = models.CharField(max_length=20, null=True,
+                             blank=True, db_index=True)
+    old_task = models.CharField(max_length=30, null=True,
                              blank=True, db_index=True)
     when = models.DateTimeField(db_index=True)
-    microseconds = models.IntegerField(default=0)
+    microseconds = models.IntegerField(default=0, db_index=True)
     publisher = models.CharField(max_length=100, null=True,
                                  blank=True, db_index=True)
     event = models.CharField(max_length=50, null=True,
@@ -47,21 +50,34 @@ class RawData(models.Model):
                                  blank=True, db_index=True)
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
-    value = models.FloatField(null=True, blank=True, db_index=True)
-    units = models.CharField(max_length=10, null=True,
+    request_id = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
-    # Grouping ID is a number assigned and meant to fence-post
-    # a block of time. <set group id = 1> <do stuff> <set group id = 2> ...
-    # Later there will be REST call for setting this.
-    grouping_id = models.IntegerField(default=0, db_index=True)
 
-    # Nested calls can be grouped by a common transaction ID if you like.
-    # A calls B calls C calls D. These can all be linked with a common
-    # transaction ID if you like.
-    transaction_id = models.IntegerField(default=0, db_index=True)
+    def __repr__(self):
+        return self.event
 
 
-class TenantForm(forms.ModelForm):
-    class Meta:
-        model = Tenant
-        fields = ('email', 'project_name', 'nova_stats_template', 'loggly_template')
+class Lifecycle(models.Model):
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    last_state = models.CharField(max_length=50, null=True,
+                             blank=True, db_index=True)
+    last_task_state = models.CharField(max_length=50, null=True,
+                             blank=True, db_index=True)
+    last_raw = models.ForeignKey(RawData, null=True)
+
+
+class Timing(models.Model):
+    name = models.CharField(max_length=50, db_index=True)
+    lifecycle = models.ForeignKey(Lifecycle)
+    start_raw = models.ForeignKey(RawData, related_name='+', null=True)
+    end_raw = models.ForeignKey(RawData, related_name='+', null=True)
+
+    start_when = models.DateTimeField(db_index=True, null=True)
+    start_ms = models.IntegerField(default=0)
+    end_when = models.DateTimeField(db_index=True, null=True)
+    end_ms = models.IntegerField(default=3)
+
+    diff_days = models.IntegerField(default=0)
+    diff_seconds = models.IntegerField(default=0)
+    diff_usecs = models.IntegerField(default=0)

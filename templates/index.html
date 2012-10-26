@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block extra_js %}
+function details(deployment_id, column, row_id)
+{
+    $("#detail").load('/' + deployment_id + '/details/' + column + 
+                      '/' + row_id);
+};
+
+function expand(deployment_id, row_id)
+{
+    $("#row_expansion_" + row_id).load('/' + deployment_id + '/expand/' + 
+                                       row_id);
+};
+
+function search_form(deployment_id)
+{
+    var field = $("#field").val();
+    var value = $("#query").val();
+    var data = {'field':field, 'value':value};
+    $("#detail").load('/' + deployment_id + '/search/', data);
+    return false;
+};
+
+{% endblock %}
+
+{% block extra_init_js %}            
+    $('#host-box').resizable();
+    $('#instance-box').resizable();
+{% endblock %}                
+
+{% block body %}
+<div class='status-title'>Recent Activity
+{% if deployment %}- {{deployment.name}}{%else%}- ALL{%endif%}
+</div>
+<div id='host-box' class='status std-height'>
+    <div id='host_activity' class='status-inner'>
+        {% include "host_status.html" %}
+    </div>
+</div>
+
+<div class='status-title'>Commands</div>
+<div class='status'>
+    <div class='status-inner' style='padding-bottom:0em; margin-bottom:0em; margin-top:1em'>
+        <div>
+        <form action="">
+        <select id='field'>
+           <option>deployment
+           <option value='routing_key'>source
+           <option value='tenant'>tenant
+           <option>service
+           <option>host
+           <option>event
+           <option selected='true'>instance
+        </select>
+        <input type='text' id='query' size='60' value=''/>
+        <input type='submit' value='Search' onclick='return search_form({{deployment_id}});'/>
+        </form>
+        </div>
+    </div>
+</div>
+
+<div class='status-title'>Details</div>
+<div class='status'>
+    <div id='detail' class='status-inner'>
+        <div>click on an item above to see more of the same type.</div>
+    </div>
+</div>
+{% endblock %}        

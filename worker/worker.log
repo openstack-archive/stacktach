@@ -1,0 +1,1508 @@
+dfw.prod.global: 10.14.228.15 5672 nova nova
+lon.prod.global: 10.21.228.31 5672 nova nova-production
+ord.prod.cell3: 10.23.244.189 5672 nova nova
+ord.prod.cell4: 10.23.244.233 5672 nova nova
+lon.prod.cell3: 10.21.228.99 5672 nova nova-production
+ord.prod.global: 10.23.244.44 5672 nova nova
+ord.prod.cell2: 10.23.244.123 5672 nova nova
+lon.prod.cell1: 10.21.228.35 5672 nova nova-production
+dfw.prod.cell2: 10.14.228.49 5672 nova nova
+ord.prod.cell1: 10.23.244.77 5672 nova nova
+ord.staging.global: 10.23.244.8 5672 nova nova
+dfw-z1: 10.24.196.32 5672 nova production
+ord.staging.cell1: 10.23.244.25 5672 nova nova
+ord.staging.cell2: 10.23.244.123 5672 nova nova
+lon.prod.cell2: 10.21.228.79 5672 nova nova-production
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.prod.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=dfw.prod.global, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.global, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.prod.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.global, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    try:
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=dfw.prod.global, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    try:
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.global, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    try:
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    try:
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer = NovaConsumer(conn, deployment)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer = NovaConsumer(conn, deployment)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.prod.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 96, in run
+    consumer = NovaConsumer(conn, deployment)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 69, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 65, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+ord.prod.cell4: 10.23.244.233 5672 nova nova
+ord.prod.global: 10.23.244.44 5672 nova nova
+lon.prod.cell1: 10.21.228.35 5672 nova nova-production
+dfw.prod.cell2: 10.14.228.49 5672 nova nova
+ord.prod.cell1: 10.23.244.77 5672 nova nova
+lon.prod.cell3: 10.21.228.99 5672 nova nova-production
+lon.prod.global: 10.21.228.31 5672 nova nova-production
+ord.staging.global: 10.23.244.8 5672 nova nova
+dfw.prod.global: 10.14.228.15 5672 nova nova
+ord.prod.cell2: 10.23.244.123 5672 nova nova
+ord.staging.cell2: 10.23.244.123 5672 nova nova
+dfw-z1: 10.24.196.32 5672 nova production
+ord.prod.cell3: 10.23.244.189 5672 nova nova
+ord.staging.cell1: 10.23.244.25 5672 nova nova
+lon.prod.cell2: 10.21.228.79 5672 nova nova-production
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=lon.prod.cell3, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.global, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=dfw.prod.global, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=lon.prod.cell3, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.prod.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell2, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+name=ord.staging.cell1, exception=Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 66, in _process
+    views.process_raw_data(self.deployment, args, asJson)
+  File "/home/sandy/src/stacktach2/stacktach/views.py", line 196, in process_raw_data
+    record = models.RawData(**values)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/base.py", line 355, in __init__
+    setattr(self, field.name, rel_obj)
+  File "/usr/local/lib/python2.7/dist-packages/django/db/models/fields/related.py", line 366, in __set__
+    self.field.name, self.field.rel.to._meta.object_name))
+ValueError: Cannot assign "(<Deployment: Deployment object>, False)": "RawData.deployment" must be a "Deployment" instance.
+dfw.prod.global: 10.14.228.15 5672 nova nova
+ord.prod.cell4: 10.23.244.233 5672 nova nova
+lon.prod.cell1: 10.21.228.35 5672 nova nova-production
+ord.prod.cell3: 10.23.244.189 5672 nova nova
+lon.prod.global: 10.21.228.31 5672 nova nova-production
+ord.staging.cell1: 10.23.244.25 5672 nova nova
+ord.prod.global: 10.23.244.44 5672 nova nova
+dfw.prod.cell2: 10.14.228.49 5672 nova nova
+lon.prod.cell3: 10.21.228.99 5672 nova nova-production
+ord.staging.cell2: 10.23.244.123 5672 nova nova
+ord.prod.cell1: 10.23.244.77 5672 nova nova
+ord.prod.cell2: 10.23.244.123 5672 nova nova
+ord.staging.global: 10.23.244.8 5672 nova nova
+dfw-z1: 10.24.196.32 5672 nova production
+lon.prod.cell2: 10.21.228.79 5672 nova nova-production
+lon.prod.global: 10.21.228.31 5672 nova nova-production
+lon.prod.cell1: 10.21.228.35 5672 nova nova-production
+dfw.prod.global: 10.14.228.15 5672 nova nova
+ord.prod.global: 10.23.244.44 5672 nova nova
+dfw.prod.cell2: 10.14.228.49 5672 nova nova
+ord.prod.cell1: 10.23.244.77 5672 nova nova
+ord.prod.cell2: 10.23.244.123 5672 nova nova
+dfw-z1: 10.24.196.32 5672 nova production
+lon.prod.cell2: 10.21.228.79 5672 nova nova-production
+ord.staging.cell2: 10.23.244.123 5672 nova nova
+ord.prod.cell4: 10.23.244.233 5672 nova nova
+ord.staging.global: 10.23.244.8 5672 nova nova
+ord.staging.cell1: 10.23.244.25 5672 nova nova
+lon.prod.cell3: 10.21.228.99 5672 nova nova-production
+ord.prod.cell3: 10.23.244.189 5672 nova nova
+lon.prod.global: 10.21.228.31 5672 nova nova-production
+ord.staging.global: 10.23.244.8 5672 nova nova
+ord.prod.cell2: 10.23.244.123 5672 nova nova
+dfw.prod.cell2: 10.14.228.49 5672 nova nova
+dfw.prod.global: 10.14.228.15 5672 nova nova
+lon.prod.cell1: 10.21.228.35 5672 nova nova-production
+lon.prod.cell2: 10.21.228.79 5672 nova nova-production
+ord.prod.cell4: 10.23.244.233 5672 nova nova
+dfw-z1: 10.24.196.32 5672 nova production
+ord.prod.cell3: 10.23.244.189 5672 nova nova
+ord.staging.cell1: 10.23.244.25 5672 nova nova
+ord.staging.cell2: 10.23.244.123 5672 nova nova
+lon.prod.cell3: 10.21.228.99 5672 nova nova-production
+ord.prod.global: 10.23.244.44 5672 nova nova
+ord.prod.cell1: 10.23.244.77 5672 nova nova
+name=ord.staging.cell1, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=lon.prod.cell3, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.prod.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.prod.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell1, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=lon.prod.cell3, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell1, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=lon.prod.cell3, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.global, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell1, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", deployment.name
+NameError: global name 'deployment' is not defined
+name=lon.prod.cell3, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=lon.prod.global, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell1, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.prod.global, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.prod.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell1, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.prod.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=lon.prod.cell3, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+name=ord.staging.cell2, exception=global name 'deployment' is not defined. Reconnecting in 5s
+Traceback (most recent call last):
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 97, in run
+    consumer.run()
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 165, in run
+    for _ in self.consume(limit=None):
+  File "/usr/local/lib/python2.7/dist-packages/kombu/mixins.py", line 181, in consume
+    connection.drain_events(timeout=safety_interval)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/connection.py", line 197, in drain_events
+    return self.transport.drain_events(self.connection, **kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 327, in drain_events
+    return connection.drain_events(**kwargs)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/transport/amqplib.py", line 182, in drain_events
+    return amqp_method(channel, args, content)
+  File "/usr/local/lib/python2.7/dist-packages/amqplib/client_0_8/channel.py", line 2060, in _basic_deliver
+    func(msg)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 486, in _receive_callback
+    self.receive(decoded, message)
+  File "/usr/local/lib/python2.7/dist-packages/kombu/messaging.py", line 458, in receive
+    [callback(body, message) for callback in callbacks]
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 70, in on_nova
+    self._process(body, message)
+  File "/home/sandy/src/stacktach2/worker/worker.py", line 58, in _process
+    print "GOT ONE", self.deployment.name
+NameError: global name 'deployment' is not defined
+lon.prod.global: 10.21.228.31 5672 nova nova-production
+ord.prod.global: 10.23.244.44 5672 nova nova
+ord.prod.cell1: 10.23.244.77 5672 nova nova
+dfw.prod.global: 10.14.228.15 5672 nova nova
+ord.prod.cell4: 10.23.244.233 5672 nova nova
+dfw.prod.cell2: 10.14.228.49 5672 nova nova
+lon.prod.cell1: 10.21.228.35 5672 nova nova-production
+dfw-z1: 10.24.196.32 5672 nova production
+ord.prod.cell3: 10.23.244.189 5672 nova nova
+ord.staging.global: 10.23.244.8 5672 nova nova
+ord.staging.cell1: 10.23.244.25 5672 nova nova
+lon.prod.cell3: 10.21.228.99 5672 nova nova-production
+ord.staging.cell2: 10.23.244.123 5672 nova nova
+ord.prod.cell2: 10.23.244.123 5672 nova nova
+lon.prod.cell2: 10.21.228.79 5672 nova nova-production

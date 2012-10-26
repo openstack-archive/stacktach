@@ -1,0 +1,18 @@
+{"deployments": [
+    {   
+        "name": "east_coast.prod.global",
+        "rabbit_host": "10.0.0.1",
+        "rabbit_port": 5672,
+        "rabbit_userid": "rabbit",
+        "rabbit_password": "rabbit",
+        "rabbit_virtual_host": "/"
+    },
+    {
+        "name": "east_coast.prod.cell1",
+        "rabbit_host": "10.0.1.1",
+        "rabbit_port": 5672,
+        "rabbit_userid": "rabbit",
+        "rabbit_password": "rabbit",
+        "rabbit_virtual_host": "/"
+    }]
+}

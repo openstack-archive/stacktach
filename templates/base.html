@@ -1,0 +1,118 @@
+<!-- 
+Copyright 2012 - Dark Secret Software Inc.
+All Rights Reserved.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may
+not use this file except in compliance with the License. You may obtain
+a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+License for the specific language governing permissions and limitations
+under the License.
+-->
+
+<html lang="en">
+<head>
+
+<link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/themes/base/jquery-ui.css" rel="stylesheet" type="text/css"/>
+<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.5/jquery.min.js"></script>
+<script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.8/jquery-ui.min.js"></script>
+
+<script type="text/javascript" src="/static/jquery.timers.js"></script>
+
+<link href='http://fonts.googleapis.com/css?family=Kaushan+Script' rel='stylesheet' type='text/css'>
+<link href='http://fonts.googleapis.com/css?family=PT+Sans&subset=latin' rel='stylesheet' type='text/css'>
+
+<style type="text/css">
+    .fancy {
+      font-family: 'Kaushan Script';
+      font-style: normal;
+      padding-bottom: 0em;
+      font-size: 3em;
+      color:#C63520;
+    }
+    h1, h2 {
+      font-family: 'PT Sans', serif;
+      font-style: normal;
+      letter-spacing: -0.076em;
+      line-height: 1em;
+    }
+    body {
+        font-size:75%;
+        color:#222;
+        background:#fff;
+        font-family:"Helvetica Neue", Arial, Helvetica, sans-serif;
+    }
+    a {
+        text-decoration:none;
+        color:#3f3f7f;
+    }
+    a:hover {
+        text-decoration:underline;
+    }
+    .cell-border {
+        border-left: 1px solid #bbbbcc;
+    }
+    .title {
+        font-weight: bold;
+
+    }
+    td {
+        padding-right: 1em;
+    }
+    .status {
+        border:1px #bbbbcc solid;
+        width:-1em;
+        margin-bottom:2em;
+    }
+    .status-title {
+        margin-left: 1em;
+        margin-right: 1em;
+        background-color: white;
+        font-family: 'PT Sans', serif;
+        color:#E5574D;
+        font-weight:bold;
+        font-size:1.5em;
+    }
+    .status-inner {
+        background-color:#fafaff;
+        padding-left:.5em;
+        margin-left:.5em;
+        margin-right:1em;
+        padding-bottom:1em;
+        padding-top:1em;
+        margin-bottom:1em;
+    }
+    .std-height {
+        height:30em;
+        overflow-y:scroll;
+        overflow-x:hidden;
+    }
+
+</style>
+
+<script type="text/javascript">
+    {% block extra_js %}
+    {% endblock %}
+    $(document).ready(function() {
+    {% block extra_init_js %}
+    {% endblock %}
+    });
+</script>
+</head>
+<body>
+    <div class='fancy'><a href='/'>StackTach</a>
+        <span style='font-size: small'>v2</span>
+    </div>
+
+    <a href="https://github.com/rackspace/stacktach"><img style="position: absolute; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_green_007200.png" alt="Fork me on GitHub"></a>
+
+{% block body %}
+{% endblock %}
+
+    </body>
+</html>
