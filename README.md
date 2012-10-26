@@ -65,9 +65,23 @@ But that's not much fun. A deployment entry would look like this:
 
 where, *name* is whatever you want to call your deployment, and *rabbit_<>* are the connectivity details for your rabbit server. It should be the same information in your `nova.conf` file that OpenStack is using. Note, json has no concept of comments, so using `#`, `//` or `/* */` as a comment won't work.
 
-You can add as many deployments as you like. When `./worker/start_workers.py` will process for each deployment defined. 
+You can add as many deployments as you like. 
 
-That's it.
+#### Starting the Worker
+
+`./worker/start_workers.py` will spawn a worker.py process for each deployment defined. Each worker will consume from a single Rabbit queue.
+
+
+#### Configuring Nova to generate Notifications
+
+`--notification_driver=nova.openstack.common.notifier.rabbit_notifier`
+`--notification_topics=monitor`
+
+This will tell OpenStack to publish notifications to a Rabbit exchange starting with `monitor.*` ... this may result in `monitor.info`, `monitor.error`, etc.
+
+You'll need to restart Nova once these changes are made.
+
+### Next Steps
 
 Once you have this working well, you should download and install Stacky and play with the command line tool.
 
