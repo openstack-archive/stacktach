@@ -68,7 +68,7 @@ def sec_to_time(diff):
     minutes = seconds / 60
     seconds -= (minutes * 60)
     usec = ('%.2f' % usec).lstrip('0')
-    return "%dd %02d:%02d:%02d %s" % (days, hours, minutes, seconds, usec)
+    return "%dd %02d:%02d:%02d%s" % (days, hours, minutes, seconds, usec)
 
 
 def rsp(data):
