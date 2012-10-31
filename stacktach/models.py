@@ -38,8 +38,7 @@ class RawData(models.Model):
                              blank=True, db_index=True)
     old_task = models.CharField(max_length=30, null=True,
                              blank=True, db_index=True)
-    when = models.DateTimeField(db_index=True)
-    microseconds = models.IntegerField(default=0, db_index=True)
+    when = models.DecimalField(max_digits=20, decimal_places=6)
     publisher = models.CharField(max_length=100, null=True,
                                  blank=True, db_index=True)
     event = models.CharField(max_length=50, null=True,
@@ -73,10 +72,8 @@ class Timing(models.Model):
     start_raw = models.ForeignKey(RawData, related_name='+', null=True)
     end_raw = models.ForeignKey(RawData, related_name='+', null=True)
 
-    start_when = models.DateTimeField(db_index=True, null=True)
-    start_ms = models.IntegerField(default=0)
-    end_when = models.DateTimeField(db_index=True, null=True)
-    end_ms = models.IntegerField(default=3)
+    start_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
+    end_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
 
     diff_days = models.IntegerField(default=0)
     diff_seconds = models.IntegerField(default=0)

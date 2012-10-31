@@ -5,6 +5,7 @@ from django import http
 from django import template
 
 from stacktach import models
+from stacktach import datetime_to_decimal as dt
 
 import datetime
 import json
@@ -73,14 +74,6 @@ HANDLERS = {'monitor.info':_monitor_message,
             '':_compute_update_message}
 
 
-def _make_datetime_from_raw(dt, ms):
-    if dt is None:
-        return None
-    return datetime.datetime(day=dt.day, month=dt.month, year=dt.year,
-                            hour=dt.hour, minute=dt.minute, second=dt.second,
-                            microsecond=ms)
-
-
 def aggregate(raw):
     """Roll up the raw event into a Lifecycle object
     and a bunch of Timing objects.
@@ -136,7 +129,6 @@ def aggregate(raw):
     if start:
         timing.start_raw = raw
         timing.start_when = raw.when
-        timing.start_ms = raw.microseconds
 
         # Erase all the other fields which may have been set
         # the first time this operation was performed.
@@ -144,19 +136,17 @@ def aggregate(raw):
         # We'll only record the last one, but track that 3 were done.
         timing.end_raw = None
         timing.end_when = None
-        timing.end_ms = 0
 
         timing.diff_when = None
         timing.diff_ms = 0
     else:
         timing.end_raw = raw
         timing.end_when = raw.when
-        timing.end_ms = raw.microseconds
-        start = _make_datetime_from_raw(timing.start_when, timing.start_ms)
-        end = _make_datetime_from_raw(timing.end_when, timing.end_ms)
+        end = dt.dt_from_decimal(timing.end_when)
 
         # We could have missed start so watch out ...
-        if start and end:
+        if timing.start_when and end:
+            start = dt.dt_from_decimal(timing.start_when)
             diff = end - start
             timing.diff_days = diff.days
             timing.diff_seconds = diff.seconds
@@ -184,18 +174,17 @@ def process_raw_data(deployment, args, json_args):
             except ValueError:
                 # Old way of doing it
                 when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
-            values['microseconds'] = when.microsecond
         except Exception, e:
             pass
-        values['when'] = when
+        values['when'] = dt.dt_to_decimal(when)
         values['routing_key'] = routing_key
         values['json'] = json_args
         record = models.RawData(**values)
         record.save()
 
         aggregate(record)
-        return values
-    return {}
+        return record
+    return None
 
 
 def _post_process_raw_data(rows, highlight=None):
@@ -204,7 +193,7 @@ def _post_process_raw_data(rows, highlight=None):
             row.is_error = True
         if highlight and row.id == int(highlight):
             row.highlight = True
-        row.when += datetime.timedelta(microseconds=row.microseconds)
+        row.fwhen = dt.dt_from_decimal(row.when)
 
 
 def _default_context(request, deployment_id=0):
@@ -250,12 +239,14 @@ def details(request, deployment_id, column, row_id):
     if column != 'when':
         rows = rows.filter(**{column:value})
     else:
-        value += datetime.timedelta(microseconds=row.microseconds)
-        from_time = value - datetime.timedelta(minutes=1)
-        to_time = value + datetime.timedelta(minutes=1)
-        rows = rows.filter(when__range=(from_time, to_time))
+        when = dt.dt_from_decimal(value)
+        from_time = when - datetime.timedelta(minutes=1)
+        to_time = when + datetime.timedelta(minutes=1)
+        from_time_dec = dt.dt_to_decimal(from_time)
+        to_time_dec = dt.dt_to_decimal(to_time)
+        rows = rows.filter(when__range=(from_time_dec, to_time_dec))
 
-    rows = rows.order_by('-when', '-microseconds')[:200]
+    rows = rows.order_by('-when')[:200]
     _post_process_raw_data(rows, highlight=row_id)
     c['rows'] = rows
     c['allow_expansion'] = True
@@ -279,7 +270,7 @@ def latest_raw(request, deployment_id):
     query = models.RawData.objects.select_related()
     if deployment_id > 0:
         query = query.filter(deployment=deployment_id)
-    rows = query.order_by('-when', '-microseconds')[:20]
+    rows = query.order_by('-when')[:20]
     _post_process_raw_data(rows)
     c['rows'] = rows
     return render_to_response('host_status.html', c)
@@ -295,7 +286,7 @@ def search(request, deployment_id):
         if deployment_id:
             row = rows.filter(deployment=deployment_id)
         rows = rows.filter(**{column:value}). \
-               order_by('-when', '-microseconds')[:22]
+               order_by('-when')[:22]
         _post_process_raw_data(rows)
     c['rows'] = rows
     c['allow_expansion'] = True

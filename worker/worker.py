@@ -25,6 +25,7 @@ import logging
 import time
 
 from stacktach import models, views
+from stacktach import datetime_to_decimal as dt
 
 
 LOG = logging.getLogger(__name__)
@@ -47,9 +48,10 @@ nova_queues = [
 
 
 class NovaConsumer(kombu.mixins.ConsumerMixin):
-    def __init__(self, connection, deployment):
+    def __init__(self, name, connection, deployment):
         self.connection = connection
         self.deployment = deployment
+        self.name = name
 
     def get_consumers(self, Consumer, channel):
         return [Consumer(queues=nova_queues, callbacks=[self.on_nova])]
@@ -62,8 +64,14 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         args = (routing_key, json.loads(message.body))
         asJson = json.dumps(args)
 
-        views.process_raw_data(self.deployment, args, asJson)
-        self.logger.debug("Recorded %s ", routing_key)
+        raw = views.process_raw_data(self.deployment, args, asJson)
+        if not raw:
+            LOG.debug("No record from %s", routing_key)
+        else:
+            LOG.debug("Recorded rec# %d from %s/%s at %s (%.6f)" %
+                          (raw.id, self.name, routing_key,
+                           str(dt.dt_from_decimal(raw.when)),
+                           float(raw.when)))
 
     def on_nova(self, body, message):
         self._process(body, message)
@@ -92,7 +100,7 @@ def run(deployment_config):
     while True:
         with kombu.connection.BrokerConnection(**params) as conn:
             try:
-                consumer = NovaConsumer(conn, deployment)
+                consumer = NovaConsumer(name, conn, deployment)
                 consumer.run()
             except Exception as e:
                 LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %

@@ -65,8 +65,8 @@
 
     <td class='cell-border'>
         <a href='#' onclick='details({{deployment_id}}, "when", {{row.id}});'>
-        {% if show_absolute_time %}{{row.when}} (+{{row.when.microsecond}})
-        {%else%}{{row.when|timesince:utc}} ago{%endif%}</a>
+        {% if show_absolute_time %}{{row.fwhen}}
+        {%else%}{{row.fwhen|timesince:utc}} ago{%endif%}</a>
     </td>
 </tr>
 {% if allow_expansion %}
