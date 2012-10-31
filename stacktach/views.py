@@ -142,15 +142,10 @@ def aggregate(raw):
     else:
         timing.end_raw = raw
         timing.end_when = raw.when
-        end = dt.dt_from_decimal(timing.end_when)
 
         # We could have missed start so watch out ...
-        if timing.start_when and end:
-            start = dt.dt_from_decimal(timing.start_when)
-            diff = end - start
-            timing.diff_days = diff.days
-            timing.diff_seconds = diff.seconds
-            timing.diff_usecs = diff.microseconds
+        if timing.start_when:
+            timing.diff = timing.end_when - timing.start_when
     timing.save()
 
 

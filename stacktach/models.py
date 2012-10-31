@@ -75,6 +75,4 @@ class Timing(models.Model):
     start_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
     end_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
 
-    diff_days = models.IntegerField(default=0)
-    diff_seconds = models.IntegerField(default=0)
-    diff_usecs = models.IntegerField(default=0)
+    diff = models.DecimalField(null=True, max_digits=20, decimal_places=6)

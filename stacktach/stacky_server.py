@@ -9,8 +9,8 @@ import datetime_to_decimal as dt
 import models
 import views
 
-
-SECS_PER_DAY = 60 * 60 * 24
+SECS_PER_HOUR = 60 * 60
+SECS_PER_DAY = SECS_PER_HOUR * 24
 
 
 def get_event_names():
@@ -35,49 +35,40 @@ def get_deployments():
     return models.Deployment.objects.all().order_by('name')
 
 
-def show_timings_for_uuid(uuid):
+def get_timings_for_uuid(uuid):
     lifecycles = models.Lifecycle.objects.filter(instance=uuid)
 
     results = []
+    results.append(["?", "Event", "Time (secs)"])
     for lc in lifecycles:
         timings = models.Timing.objects.filter(lifecycle=lc)
         if not timings:
             continue
-        this = []
-        this.append(["?", "Event", "Time (secs)"])
         for t in timings:
             state = "?"
+            show_time = 'n/a'
             if t.start_raw:
                 state = 'S'
             if t.end_raw:
-                sate = 'E'
+                state = 'E'
             if t.start_raw and t.end_raw:
                 state = "."
-            this.append([state, t.name, sec_to_time(seconds_from_timing(t))])
-        results.append(this)
+                show_time = sec_to_time(t.diff)
+            results.append([state, t.name, show_time])
     return results
 
 
-def seconds_from_timedelta(days, seconds, usecs):
-    us = usecs / 1000000.0
-    return (days * SECS_PER_DAY) + seconds + us
-
-
-def seconds_from_timing(t):
-    return seconds_from_timedelta(t.diff_days, t.diff_seconds, t.diff_usecs)
-
-
-def sec_to_time(fseconds):
-    seconds = int(fseconds)
-    usec = fseconds - seconds
-    days = seconds / (60 * 60 * 24)
-    seconds -= (days * (60 * 60 * 24))
-    hours = seconds / (60 * 60)
-    seconds -= (hours * (60 * 60))
+def sec_to_time(diff):
+    seconds = int(diff)
+    usec = diff - seconds
+    days = seconds / SECS_PER_DAY
+    seconds -= (days * SECS_PER_DAY)
+    hours = seconds / SECS_PER_HOUR
+    seconds -= (hours * SECS_PER_HOUR)
     minutes = seconds / 60
     seconds -= (minutes * 60)
     usec = ('%.2f' % usec).lstrip('0')
-    return "%dd %02d:%02d:%02d%s" % (days, hours, minutes, seconds, usec)
+    return "%dd %02d:%02d:%02d %s" % (days, hours, minutes, seconds, usec)
 
 
 def rsp(data):
@@ -127,18 +118,21 @@ def do_uuid(request):
     return rsp(results)
 
 
+def do_timings_uuid(request):
+    uuid = request.GET['uuid']
+    return rsp(get_timings_for_uuid(uuid))
+
+
 def do_timings(request):
     name = request.GET['name']
     results = []
     results.append([name, "Time"])
     timings = models.Timing.objects.select_related().filter(name=name) \
                                  .exclude(Q(start_raw=None) | Q(end_raw=None)) \
-                                 .order_by('diff_days', 'diff_seconds',
-                                           'diff_usecs')
+                                 .order_by('diff')
 
     for t in timings:
-        seconds = seconds_from_timing(t)
-        results.append([t.lifecycle.instance, sec_to_time(seconds)])
+        results.append([t.lifecycle.instance, sec_to_time(t.diff)])
     return rsp(results)
 
 
