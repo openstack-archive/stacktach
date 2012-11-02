@@ -5,9 +5,10 @@ import time
 
 
 def dt_to_decimal(utc):
-    decimal.getcontext().prec = 6
-    return decimal.Decimal(calendar.timegm(utc.utctimetuple()) +
-                           utc.microsecond/float(1e6))
+    decimal.getcontext().prec = 30
+    return decimal.Decimal(str(calendar.timegm(utc.utctimetuple()))) + \
+           (decimal.Decimal(str(utc.microsecond)) /
+           decimal.Decimal("1000000.0"))
 
 
 def dt_from_decimal(dec):
