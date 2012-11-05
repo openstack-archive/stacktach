@@ -1,6 +1,7 @@
 {"deployments": [
     {   
         "name": "east_coast.prod.global",
+        "durable_queue": false,
         "rabbit_host": "10.0.0.1",
         "rabbit_port": 5672,
         "rabbit_userid": "rabbit",
@@ -9,6 +10,7 @@
     },
     {
         "name": "east_coast.prod.cell1",
+        "durable_queue": false,
         "rabbit_host": "10.0.1.1",
         "rabbit_port": 5672,
         "rabbit_userid": "rabbit",

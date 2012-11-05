@@ -81,6 +81,9 @@ def aggregate(raw):
     We can use this for summarized timing reports.
     """
 
+    if not raw.instance:
+        return
+
     # While we hope only one lifecycle ever exists it's quite
     # likely we get multiple due to the workers and threads.
     lifecycle = None

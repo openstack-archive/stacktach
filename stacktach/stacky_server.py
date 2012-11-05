@@ -149,14 +149,15 @@ def do_summary(request):
 
     for name in interesting:
         timings = models.Timing.objects.filter(name=name) \
-                               .exclude(Q(start_raw=None) | Q(end_raw=None))
+                               .exclude(Q(start_raw=None) | Q(end_raw=None)) \
+                               .exclude(diff__lt=0)
         if not timings:
             continue
 
         total, _min, _max = 0.0, None, None
         num = len(timings)
         for t in timings:
-            seconds = seconds_from_timing(t)
+            seconds = float(t.diff)
             total += seconds
             if _min is None:
                 _min = seconds
