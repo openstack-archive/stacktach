@@ -233,7 +233,7 @@ def details(request, deployment_id, column, row_id):
     value = getattr(row, column)
     rows = models.RawData.objects.select_related()
     if deployment_id:
-        row = row.filter(deployment=deployment_id)
+        rows = rows.filter(deployment=deployment_id)
     if column != 'when':
         rows = rows.filter(**{column:value})
     else:
