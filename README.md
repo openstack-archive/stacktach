@@ -36,6 +36,8 @@ There are two config files for StackTach. The first one tells us where the secon
 
 The `sample_stacktach_config.sh` shell script defines the necessary environment variables StackTach needs. Most of these are just information about the database (assuming MySql) but some are a little different.
 
+If your db host is not on the same machine, you'll need to set this flag. Otherwise the empty string is fine.
+
 `STACKTACH_INSTALL_DIR` should point to where StackTach is running out of. In most cases this will be your repo directory, but it could be elsewhere if your going for a proper deployment.
 The StackTach worker needs to know which RabbitMQ servers to listen to. This information is stored in the deployment file. `STACKTACH_DEPLOYMENTS_FILE` should point to this json file. To learn more about the deployments file, see further down.
 
@@ -56,6 +58,7 @@ But that's not much fun. A deployment entry would look like this:
 {"deployments": [
      {
          "name": "east_coast.prod.cell1",
+         "durable_queue": false,
          "rabbit_host": "10.0.1.1",
          "rabbit_port": 5672,
          "rabbit_userid": "rabbit",
@@ -66,6 +69,8 @@ But that's not much fun. A deployment entry would look like this:
 ```
 
 where, *name* is whatever you want to call your deployment, and *rabbit_<>* are the connectivity details for your rabbit server. It should be the same information in your `nova.conf` file that OpenStack is using. Note, json has no concept of comments, so using `#`, `//` or `/* */` as a comment won't work.
+
+By default, Nova uses emphemeral queues. If you are using durable queues, be sure to change the necessary flag here.
 
 You can add as many deployments as you like. 
 
