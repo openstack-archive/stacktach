@@ -34,18 +34,6 @@ handler = logging.handlers.TimedRotatingFileHandler('worker.log',
                                            when='h', interval=6, backupCount=4)
 LOG.addHandler(handler)
 
-nova_exchange = kombu.entity.Exchange("nova", type="topic", exclusive=False,
-                                      durable=True, auto_delete=False)
-
-nova_queues = [
-    kombu.Queue("monitor.info", nova_exchange, durable=True,
-                auto_delete=False,
-                exclusive=False, routing_key='monitor.info'),
-    kombu.Queue("monitor.error", nova_exchange, durable=True,
-                auto_delete=False,
-                exclusive=False, routing_key='monitor.error'),
-]
-
 
 class NovaConsumer(kombu.mixins.ConsumerMixin):
     def __init__(self, name, connection, deployment):
@@ -54,6 +42,20 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         self.name = name
 
     def get_consumers(self, Consumer, channel):
+        durable = self.deployment_config.get('durable_queue', True)
+        nova_exchange = kombu.entity.Exchange("nova", type="topic",
+                            exclusive=False, durable=durable, auto_delete=False)
+
+
+        nova_queues = [
+            kombu.Queue("monitor.info", nova_exchange, durable=durable,
+                        auto_delete=False,
+                        exclusive=False, routing_key='monitor.info'),
+            kombu.Queue("monitor.error", nova_exchange, durable=durable,
+                        auto_delete=False,
+                        exclusive=False, routing_key='monitor.error'),
+        ]
+
         return [Consumer(queues=nova_queues, callbacks=[self.on_nova])]
 
     def _process(self, body, message):

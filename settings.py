@@ -2,6 +2,7 @@
 import os
 
 db_name = os.environ['STACKTACH_DB_NAME']
+db_host = os.environ.get('STACKTACH_DB_HOST', "")
 db_username = os.environ['STACKTACH_DB_USERNAME']
 db_password = os.environ['STACKTACH_DB_PASSWORD']
 install_dir = os.environ['STACKTACH_INSTALL_DIR']
@@ -21,7 +22,7 @@ DATABASES = {
         'NAME': db_name,
         'USER': db_username,
         'PASSWORD': db_password,
-        'HOST': '',    # Set to empty string for localhost.
+        'HOST': db_host,    # Set to empty string for localhost.
         'PORT': '',    # Set to empty string for default.
     }
 }
