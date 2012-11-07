@@ -77,7 +77,7 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         if raw:
             self.processed += 1
 
-    self._check_memory()
+        self._check_memory()
 
     def _check_memory(self):
         if not self.pmi:
@@ -89,7 +89,7 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         check = self.last_time is None
         if self.last_time:
             diff = utc - self.last_time
-        if diff.seconds > 30:
+            if diff.seconds > 30:
                 check = True
         if check:
             self.last_time = utc
