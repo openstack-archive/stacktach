@@ -12,6 +12,13 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
 
 import worker
 
+config_filename = os.environ.get('STACKTACH_DEPLOYMENTS_FILE',
+                                 'stacktach_worker_config.json')
+try:
+    from local_settings import *
+    config_filename = STACKTACH_DEPLOYMENTS_FILE
+except ImportError:
+    pass
 
 processes = []
 
@@ -28,7 +35,6 @@ def kill_time(signal, frame):
 
 
 if __name__ == '__main__':
-    config_filename = os.environ['STACKTACH_DEPLOYMENTS_FILE']
     config = None
     with open(config_filename, "r") as f:
         config = json.load(f)
