@@ -280,7 +280,7 @@ def do_watch(request, deployment_id):
 
 
 def do_kpi(request):
-    yesterday = datetime.datetime.now() - datetime.timedelta(days=1)
+    yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
 
     events = models.RawData.objects.exclude(instance=None)  \
                                    .exclude(when__lt=yesterday) \

@@ -76,3 +76,13 @@ class Timing(models.Model):
     end_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
 
     diff = models.DecimalField(null=True, max_digits=20, decimal_places=6)
+
+
+class RequestTracker(models.Model):
+    request_id = models.CharField(max_length=50, db_index=True)
+
+
+class RequestEvents(models.Model):
+    request_tracker = models.ForeignKey(RequestTracker)
+    raw = models.ForeignKey(RawData, related_name='+')
+    when = models.DecimalField(max_digits=20, decimal_places=6)

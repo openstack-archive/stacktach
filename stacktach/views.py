@@ -74,6 +74,20 @@ HANDLERS = {'monitor.info':_monitor_message,
             '':_compute_update_message}
 
 
+def kpi(raw):
+    if raw.event == "compute.instance.update":
+        if "api" in e.host:
+            activities = instance_map.get(e.instance, [])
+            activities.append((e.request_id, e, None))
+            instance_map[e.instance] = activities
+        return
+
+    if not e.event.endswith(".end"):
+        return
+
+
+
+
 def aggregate(raw):
     """Roll up the raw event into a Lifecycle object
     and a bunch of Timing objects.
