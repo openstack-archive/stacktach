@@ -76,6 +76,8 @@ You can add as many deployments as you like.
 
 #### Starting the Worker
 
+Note: the worker now uses librabbitmq, be sure to install that first.
+
 `./worker/start_workers.py` will spawn a worker.py process for each deployment defined. Each worker will consume from a single Rabbit queue.
 
 
