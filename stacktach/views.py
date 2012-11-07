@@ -76,11 +76,10 @@ HANDLERS = {'monitor.info':_monitor_message,
 
 def kpi(raw):
     if raw.event == "compute.instance.update":
-        if "api" in e.host:
-            activities = instance_map.get(e.instance, [])
-            activities.append((e.request_id, e, None))
-            instance_map[e.instance] = activities
-        return
+        if "api" in raw.host:
+            tracker = models.RequestTracker(request_id=raw.request_id)
+            tracker.save()
+            return
 
     if not e.event.endswith(".end"):
         return
