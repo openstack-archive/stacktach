@@ -1,11 +1,20 @@
-# Django settings for stproject project.
+# Django settings for StackTach project.
 import os
 
-db_name = os.environ['STACKTACH_DB_NAME']
-db_host = os.environ.get('STACKTACH_DB_HOST', "")
-db_username = os.environ['STACKTACH_DB_USERNAME']
-db_password = os.environ['STACKTACH_DB_PASSWORD']
-install_dir = os.environ['STACKTACH_INSTALL_DIR']
+try:
+    from local_settings import *
+
+    db_name = STACKTACH_DB_NAME
+    db_host = STACKTACH_DB_HOST
+    db_username = STACKTACH_DB_USERNAME
+    db_password = STACKTACH_DB_PASSWORD
+    install_dir = STACKTACH_INSTALL_DIR
+except ImportError:
+    db_name = os.environ['STACKTACH_DB_NAME']
+    db_host = os.environ.get('STACKTACH_DB_HOST', "")
+    db_username = os.environ['STACKTACH_DB_USERNAME']
+    db_password = os.environ['STACKTACH_DB_PASSWORD']
+    install_dir = os.environ['STACKTACH_INSTALL_DIR']
 
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
