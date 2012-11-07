@@ -1,7 +1,8 @@
 # Copyright 2012 - Dark Secret Software Inc.
 
-from django.shortcuts import render_to_response
+from django import db
 from django import http
+from django.shortcuts import render_to_response
 from django import template
 
 from stacktach import models
@@ -30,7 +31,6 @@ def _monitor_message(routing_key, body):
         host = ".".join(parts[1:])
     else:
         host = None
-    #logging.error("publisher=%s, host=%s" % (publisher, host))
     payload = body['payload']
     request_spec = payload.get('request_spec', None)
 
@@ -87,7 +87,8 @@ def aggregate(raw):
     # While we hope only one lifecycle ever exists it's quite
     # likely we get multiple due to the workers and threads.
     lifecycle = None
-    lifecycles = models.Lifecycle.objects.filter(instance=raw.instance)
+    lifecycles = models.Lifecycle.objects.select_related().\
+                                    filter(instance=raw.instance)
     if len(lifecycles) > 0:
         lifecycle = lifecycles[0]
     if not lifecycle:
@@ -115,7 +116,8 @@ def aggregate(raw):
     # *shouldn't* happen).
     start = step == 'start'
     timing = None
-    timings = models.Timing.objects.filter(name=name, lifecycle=lifecycle)
+    timings = models.Timing.objects.select_related().\
+                                filter(name=name, lifecycle=lifecycle)
     if not start:
         for t in timings:
             try:
@@ -154,18 +156,21 @@ def aggregate(raw):
 
 def process_raw_data(deployment, args, json_args):
     """This is called directly by the worker to add the event to the db."""
+    db.reset_queries()
+
     routing_key, body = args
+    record = None
     handler = HANDLERS.get(routing_key, None)
     if handler:
         values = handler(routing_key, body)
         if not values:
-            return {}
+            return record
 
         values['deployment'] = deployment
         try:
             when = body['timestamp']
         except KeyError:
-            when = body['_context_timestamp'] # Old way of doing it
+            when = body['_context_timestamp']  # Old way of doing it
         try:
             try:
                 when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
@@ -181,8 +186,7 @@ def process_raw_data(deployment, args, json_args):
         record.save()
 
         aggregate(record)
-        return record
-    return None
+    return record
 
 
 def _post_process_raw_data(rows, highlight=None):
