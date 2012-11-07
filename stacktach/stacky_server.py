@@ -281,57 +281,17 @@ def do_watch(request, deployment_id):
 
 def do_kpi(request):
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
-
-    events = models.RawData.objects.exclude(instance=None)  \
-                                   .exclude(when__lt=yesterday) \
-                                   .filter(Q(event__endswith='.end') |
-                                           Q(event="compute.instance.update")) \
-                                   .only('event', 'host', 'request_id',
-                                           'instance', 'deployment') \
-                                   .order_by('when')
-
-    events = list(events)
-    instance_map = {}  # { uuid: [(request_id, start_event, end_event), ...] }
-
-    for e in events:
-        if e.event == "compute.instance.update":
-            if "api" in e.host:
-                activities = instance_map.get(e.instance, [])
-                activities.append((e.request_id, e, None))
-                instance_map[e.instance] = activities
-            continue
-
-        if not e.event.endswith(".end"):
-            continue
-
-        activities = instance_map.get(e.instance)
-        if not activities:
-            # We missed the api start, skip it
-            continue
-
-        found = False
-        for index, a in enumerate(activities):
-            request_id, start_event, end_event = a
-            #if end_event is not None:
-            #    continue
-
-            if request_id == e.request_id:
-                end_event = e
-                activities[index] = (request_id, start_event, e)
-                found = True
-                break
+    trackers = models.RequestTracker.objects.select_related() \
+                                   .exclude(last_timing=None)  \
+                                   .exclude(start__lt=yesterday) \
+                                   .order_by('duration')
 
     results = []
     results.append(["Event", "Time", "UUID", "Deployment"])
-    for uuid, activities in instance_map.iteritems():
-        for request_id, start_event, end_event in activities:
-            if not end_event:
-                continue
-            event = end_event.event[:-len(".end")]
-            start = dt.dt_from_decimal(start_event.when)
-            end = dt.dt_from_decimal(end_event.when)
-            diff = end - start
-            results.append([event, sec_to_time(seconds_from_timedelta(
-                       diff.days, diff.seconds, diff.microseconds)), uuid,
-                       end_event.deployment.name])
+    for track in trackers:
+        end_event = track.last_timing.end_raw
+        event = end_event.event[:-len(".end")]
+        uuid = track.lifecycle.instance
+        results.append([event, sec_to_time(track.duration),
+                   uuid, end_event.deployment.name])
     return rsp(results)
