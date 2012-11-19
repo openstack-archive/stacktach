@@ -81,7 +81,8 @@ class Timing(models.Model):
     start_raw = models.ForeignKey(RawData, related_name='+', null=True)
     end_raw = models.ForeignKey(RawData, related_name='+', null=True)
 
-    start_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
+    start_when = models.DecimalField(null=True, max_digits=20,
+                                     decimal_places=6)
     end_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
 
     diff = models.DecimalField(null=True, max_digits=20, decimal_places=6)
@@ -93,7 +94,7 @@ class RequestTracker(models.Model):
     final .end event (with the same Request ID)."""
     request_id = models.CharField(max_length=50, db_index=True)
     lifecycle = models.ForeignKey(Lifecycle)
-    last_timing = models.ForeignKey(Timing, null=true)
+    last_timing = models.ForeignKey(Timing, null=True)
     start = models.DecimalField(max_digits=20, decimal_places=6)
     duration = models.DecimalField(max_digits=20, decimal_places=6)
 

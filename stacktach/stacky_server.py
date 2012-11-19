@@ -281,6 +281,7 @@ def do_watch(request, deployment_id):
 
 def do_kpi(request):
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+    yesterday = dt.dt_to_decimal(yesterday)
     trackers = models.RequestTracker.objects.select_related() \
                                    .exclude(last_timing=None)  \
                                    .exclude(start__lt=yesterday) \
