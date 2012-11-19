@@ -74,11 +74,52 @@ HANDLERS = {'monitor.info':_monitor_message,
             '':_compute_update_message}
 
 
+def start_kpi_tracking(lifecycle, raw):
+    """Start the clock for kpi timings when we see an instance.update
+    coming in from an api node."""
+    if raw.event != "compute.instance.update":
+        return
+
+    if "api" not in raw.host:
+        return
+
+    tracker = models.RequestTracker(request_id=raw.request_id,
+                                    start=raw.when,
+                                    lifecycle=lifecycle,
+                                    last_timing=None,
+                                    duration=0.0)
+    tracker.save()
+
+
+def update_kpi(lifecycle, timing, raw):
+    """Whenever we get a .end event, use the Timing object to
+    compute our current end-to-end duration.
+
+    Note: it may not be completely accurate if the operation is
+    still in-process, but we have no way of knowing it's still
+    in-process without mapping the original command with the
+    expected .end event (that's a whole other thing)
+
+    Until then, we'll take the lazy route and be aware of these
+    potential fence-post issues."""
+    trackers = models.RequestTracker.objects.filter(request_id=raw.request.id)
+    if len(trackers) == 0:
+        return
+
+    tracker = trackers[0]
+    tracker.last_timing = timing
+    tracker.duration = timing.end_when - tracker.start
+    tracker.save()
+
+
 def aggregate(raw):
     """Roll up the raw event into a Lifecycle object
     and a bunch of Timing objects.
 
     We can use this for summarized timing reports.
+
+    Additionally, we can use this processing to give
+    us end-to-end user request timings for kpi reports.
     """
 
     if not raw.instance:
@@ -104,6 +145,8 @@ def aggregate(raw):
     name = '.'.join(parts[:-1])
 
     if not step in ['start', 'end']:
+        # Perhaps it's an operation initiated in the API?
+        start_kpi_tracking(lifecyle, raw)
         return
 
     # We are going to try to track every event pair that comes
@@ -151,8 +194,9 @@ def aggregate(raw):
         # We could have missed start so watch out ...
         if timing.start_when:
             timing.diff = timing.end_when - timing.start_when
+            # Looks like a valid pair ...
+            update_kpi(lifecycle, timing, raw)
     timing.save()
-
 
 def process_raw_data(deployment, args, json_args):
     """This is called directly by the worker to add the event to the db."""

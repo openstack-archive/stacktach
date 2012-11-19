@@ -57,6 +57,12 @@ class RawData(models.Model):
 
 
 class Lifecycle(models.Model):
+    """The Lifecycle table is the Master for a group of
+    Timing detail records. There is one Lifecycle row for
+    each instance seen in the event stream. The Timings
+    relate to the execution time for each .start/.end event
+    pair for this instance. These pairs are over the entire
+    lifespan of the instance, even across multiple api requests."""
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
     last_state = models.CharField(max_length=50, null=True,
@@ -67,6 +73,9 @@ class Lifecycle(models.Model):
 
 
 class Timing(models.Model):
+    """Each Timing record corresponds to a .start/.end event pair
+    for an instance. It tracks how long it took this operation
+    to execute."""
     name = models.CharField(max_length=50, db_index=True)
     lifecycle = models.ForeignKey(Lifecycle)
     start_raw = models.ForeignKey(RawData, related_name='+', null=True)
@@ -76,3 +85,17 @@ class Timing(models.Model):
     end_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
 
     diff = models.DecimalField(null=True, max_digits=20, decimal_places=6)
+
+
+class RequestTracker(models.Model):
+    """The RequestTracker table tracks the elapsed time of a user
+    request from the time it hits the API node to the time of the
+    final .end event (with the same Request ID)."""
+    request_id = models.CharField(max_length=50, db_index=True)
+    lifecycle = models.ForeignKey(Lifecycle)
+    last_timing = models.ForeignKey(Timing, null=true)
+    start = models.DecimalField(max_digits=20, decimal_places=6)
+    duration = models.DecimalField(max_digits=20, decimal_places=6)
+
+    # Not used ... but soon hopefully.
+    completed = models.BooleanField(default=False)
