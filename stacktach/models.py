@@ -18,7 +18,7 @@ from django.db import models
 
 
 class Deployment(models.Model):
-    name = models.CharField(max_length=50)
+    name = models.CharField(max_length=50, db_index=True)
 
 
 def get_or_create_deployment(name):

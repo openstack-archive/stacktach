@@ -16,7 +16,7 @@ except ImportError:
     db_password = os.environ['STACKTACH_DB_PASSWORD']
     install_dir = os.environ['STACKTACH_INSTALL_DIR']
 
-DEBUG = False
+DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (

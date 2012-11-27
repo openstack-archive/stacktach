@@ -67,7 +67,7 @@ def sec_to_time(diff):
     seconds -= (hours * SECS_PER_HOUR)
     minutes = seconds / 60
     seconds -= (minutes * 60)
-    usec = ('%.2f' % usec).lstrip('0')
+    usec = str(usec)[1:4]
     return "%dd %02d:%02d:%02d%s" % (days, hours, minutes, seconds, usec)
 
 
@@ -279,7 +279,7 @@ def do_watch(request, deployment_id):
     return rsp([c, results, str(dec_now)])
 
 
-def do_kpi(request):
+def do_kpi(request, tenant_id=None):
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     yesterday = dt.dt_to_decimal(yesterday)
     trackers = models.RequestTracker.objects.select_related() \
@@ -293,6 +293,7 @@ def do_kpi(request):
         end_event = track.last_timing.end_raw
         event = end_event.event[:-len(".end")]
         uuid = track.lifecycle.instance
-        results.append([event, sec_to_time(track.duration),
+        if tenant_id == None or (tenant_id == end_event.tenant):
+            results.append([event, sec_to_time(track.duration),
                    uuid, end_event.deployment.name])
     return rsp(results)
