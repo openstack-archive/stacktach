@@ -17,6 +17,7 @@ urlpatterns = patterns('',
     url(r'stacky/watch/(?P<deployment_id>\d+)/$',
                                         'stacktach.stacky_server.do_watch'),
     url(r'stacky/kpi/$', 'stacktach.stacky_server.do_kpi'),
+    url(r'stacky/kpi/(?P<tenant_id>\d+)/$', 'stacktach.stacky_server.do_kpi'),
 
     url(r'^(?P<deployment_id>\d+)/$', 'stacktach.views.home', name='home'),
     url(r'^(?P<deployment_id>\d+)/details/(?P<column>\w+)/(?P<row_id>\d+)/$',
