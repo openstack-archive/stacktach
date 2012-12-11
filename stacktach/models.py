@@ -96,8 +96,8 @@ class RequestTracker(models.Model):
     final .end event (with the same Request ID)."""
     request_id = models.CharField(max_length=50, db_index=True)
     lifecycle = models.ForeignKey(Lifecycle)
-    last_timing = models.ForeignKey(Timing, null=True)
-    start = models.DecimalField(max_digits=20, decimal_places=6)
+    last_timing = models.ForeignKey(Timing, null=True, db_index=True)
+    start = models.DecimalField(max_digits=20, decimal_places=6, db_index=True)
     duration = models.DecimalField(max_digits=20, decimal_places=6,
                                    db_index=True)
 
