@@ -86,7 +86,8 @@ class Timing(models.Model):
                                      decimal_places=6)
     end_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
 
-    diff = models.DecimalField(null=True, max_digits=20, decimal_places=6)
+    diff = models.DecimalField(null=True, max_digits=20, decimal_places=6,
+                               db_index=True)
 
 
 class RequestTracker(models.Model):
@@ -97,7 +98,8 @@ class RequestTracker(models.Model):
     lifecycle = models.ForeignKey(Lifecycle)
     last_timing = models.ForeignKey(Timing, null=True)
     start = models.DecimalField(max_digits=20, decimal_places=6)
-    duration = models.DecimalField(max_digits=20, decimal_places=6)
+    duration = models.DecimalField(max_digits=20, decimal_places=6,
+                                   db_index=True)
 
     # Not used ... but soon hopefully.
-    completed = models.BooleanField(default=False)
+    completed = models.BooleanField(default=False, db_index=True)
