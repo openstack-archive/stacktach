@@ -87,7 +87,7 @@ def start_kpi_tracking(lifecycle, raw):
                                     start=raw.when,
                                     lifecycle=lifecycle,
                                     last_timing=None,
-                                    duration=0.0)
+                                    duration=str(0.0))
     tracker.save()
 
 
@@ -102,7 +102,8 @@ def update_kpi(lifecycle, timing, raw):
 
     Until then, we'll take the lazy route and be aware of these
     potential fence-post issues."""
-    trackers = models.RequestTracker.objects.filter(request_id=raw.request.id)
+    trackers = models.RequestTracker.objects.\
+                                        filter(request_id=raw.request_id)
     if len(trackers) == 0:
         return
 
@@ -146,7 +147,7 @@ def aggregate(raw):
 
     if not step in ['start', 'end']:
         # Perhaps it's an operation initiated in the API?
-        start_kpi_tracking(lifecyle, raw)
+        start_kpi_tracking(lifecycle, raw)
         return
 
     # We are going to try to track every event pair that comes
@@ -313,7 +314,9 @@ def latest_raw(request, deployment_id):
     """This is the 2sec ticker that updates the Recent Activity box."""
     deployment_id = int(deployment_id)
     c = _default_context(request, deployment_id)
-    query = models.RawData.objects.select_related()
+    then = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+    thend = dt.dt_to_decimal(then)
+    query = models.RawData.objects.select_related().filter(when__gt=thend)
     if deployment_id > 0:
         query = query.filter(deployment=deployment_id)
     rows = query.order_by('-when')[:20]

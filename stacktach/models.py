@@ -38,7 +38,8 @@ class RawData(models.Model):
                              blank=True, db_index=True)
     old_task = models.CharField(max_length=30, null=True,
                              blank=True, db_index=True)
-    when = models.DecimalField(max_digits=20, decimal_places=6)
+    when = models.DecimalField(max_digits=20, decimal_places=6,
+                                               db_index=True)
     publisher = models.CharField(max_length=100, null=True,
                                  blank=True, db_index=True)
     event = models.CharField(max_length=50, null=True,
@@ -81,10 +82,12 @@ class Timing(models.Model):
     start_raw = models.ForeignKey(RawData, related_name='+', null=True)
     end_raw = models.ForeignKey(RawData, related_name='+', null=True)
 
-    start_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
+    start_when = models.DecimalField(null=True, max_digits=20,
+                                     decimal_places=6)
     end_when = models.DecimalField(null=True, max_digits=20, decimal_places=6)
 
-    diff = models.DecimalField(null=True, max_digits=20, decimal_places=6)
+    diff = models.DecimalField(null=True, max_digits=20, decimal_places=6,
+                               db_index=True)
 
 
 class RequestTracker(models.Model):
@@ -93,9 +96,10 @@ class RequestTracker(models.Model):
     final .end event (with the same Request ID)."""
     request_id = models.CharField(max_length=50, db_index=True)
     lifecycle = models.ForeignKey(Lifecycle)
-    last_timing = models.ForeignKey(Timing, null=true)
-    start = models.DecimalField(max_digits=20, decimal_places=6)
-    duration = models.DecimalField(max_digits=20, decimal_places=6)
+    last_timing = models.ForeignKey(Timing, null=True, db_index=True)
+    start = models.DecimalField(max_digits=20, decimal_places=6, db_index=True)
+    duration = models.DecimalField(max_digits=20, decimal_places=6,
+                                   db_index=True)
 
     # Not used ... but soon hopefully.
-    completed = models.BooleanField(default=False)
+    completed = models.BooleanField(default=False, db_index=True)
