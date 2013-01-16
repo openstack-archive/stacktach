@@ -1,6 +1,6 @@
 #!/bin/bash
 
-WORKDIR=/srv/www/stacktach/app
+WORKDIR=/root/stacktach
 DAEMON=/usr/bin/python
 ARGS=$WORKDIR/worker/start_workers.py
 PIDFILE=/var/run/stacktach.pid

@@ -73,6 +73,43 @@ class Lifecycle(models.Model):
     last_raw = models.ForeignKey(RawData, null=True)
 
 
+class InstanceUsage(models.Model):
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    launched_at = models.IntegerField(null=True, db_index=True)
+    deleted_at = models.IntegerField(null=True, db_index=True)
+    request_id =  models.CharField(max_length=50, null=True,
+                                   blank=True, db_index=True)
+    instance_type_id =  models.CharField(max_length=50,
+                                         null=True,
+                                         blank=True,
+                                         db_index=True)
+class InstanceExists(models.Model):
+    PENDING = 'pending'
+    VERIFIED = 'verified'
+    FAILED = 'failed'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending Verification'),
+        (VERIFIED, 'Passed Verification'),
+        (FAILED, 'Failed Verification'),
+    ]
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    launched_at = models.IntegerField(null=True, db_index=True)
+    deleted_at = models.IntegerField(null=True, db_index=True)
+    message_id =  models.CharField(max_length=50, null=True,
+                                   blank=True, db_index=True)
+    instance_type_id =  models.CharField(max_length=50,
+                                         null=True,
+                                         blank=True,
+                                         db_index=True)
+    status = models.CharField(max_length=50, db_index=True,
+                              choices=STATUS_CHOICES,
+                              default=PENDING)
+    raw = models.ForeignKey(RawData, related_name='+', null=True)
+    usage = models.ForeignKey(InstanceUsage, related_name='+', null=True)
+
+
 class Timing(models.Model):
     """Each Timing record corresponds to a .start/.end event pair
     for an instance. It tracks how long it took this operation

@@ -199,6 +199,111 @@ def aggregate(raw):
             update_kpi(lifecycle, timing, raw)
     timing.save()
 
+def process_for_usage(raw):
+    if not raw.instance:
+        return
+    
+    notif = json.loads(raw.json)
+
+    print raw.event
+
+    if raw.event == 'compute.instance.create.start':
+        values = {}
+        values['instance'] = notif[1]['payload']['instance_id']
+        values['request_id'] = notif[1]['_context_request_id']
+        values['instance_type_id'] = notif[1]['payload']['instance_type_id']
+        usage = models.InstanceUsage(**values)
+        usage.save()
+    elif raw.event == 'compute.instance.resize.prep.start':
+        values = {}
+        values['instance'] = notif[1]['payload']['instance_id']
+        values['request_id'] = notif[1]['_context_request_id']
+        usage = models.InstanceUsage(**values)
+        usage.save()
+    elif raw.event == 'compute.instance.resize.revert.start':
+        values = {}
+        values['instance'] = notif[1]['payload']['instance_id']
+        values['request_id'] = notif[1]['_context_request_id']
+        usage = models.InstanceUsage(**values)
+        usage.save()
+    elif raw.event == 'compute.instance.create.end':
+        instance_id = notif[1]['payload']['instance_id']
+        request_id = notif[1]['_context_request_id']
+        instance = models.InstanceUsage.objects.get(instance=instance_id,
+                                                    request_id=request_id)
+        instance.launched_at = str_time_to_unix(notif[1]['payload']['launched_at'])
+        instance.save()
+    elif raw.event == 'compute.instance.resize.prep.end':
+        instance_id = notif[1]['payload']['instance_id']
+        request_id = notif[1]['_context_request_id']
+        instance = models.InstanceUsage.objects.get(instance=instance_id,
+                                                    request_id=request_id)
+        instance.instance_type_id = notif[1]['payload']['new_instance_type_id']
+        instance.save()
+    elif raw.event == 'compute.instance.finish_resize.end':
+        instance_id = notif[1]['payload']['instance_id']
+        request_id = notif[1]['_context_request_id']
+        instance = models.InstanceUsage.objects.get(instance=instance_id,
+                                                    request_id=request_id)
+        instance.launched_at = str_time_to_unix(notif[1]['payload']['launched_at'])
+        instance.save()
+    elif raw.event == 'compute.instance.resize.revert.end':
+        instance_id = notif[1]['payload']['instance_id']
+        request_id = notif[1]['_context_request_id']
+        instance = models.InstanceUsage.objects.get(instance=instance_id,
+                                                    request_id=request_id)
+        instance.launched_at = str_time_to_unix(notif[1]['payload']['launched_at'])
+        instance.instance_type_id = notif[1]['payload']['instance_type_id']
+        instance.save()
+    elif raw.event == 'compute.instance.delete.end':
+        instance_id = notif[1]['payload']['instance_id']
+        launched_at = notif[1]['payload']['launched_at']
+        launched_at = str_time_to_unix(launched_at)
+        instance = models.InstanceUsage.objects.get(instance=instance_id,
+                                                    launched_at=launched_at)
+        instance.deleted_at = str_time_to_unix(notif[1]['payload']['deleted_at'])
+        instance.save()
+    elif raw.event == 'compute.instance.exists':
+        payload = notif[1]['payload']
+        instance_id = payload['instance_id']
+        launched_at = payload['launched_at']
+        launched_at = str_time_to_unix(launched_at)
+        usage = models.InstanceUsage.objects.get(instance=instance_id,
+                                                    launched_at=launched_at)
+        values = {}
+        values['message_id'] = notif[1]['message_id']
+        values['instance'] = instance_id
+        values['launched_at'] = launched_at
+        values['instance_type_id'] = payload['instance_type_id']
+        
+        deleted_at = payload.get('deleted_at')
+        if deleted_at and deleted_at != '':
+            deleted_at = str_time_to_unix(deleted_at)
+            values['deleted_at'] = deleted_at
+        
+        exists = models.InstanceExists(**values)
+        exists.usage = usage
+        exists.raw = raw
+        exists.save()
+
+
+        """if payload['instance_type_id'] != int(instance.instance_type_id):
+            print '%s alarm (%s != %s)' % (instance_id, payload['instance_type_id'], instance.instance_type_id)
+        else:
+            print '%s verified' % instance_id"""
+
+def str_time_to_unix(when):
+    try:
+        try:
+            when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
+        except ValueError:
+            # Old way of doing it
+            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+    except Exception, e:
+        pass
+    return dt.dt_to_decimal(when)
+
+
 def process_raw_data(deployment, args, json_args):
     """This is called directly by the worker to add the event to the db."""
     db.reset_queries()
@@ -231,6 +336,7 @@ def process_raw_data(deployment, args, json_args):
         record.save()
 
         aggregate(record)
+        process_for_usage(record)
     return record
 
 
