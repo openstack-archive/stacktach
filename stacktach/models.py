@@ -54,7 +54,7 @@ class RawData(models.Model):
                                 blank=True, db_index=True)
 
     def __repr__(self):
-        return self.event
+        return "%s %s %s" % (self.event, self.instance, self.state)
 
 
 class Lifecycle(models.Model):

@@ -113,7 +113,7 @@ def update_kpi(lifecycle, timing, raw):
     tracker.save()
 
 
-def aggregate(raw):
+def aggregate_lifecycle(raw):
     """Roll up the raw event into a Lifecycle object
     and a bunch of Timing objects.
 
@@ -211,10 +211,10 @@ INSTANCE_EVENT = {
     'exists': 'compute.instance.exists',
 }
 
-def process_for_usage(raw):
+def aggregate_usage(raw):
     if not raw.instance:
         return
-    
+
     if raw.event == INSTANCE_EVENT['create_start'] or \
             raw.event == INSTANCE_EVENT['resize_prep_start'] or\
             raw.event == INSTANCE_EVENT['resize_revert_start']:
@@ -239,10 +239,10 @@ def _process_usage_for_new_launch(raw):
     values = {}
     values['instance'] = payload['instance_id']
     values['request_id'] = notif[1]['_context_request_id']
-    
+
     if raw.event == INSTANCE_EVENT['create_start']:
         values['instance_type_id'] = payload['instance_type_id']
-    
+
     usage = models.InstanceUsage(**values)
     usage.save()
 
@@ -259,10 +259,10 @@ def _process_usage_for_updates(raw):
             raw.event == INSTANCE_EVENT['resize_finish_end'] or\
             raw.event == INSTANCE_EVENT['resize_revert_end']:
         instance.launched_at = str_time_to_unix(payload['launched_at'])
-    
+
     if raw.event == INSTANCE_EVENT['resize_revert_end']:
         instance.instance_type_id = payload['instance_type_id']
-    elif raw.event == INSTANCE_EVENT['resize_prep_end']: 
+    elif raw.event == INSTANCE_EVENT['resize_prep_end']:
         instance.instance_type_id = payload['new_instance_type_id']
 
     instance.save()
@@ -293,14 +293,14 @@ def _process_exists(raw):
     values['instance'] = instance_id
     values['launched_at'] = launched_at
     values['instance_type_id'] = payload['instance_type_id']
-    
+
     values['usage'] = usage
     values['raw'] = raw
     deleted_at = payload.get('deleted_at')
     if deleted_at and deleted_at != '':
         deleted_at = str_time_to_unix(deleted_at)
         values['deleted_at'] = deleted_at
-    
+
     exists = models.InstanceExists(**values)
     exists.save()
 
@@ -348,8 +348,8 @@ def process_raw_data(deployment, args, json_args):
         record = models.RawData(**values)
         record.save()
 
-        aggregate(record)
-        process_for_usage(record)
+        aggregate_lifecycle(record)
+        aggregate_usage(record)
     return record
 
 

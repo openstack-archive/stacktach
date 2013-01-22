@@ -4,12 +4,16 @@ import os
 try:
     from local_settings import *
 
+    db_engine = STACKTACH_DB_ENGINE
     db_name = STACKTACH_DB_NAME
     db_host = STACKTACH_DB_HOST
     db_username = STACKTACH_DB_USERNAME
     db_password = STACKTACH_DB_PASSWORD
     install_dir = STACKTACH_INSTALL_DIR
 except ImportError:
+    db_engine = os.environ.get('STACKTACH_DB_ENGINE',
+                               'django.db.backends.mysql')
+    db_host = os.environ.get('STACKTACH_DB_HOST', "")
     db_name = os.environ['STACKTACH_DB_NAME']
     db_host = os.environ.get('STACKTACH_DB_HOST', "")
     db_username = os.environ['STACKTACH_DB_USERNAME']
@@ -27,7 +31,7 @@ MANAGERS = ADMINS
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
+        'ENGINE': db_engine,
         'NAME': db_name,
         'USER': db_username,
         'PASSWORD': db_password,
@@ -88,7 +92,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    ['/root/stacktach/static/',]
+    [install_dir + 'static/',]
 )
 
 # List of finder classes that know how to find static files in

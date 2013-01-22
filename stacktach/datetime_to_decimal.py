@@ -17,13 +17,3 @@ def dt_from_decimal(dec):
 
     daittyme = datetime.datetime.utcfromtimestamp(integer)
     return daittyme.replace(microsecond=micro)
-
-
-if __name__ == '__main__':
-    now = datetime.datetime.utcnow()
-    d = dt_to_decimal(now)
-    daittyme = dt_from_decimal(d)
-    print repr(now)
-    print repr(d)
-    print repr(daittyme)
-    assert(now == daittyme)
