@@ -235,9 +235,9 @@ def _process_usage_for_updates(raw):
     instance = models.InstanceUsage.objects.get(instance=instance_id,
         request_id=request_id)
 
-    if raw.event == INSTANCE_EVENT['create_end'] or\
-            raw.event == INSTANCE_EVENT['resize_finish_end'] or\
-            raw.event == INSTANCE_EVENT['resize_revert_end']:
+    if raw.event in [INSTANCE_EVENT['create_end'],
+                     INSTANCE_EVENT['resize_finish_end'],
+                     INSTANCE_EVENT['resize_revert_end']]:
         instance.launched_at = str_time_to_unix(payload['launched_at'])
 
     if raw.event == INSTANCE_EVENT['resize_revert_end']:
