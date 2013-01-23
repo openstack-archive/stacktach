@@ -5,12 +5,16 @@ from django import http
 from django.shortcuts import render_to_response
 from django import template
 
+from stacktach import db as stackdb
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
 
 import datetime
 import json
 import pprint
+
+
+STACKDB = stackdb
 
 
 def _extract_states(payload):
@@ -129,16 +133,15 @@ def aggregate_lifecycle(raw):
     # While we hope only one lifecycle ever exists it's quite
     # likely we get multiple due to the workers and threads.
     lifecycle = None
-    lifecycles = models.Lifecycle.objects.select_related().\
-                                    filter(instance=raw.instance)
+    lifecycles = STACKDB.find_lifecycles(instance=raw.instance)
     if len(lifecycles) > 0:
         lifecycle = lifecycles[0]
     if not lifecycle:
-        lifecycle = models.Lifecycle(instance=raw.instance)
+        lifecycle = STACKDB.create_lifecycle(instance=raw.instance)
     lifecycle.last_raw = raw
     lifecycle.last_state = raw.state
     lifecycle.last_task_state = raw.old_task
-    lifecycle.save()
+    STACKDB.save(lifecycle)
 
     event = raw.event
     parts = event.split('.')
@@ -160,8 +163,7 @@ def aggregate_lifecycle(raw):
     # *shouldn't* happen).
     start = step == 'start'
     timing = None
-    timings = models.Timing.objects.select_related().\
-                                filter(name=name, lifecycle=lifecycle)
+    timings = STACKDB.find_timings(name=name, lifecycle=lifecycle)
     if not start:
         for t in timings:
             try:
@@ -173,7 +175,7 @@ def aggregate_lifecycle(raw):
                 pass
 
     if timing is None:
-        timing = models.Timing(name=name, lifecycle=lifecycle)
+        timing = STACKDB.create_timing(name=name, lifecycle=lifecycle)
 
     if start:
         timing.start_raw = raw
@@ -197,7 +199,7 @@ def aggregate_lifecycle(raw):
             timing.diff = timing.end_when - timing.start_when
             # Looks like a valid pair ...
             update_kpi(lifecycle, timing, raw)
-    timing.save()
+    STACKDB.save(timing)
 
 
 INSTANCE_EVENT = {

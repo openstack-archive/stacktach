@@ -603,6 +603,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         self.assertEqual(exists.deleted_at, deleted)
         self.assertEqual(exists.instance_type_id, '1')
 
+
 class ViewsUsageWorkflowTestCase(unittest.TestCase):
     def setUp(self):
         self.deployment = Deployment(name='TestDeployment')
