@@ -199,6 +199,7 @@ def aggregate_lifecycle(raw):
             update_kpi(lifecycle, timing, raw)
     timing.save()
 
+
 INSTANCE_EVENT = {
     'create_start': 'compute.instance.create.start',
     'create_end': 'compute.instance.create.end',
@@ -210,27 +211,6 @@ INSTANCE_EVENT = {
     'delete_end': 'compute.instance.delete.end',
     'exists': 'compute.instance.exists',
 }
-
-def aggregate_usage(raw):
-    if not raw.instance:
-        return
-
-    if raw.event == INSTANCE_EVENT['create_start'] or \
-            raw.event == INSTANCE_EVENT['resize_prep_start'] or\
-            raw.event == INSTANCE_EVENT['resize_revert_start']:
-        _process_usage_for_new_launch(raw)
-
-    elif raw.event == INSTANCE_EVENT['create_end'] or\
-            raw.event == INSTANCE_EVENT['resize_prep_end'] or\
-            raw.event == INSTANCE_EVENT['resize_finish_end'] or\
-            raw.event == INSTANCE_EVENT['resize_revert_end']:
-        _process_usage_for_updates(raw)
-
-    elif raw.event == INSTANCE_EVENT['delete_end']:
-        _process_delete(raw)
-
-    elif raw.event == INSTANCE_EVENT['exists']:
-        _process_exists(raw)
 
 
 def _process_usage_for_new_launch(raw):
@@ -253,7 +233,7 @@ def _process_usage_for_updates(raw):
     instance_id = payload['instance_id']
     request_id = notif[1]['_context_request_id']
     instance = models.InstanceUsage.objects.get(instance=instance_id,
-                                                request_id=request_id)
+        request_id=request_id)
 
     if raw.event == INSTANCE_EVENT['create_end'] or\
             raw.event == INSTANCE_EVENT['resize_finish_end'] or\
@@ -287,7 +267,7 @@ def _process_exists(raw):
     launched_at = payload['launched_at']
     launched_at = str_time_to_unix(launched_at)
     usage = models.InstanceUsage.objects.get(instance=instance_id,
-                                                launched_at=launched_at)
+                                             launched_at=launched_at)
     values = {}
     values['message_id'] = notif[1]['message_id']
     values['instance'] = instance_id
@@ -303,6 +283,27 @@ def _process_exists(raw):
 
     exists = models.InstanceExists(**values)
     exists.save()
+
+
+USAGE_PROCESS_MAPPING = {
+    INSTANCE_EVENT['create_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['resize_prep_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['resize_revert_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['create_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['resize_prep_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['delete_end']: _process_delete,
+    INSTANCE_EVENT['exists']: _process_exists,
+} 
+
+
+def aggregate_usage(raw):
+    if not raw.instance:
+        return
+
+    if raw.event in USAGE_PROCESS_MAPPING:
+        USAGE_PROCESS_MAPPING[raw.event](raw)
 
 
 def str_time_to_unix(when):
