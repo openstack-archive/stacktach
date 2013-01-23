@@ -13,14 +13,13 @@ try:
 except ImportError:
     db_engine = os.environ.get('STACKTACH_DB_ENGINE',
                                'django.db.backends.mysql')
-    db_host = os.environ.get('STACKTACH_DB_HOST', "")
     db_name = os.environ['STACKTACH_DB_NAME']
     db_host = os.environ.get('STACKTACH_DB_HOST', "")
     db_username = os.environ['STACKTACH_DB_USERNAME']
     db_password = os.environ['STACKTACH_DB_PASSWORD']
     install_dir = os.environ['STACKTACH_INSTALL_DIR']
 
-DEBUG = True
+DEBUG = False
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
@@ -92,7 +91,7 @@ STATICFILES_DIRS = (
     # Put strings here, like "/home/html/static" or "C:/www/django/static".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
-    [install_dir + 'static/',]
+    [install_dir + "static",]
 )
 
 # List of finder classes that know how to find static files in
