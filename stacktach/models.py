@@ -76,8 +76,12 @@ class Lifecycle(models.Model):
 class InstanceUsage(models.Model):
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
-    launched_at = models.IntegerField(null=True, db_index=True)
-    deleted_at = models.IntegerField(null=True, db_index=True)
+    #launched_at = models.IntegerField(null=True, db_index=True)
+    launched_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6)
+    #deleted_at = models.IntegerField(null=True, db_index=True)
+    deleted_at = models.DecimalField(null=True, max_digits=20,
+                                     decimal_places=6)
     request_id =  models.CharField(max_length=50, null=True,
                                    blank=True, db_index=True)
     instance_type_id =  models.CharField(max_length=50,
@@ -95,8 +99,12 @@ class InstanceExists(models.Model):
     ]
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
-    launched_at = models.IntegerField(null=True, db_index=True)
-    deleted_at = models.IntegerField(null=True, db_index=True)
+    #launched_at = models.IntegerField(null=True, db_index=True)
+    launched_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6)
+    #deleted_at = models.IntegerField(null=True, db_index=True)
+    deleted_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6)
     message_id =  models.CharField(max_length=50, null=True,
                                    blank=True, db_index=True)
     instance_type_id =  models.CharField(max_length=50,

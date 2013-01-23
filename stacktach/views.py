@@ -293,9 +293,9 @@ def _process_exists(raw):
     values['instance'] = instance_id
     values['launched_at'] = launched_at
     values['instance_type_id'] = payload['instance_type_id']
-
     values['usage'] = usage
     values['raw'] = raw
+
     deleted_at = payload.get('deleted_at')
     if deleted_at and deleted_at != '':
         deleted_at = str_time_to_unix(deleted_at)
