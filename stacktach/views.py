@@ -224,8 +224,8 @@ def _process_usage_for_new_launch(raw):
     if raw.event == INSTANCE_EVENT['create_start']:
         values['instance_type_id'] = payload['instance_type_id']
 
-    usage = models.InstanceUsage(**values)
-    usage.save()
+    usage = STACKDB.create_instance_usage(**values)
+    STACKDB.save(usage)
 
 
 def _process_usage_for_updates(raw):
@@ -233,20 +233,20 @@ def _process_usage_for_updates(raw):
     payload = notif[1]['payload']
     instance_id = payload['instance_id']
     request_id = notif[1]['_context_request_id']
-    instance = models.InstanceUsage.objects.get(instance=instance_id,
-        request_id=request_id)
+    usage = STACKDB.get_instance_usage(instance=instance_id,
+                                          request_id=request_id)
 
     if raw.event in [INSTANCE_EVENT['create_end'],
                      INSTANCE_EVENT['resize_finish_end'],
                      INSTANCE_EVENT['resize_revert_end']]:
-        instance.launched_at = str_time_to_unix(payload['launched_at'])
+        usage.launched_at = str_time_to_unix(payload['launched_at'])
 
     if raw.event == INSTANCE_EVENT['resize_revert_end']:
-        instance.instance_type_id = payload['instance_type_id']
+        usage.instance_type_id = payload['instance_type_id']
     elif raw.event == INSTANCE_EVENT['resize_prep_end']:
-        instance.instance_type_id = payload['new_instance_type_id']
+        usage.instance_type_id = payload['new_instance_type_id']
 
-    instance.save()
+    STACKDB.save(usage)
 
 
 def _process_delete(raw):
@@ -255,10 +255,10 @@ def _process_delete(raw):
     instance_id = payload['instance_id']
     launched_at = payload['launched_at']
     launched_at = str_time_to_unix(launched_at)
-    instance = models.InstanceUsage.objects.get(instance=instance_id,
+    instance = STACKDB.get_instance_usage(instance=instance_id,
                                                 launched_at=launched_at)
     instance.deleted_at = str_time_to_unix(payload['deleted_at'])
-    instance.save()
+    STACKDB.save(instance)
 
 
 def _process_exists(raw):
@@ -267,8 +267,8 @@ def _process_exists(raw):
     instance_id = payload['instance_id']
     launched_at = payload['launched_at']
     launched_at = str_time_to_unix(launched_at)
-    usage = models.InstanceUsage.objects.get(instance=instance_id,
-                                             launched_at=launched_at)
+    usage = STACKDB.get_instance_usage(instance=instance_id,
+                                       launched_at=launched_at)
     values = {}
     values['message_id'] = notif[1]['message_id']
     values['instance'] = instance_id
@@ -282,8 +282,8 @@ def _process_exists(raw):
         deleted_at = str_time_to_unix(deleted_at)
         values['deleted_at'] = deleted_at
 
-    exists = models.InstanceExists(**values)
-    exists.save()
+    exists = STACKDB.create_instance_exists(**values)
+    STACKDB.save(exists)
 
 
 USAGE_PROCESS_MAPPING = {

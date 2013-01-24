@@ -18,5 +18,14 @@ def create_request_tracker(**kwargs):
 def find_request_trackers(**kwargs):
     return models.RequestTracker.objects.filter(**kwargs)
 
+def create_instance_usage(**kwargs):
+    return models.InstanceUsage(**kwargs)
+
+def get_instance_usage(**kwargs):
+    return models.InstanceUsage.objects.get(**kwargs)
+
+def create_instance_exists(**kwargs):
+    return models.InstanceExists(**kwargs)
+
 def save(obj):
     obj.save()
