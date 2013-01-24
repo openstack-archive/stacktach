@@ -5,14 +5,16 @@ import unittest
 
 import mox
 
-INSTANCE_ID_1 = 'testinstanceid1'
-INSTANCE_ID_2 = 'testinstanceid2'
-
-os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
-sys.path = [os.path.abspath(os.path.dirname('stacktach'))] + sys.path
-
+import utils
+utils.setup_sys_path()
+from utils import INSTANCE_ID_1
+from utils import INSTANCE_ID_2
+from utils import MESSAGE_ID_1
+from utils import MESSAGE_ID_2
+from utils import REQUEST_ID_1
+from utils import REQUEST_ID_2
+from utils import REQUEST_ID_3
 from stacktach import views
-import test_utils as utils
 
 class StacktachLifecycleTestCase(unittest.TestCase):
     def setUp(self):
@@ -20,15 +22,77 @@ class StacktachLifecycleTestCase(unittest.TestCase):
         views.STACKDB = self.mox.CreateMockAnything()
 
     def tearDown(self):
-        pass
+        self.mox.UnsetStubs()
+
+    def test_start_kpi_tracking_not_update(self):
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.create.start'
+        self.mox.ReplayAll()
+        views.start_kpi_tracking(None, raw)
+        self.mox.VerifyAll()
+
+    def test_start_kpi_tracking_not_from_api(self):
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.update'
+        raw.host = 'compute'
+        self.mox.ReplayAll()
+        views.start_kpi_tracking(None, raw)
+        self.mox.VerifyAll()
+
+    def test_start_kpi_tracking(self):
+        lifecycle = self.mox.CreateMockAnything()
+        tracker = self.mox.CreateMockAnything()
+        when = utils.decimal_utcnow()
+        raw = utils.create_raw(self.mox, when, 'compute.instance.update',
+                               host='api')
+        views.STACKDB.create_request_tracker(lifecycle=lifecycle,
+                                             request_id=REQUEST_ID_1,
+                                             start=when,
+                                             last_timing=None,
+                                             duration=str(0.0))\
+                                             .AndReturn(tracker)
+        views.STACKDB.save(tracker)
+        self.mox.ReplayAll()
+        views.start_kpi_tracking(lifecycle, raw)
+        self.mox.VerifyAll()
+
+    def test_update_kpi_no_trackers(self):
+        raw = self.mox.CreateMockAnything()
+        raw.request_id = REQUEST_ID_1
+        views.STACKDB.find_request_trackers(request_id=REQUEST_ID_1)\
+                                            .AndReturn([])
+        self.mox.ReplayAll()
+        views.update_kpi(None, raw)
+        self.mox.VerifyAll()
+
+    def test_update_kpi(self):
+        lifecycle = self.mox.CreateMockAnything()
+        end = utils.decimal_utcnow()
+        raw = self.mox.CreateMockAnything()
+        raw.request_id = REQUEST_ID_1
+        raw.when=end
+        timing = utils.create_timing(self.mox, 'compute.instance.create',
+                                     lifecycle, end_when=end)
+        start = utils.decimal_utcnow()
+        tracker = utils.create_tracker(self.mox, REQUEST_ID_1, lifecycle,
+                                       start)
+        views.STACKDB.find_request_trackers(request_id=REQUEST_ID_1)\
+                                            .AndReturn([tracker])
+        views.STACKDB.save(tracker)
+        self.mox.ReplayAll()
+        views.update_kpi(timing, raw)
+        self.assertEqual(tracker.request_id, REQUEST_ID_1)
+        self.assertEqual(tracker.lifecycle, lifecycle)
+        self.assertEqual(tracker.last_timing, timing)
+        self.assertEqual(tracker.start, start)
+        self.assertEqual(tracker.duration, end-start)
+        self.mox.VerifyAll()
 
     def test_aggregate_lifecycle_no_instance(self):
         raw = self.mox.CreateMockAnything()
         raw.instance = None
-
-        views.aggregate_lifecycle(raw)
-
         self.mox.ReplayAll()
+        views.aggregate_lifecycle(raw)
         self.mox.VerifyAll()
 
     def test_aggregate_lifecycle_start(self):
@@ -82,7 +146,7 @@ class StacktachLifecycleTestCase(unittest.TestCase):
         views.STACKDB.find_timings(name=event_name, lifecycle=lifecycle).AndReturn([timing])
 
         self.mox.StubOutWithMock(views, "update_kpi")
-        views.update_kpi(lifecycle, timing, end_raw)
+        views.update_kpi(timing, end_raw)
         views.STACKDB.save(timing)
 
         self.mox.ReplayAll()
@@ -98,7 +162,6 @@ class StacktachLifecycleTestCase(unittest.TestCase):
         self.assertEqual(timing.end_when, end_when)
         self.assertEqual(timing.diff, end_when-start_when)
 
-        self.mox.UnsetStubs()
         self.mox.VerifyAll()
 
 
@@ -122,5 +185,4 @@ class StacktachLifecycleTestCase(unittest.TestCase):
         self.assertEqual(lifecycle.last_state, 'active')
         self.assertEqual(lifecycle.last_task_state, 'reboot')
 
-        self.mox.UnsetStubs()
         self.mox.VerifyAll()

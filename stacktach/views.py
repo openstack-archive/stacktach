@@ -67,7 +67,7 @@ def _compute_update_message(routing_key, body):
     resp = dict(host=host, instance=instance, publisher=publisher,
                 service=service, event=event, tenant=tenant,
                 request_id=request_id)
-    payload = data.get('payload', {})
+    payload = body.get('payload', {})
     resp.update(_extract_states(payload))
     return resp
 
@@ -87,15 +87,15 @@ def start_kpi_tracking(lifecycle, raw):
     if "api" not in raw.host:
         return
 
-    tracker = models.RequestTracker(request_id=raw.request_id,
-                                    start=raw.when,
-                                    lifecycle=lifecycle,
-                                    last_timing=None,
-                                    duration=str(0.0))
-    tracker.save()
+    tracker = STACKDB.create_request_tracker(request_id=raw.request_id,
+                                             start=raw.when,
+                                             lifecycle=lifecycle,
+                                             last_timing=None,
+                                             duration=str(0.0))
+    STACKDB.save(tracker)
 
 
-def update_kpi(lifecycle, timing, raw):
+def update_kpi(timing, raw):
     """Whenever we get a .end event, use the Timing object to
     compute our current end-to-end duration.
 
@@ -106,15 +106,14 @@ def update_kpi(lifecycle, timing, raw):
 
     Until then, we'll take the lazy route and be aware of these
     potential fence-post issues."""
-    trackers = models.RequestTracker.objects.\
-                                        filter(request_id=raw.request_id)
+    trackers = STACKDB.find_request_trackers(request_id=raw.request_id)
     if len(trackers) == 0:
         return
 
     tracker = trackers[0]
     tracker.last_timing = timing
     tracker.duration = timing.end_when - tracker.start
-    tracker.save()
+    STACKDB.save(tracker)
 
 
 def aggregate_lifecycle(raw):
@@ -198,7 +197,7 @@ def aggregate_lifecycle(raw):
         if timing.start_when:
             timing.diff = timing.end_when - timing.start_when
             # Looks like a valid pair ...
-            update_kpi(lifecycle, timing, raw)
+            update_kpi(timing, raw)
     STACKDB.save(timing)
 
 

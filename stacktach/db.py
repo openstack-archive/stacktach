@@ -12,5 +12,11 @@ def create_timing(**kwargs):
 def find_timings(**kwargs):
     return models.Timing.objects.select_related().filter(**kwargs)
 
+def create_request_tracker(**kwargs):
+    return models.RequestTracker(**kwargs)
+
+def find_request_trackers(**kwargs):
+    return models.RequestTracker.objects.filter(**kwargs)
+
 def save(obj):
     obj.save()
