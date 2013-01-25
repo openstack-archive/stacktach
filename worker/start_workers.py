@@ -22,7 +22,6 @@ except ImportError:
 
 processes = []
 
-print config_filename
 
 def kill_time(signal, frame):
     print "dying ..."
