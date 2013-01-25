@@ -5,22 +5,6 @@ import unittest
 
 TENANT_ID_1 = 'testtenantid1'
 
-def setup_sys_path():
-    sys.path = [os.path.abspath(os.path.dirname('stacktach'))] + sys.path
-
-def setup_environment():
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'settings'
-    os.environ['STACKTACH_DB_ENGINE'] = 'django.db.backends.sqlite3'
-    when = str(datetime.datetime.utcnow())
-    os.environ['STACKTACH_DB_NAME'] = '/tmp/stacktach.%s.sqlite' % when
-    os.environ['STACKTACH_DB_HOST'] = ''
-    os.environ['STACKTACH_DB_USERNAME'] = ''
-    os.environ['STACKTACH_DB_PASSWORD'] = ''
-    install_dir = os.path.abspath(os.path.dirname('stacktach'))
-    os.environ['STACKTACH_INSTALL_DIR'] = install_dir
-
-setup_sys_path()
-setup_environment()
 from stacktach import datetime_to_decimal as dt
 
 INSTANCE_ID_1 = 'testinstanceid1'

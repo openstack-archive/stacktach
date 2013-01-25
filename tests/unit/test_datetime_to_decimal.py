@@ -2,7 +2,6 @@ import datetime
 import decimal
 import unittest
 
-import utils
 from stacktach import datetime_to_decimal
 
 class DatetimeToDecimalTestCase(unittest.TestCase):
