@@ -2,3 +2,5 @@
 
 *.pyc
 local_settings.py
+.coverage
+worker.log

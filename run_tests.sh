@@ -1,2 +1,2 @@
 #!/bin/bash
-nosetests tests --exclude-dir=stacktach --with-coverage --cover-package=stacktach
+nosetests tests --exclude-dir=stacktach --with-coverage --cover-package=stacktach,worker
