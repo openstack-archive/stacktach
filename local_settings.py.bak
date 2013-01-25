@@ -1,6 +1,0 @@
-STACKTACH_DB_ENGINE='django.db.backends.sqlite3'
-STACKTACH_DB_NAME='/tmp/stacktach.sqlite'
-STACKTACH_DB_HOST=''
-STACKTACH_DB_USERNAME=''
-STACKTACH_DB_PASSWORD=''
-STACKTACH_INSTALL_DIR='/home/andrewmelton/publicgit/stacktach-app/'

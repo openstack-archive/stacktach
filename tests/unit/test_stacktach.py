@@ -26,7 +26,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
-    def assertOnHandlerResponce(self, resp, **kwargs):
+    def assertOnHandlerResponse(self, resp, **kwargs):
         for key in kwargs:
             self.assertTrue(key in resp, msg='%s not in response' % key)
             self.assertEqual(resp[key], kwargs[key])
@@ -45,7 +45,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
             },
         }
         resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponce(resp, host='cpu1-n01.example.com',
+        self.assertOnHandlerResponse(resp, host='cpu1-n01.example.com',
                                      instance=INSTANCE_ID_1,
                                      publisher=body['publisher_id'],
                                      service='compute',
@@ -70,7 +70,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
                 },
             }
         resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponce(resp, host=None, instance=INSTANCE_ID_1,
+        self.assertOnHandlerResponse(resp, host=None, instance=INSTANCE_ID_1,
                                      publisher=body['publisher_id'],
                                      service='compute',
                                      event=body['event_type'],
@@ -92,7 +92,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
                 },
             }
         resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponce(resp, host='cpu1-n01.example.com',
+        self.assertOnHandlerResponse(resp, host='cpu1-n01.example.com',
                                      instance=INSTANCE_ID_1,
                                      publisher=body['publisher_id'],
                                      service='compute',
@@ -116,7 +116,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
                 },
             }
         resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponce(resp, host='cpu1-n01.example.com',
+        self.assertOnHandlerResponse(resp, host='cpu1-n01.example.com',
                                     instance=INSTANCE_ID_1,
                                     publisher=body['publisher_id'],
                                     service='compute',
@@ -143,7 +143,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         }
         resp = views._compute_update_message(None, body)
         print resp
-        self.assertOnHandlerResponce(resp, publisher=None, instance=None,
+        self.assertOnHandlerResponse(resp, publisher=None, instance=None,
                                      host='compute', tenant=TENANT_ID_1,
                                      event='some_method',
                                      request_id=REQUEST_ID_1, state='active',
