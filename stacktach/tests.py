@@ -621,7 +621,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         usage = usages[0]
         self.assertOnUsage(usage, INSTANCE_ID_1, '1', launched, REQUEST_ID_1)
 
-    @unittest.skip('can\'t handle late starts yet')
+    @unittest.skip("can't handle late starts yet")
     def test_create_workflow_start_late(self):
         created_str = '2012-12-21 06:30:50.123'
         created = views.str_time_to_unix(created_str)
@@ -749,7 +749,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         self.assertOnUsage(usage_after, INSTANCE_ID_1, '2', finish_time,
                            REQUEST_ID_2)
 
-    @unittest.skip('can\'t handle late starts yet')
+    @unittest.skip("can't handle late starts yet")
     def test_resize_workflow_start_late(self):
         launched_str = '2012-12-21 06:34:50.123'
         launched = views.str_time_to_unix(launched_str)
@@ -852,7 +852,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         self.assertOnUsage(usage_after_revert, INSTANCE_ID_1, '1', end_time,
                            REQUEST_ID_3)
 
-    @unittest.skip('can\'t handle late starts yet')
+    @unittest.skip("can't handle late starts yet")
     def test_resize_revert_workflow_start_late(self):
         launched_str = '2012-12-21 06:34:50.123'
         launched = views.str_time_to_unix(launched_str)
