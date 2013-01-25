@@ -1,5 +1,8 @@
 import models
 
+def create_rawdata(**kwargs):
+    return models.RawData(**kwargs)
+
 def create_lifecycle(**kwargs):
     return models.Lifecycle(**kwargs)
 

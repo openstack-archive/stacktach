@@ -3,7 +3,6 @@ import decimal
 import unittest
 
 import utils
-utils.setup_sys_path()
 from stacktach import datetime_to_decimal
 
 class DatetimeToDecimalTestCase(unittest.TestCase):

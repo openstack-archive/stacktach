@@ -3,15 +3,7 @@ import os
 import sys
 import unittest
 
-INSTANCE_ID_1 = 'testinstanceid1'
-INSTANCE_ID_2 = 'testinstanceid2'
-
-MESSAGE_ID_1 = 'testmessageid1'
-MESSAGE_ID_2 = 'testmessageid2'
-
-REQUEST_ID_1 = 'testrequestid1'
-REQUEST_ID_2 = 'testrequestid2'
-REQUEST_ID_3 = 'testrequestid3'
+TENANT_ID_1 = 'testtenantid1'
 
 def setup_sys_path():
     sys.path = [os.path.abspath(os.path.dirname('stacktach'))] + sys.path
@@ -30,6 +22,16 @@ def setup_environment():
 setup_sys_path()
 setup_environment()
 from stacktach import datetime_to_decimal as dt
+
+INSTANCE_ID_1 = 'testinstanceid1'
+INSTANCE_ID_2 = 'testinstanceid2'
+
+MESSAGE_ID_1 = 'testmessageid1'
+MESSAGE_ID_2 = 'testmessageid2'
+
+REQUEST_ID_1 = 'testrequestid1'
+REQUEST_ID_2 = 'testrequestid2'
+REQUEST_ID_3 = 'testrequestid3'
 
 
 def decimal_utc(t = datetime.datetime.utcnow()):

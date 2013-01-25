@@ -347,8 +347,8 @@ def process_raw_data(deployment, args, json_args):
         values['when'] = dt.dt_to_decimal(when)
         values['routing_key'] = routing_key
         values['json'] = json_args
-        record = models.RawData(**values)
-        record.save()
+        record = STACKDB.create_rawdata(**values)
+        STACKDB.save(record)
 
         aggregate_lifecycle(record)
         aggregate_usage(record)

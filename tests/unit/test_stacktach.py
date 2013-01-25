@@ -7,7 +7,6 @@ import unittest
 import mox
 
 import utils
-utils.setup_sys_path()
 from utils import INSTANCE_ID_1
 from utils import INSTANCE_ID_2
 from utils import MESSAGE_ID_1
@@ -15,7 +14,199 @@ from utils import MESSAGE_ID_2
 from utils import REQUEST_ID_1
 from utils import REQUEST_ID_2
 from utils import REQUEST_ID_3
+from utils import TENANT_ID_1
 from stacktach import views
+
+
+class StacktachRawParsingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+        views.STACKDB = self.mox.CreateMockAnything()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def assertOnHandlerResponce(self, resp, **kwargs):
+        for key in kwargs:
+            self.assertTrue(key in resp, msg='%s not in response' % key)
+            self.assertEqual(resp[key], kwargs[key])
+
+    def test_monitor_message(self):
+        body = {
+            'event_type': 'compute.instance.create.start',
+            'publisher_id': 'compute.cpu1-n01.example.com',
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            'payload': {
+                'instance_id': INSTANCE_ID_1,
+                'state': 'active',
+                'old_state': 'building',
+                'old_task_state': 'build',
+            },
+        }
+        resp = views._monitor_message(None, body)
+        self.assertOnHandlerResponce(resp, host='cpu1-n01.example.com',
+                                     instance=INSTANCE_ID_1,
+                                     publisher=body['publisher_id'],
+                                     service='compute',
+                                     event=body['event_type'],
+                                     tenant=TENANT_ID_1,
+                                     request_id=REQUEST_ID_1,
+                                     state='active',
+                                     old_state='building',
+                                     old_task='build')
+
+    def test_monitor_message_no_host(self):
+        body = {
+            'event_type': 'compute.instance.create.start',
+            'publisher_id': 'compute',
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            'payload': {
+                'instance_id': INSTANCE_ID_1,
+                'state': 'active',
+                'old_state': 'building',
+                'old_task_state': 'build',
+                },
+            }
+        resp = views._monitor_message(None, body)
+        self.assertOnHandlerResponce(resp, host=None, instance=INSTANCE_ID_1,
+                                     publisher=body['publisher_id'],
+                                     service='compute',
+                                     event=body['event_type'],
+                                     tenant=TENANT_ID_1,
+                                     request_id=REQUEST_ID_1, state='active',
+                                     old_state='building', old_task='build')
+
+    def test_monitor_message_exception(self):
+        body = {
+            'event_type': 'compute.instance.create.start',
+            'publisher_id': 'compute.cpu1-n01.example.com',
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            'payload': {
+                'exception': {'kwargs':{'uuid': INSTANCE_ID_1}},
+                'state': 'active',
+                'old_state': 'building',
+                'old_task_state': 'build',
+                },
+            }
+        resp = views._monitor_message(None, body)
+        self.assertOnHandlerResponce(resp, host='cpu1-n01.example.com',
+                                     instance=INSTANCE_ID_1,
+                                     publisher=body['publisher_id'],
+                                     service='compute',
+                                     event=body['event_type'],
+                                     tenant=TENANT_ID_1,
+                                     request_id=REQUEST_ID_1,
+                                     state='active', old_state='building',
+                                     old_task='build')
+
+    def test_monitor_message_exception(self):
+        body = {
+            'event_type': 'compute.instance.create.start',
+            'publisher_id': 'compute.cpu1-n01.example.com',
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            'payload': {
+                'instance': {'uuid': INSTANCE_ID_1},
+                'state': 'active',
+                'old_state': 'building',
+                'old_task_state': 'build',
+                },
+            }
+        resp = views._monitor_message(None, body)
+        self.assertOnHandlerResponce(resp, host='cpu1-n01.example.com',
+                                    instance=INSTANCE_ID_1,
+                                    publisher=body['publisher_id'],
+                                    service='compute',
+                                    event=body['event_type'],
+                                    tenant=TENANT_ID_1,
+                                    request_id=REQUEST_ID_1,
+                                    state='active', old_state='building',
+                                    old_task='build')
+
+    def test_compute_update_message(self):
+        body = {
+            '_context_request_id': REQUEST_ID_1,
+            'method': 'some_method',
+            'args': {
+                'host': 'compute',
+                'service_name': 'compute',
+                '_context_project_id': TENANT_ID_1
+            },
+            'payload': {
+                'state': 'active',
+                'old_state': 'building',
+                'old_task_state': 'build',
+                }
+        }
+        resp = views._compute_update_message(None, body)
+        print resp
+        self.assertOnHandlerResponce(resp, publisher=None, instance=None,
+                                     host='compute', tenant=TENANT_ID_1,
+                                     event='some_method',
+                                     request_id=REQUEST_ID_1, state='active',
+                                     old_state='building', old_task='build')
+
+    def test_process_raw_data(self):
+        deployment = self.mox.CreateMockAnything()
+        when = '2013-1-25 13:38:23.123'
+        dict = {
+            'timestamp': when,
+        }
+        args = ('monitor.info', dict)
+        json_args = json.dumps(args)
+        old_info_handler = views.HANDLERS['monitor.info']
+        views.HANDLERS['monitor.info'] = lambda key, mess: {'host': 'api'}
+        raw_values = {
+            'deployment': deployment,
+            'when': utils.decimal_utc(datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")),
+            'host': 'api',
+            'routing_key': 'monitor.info',
+            'json': json_args
+        }
+        raw = self.mox.CreateMockAnything()
+        views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
+        views.STACKDB.save(raw)
+        self.mox.StubOutWithMock(views, "aggregate_lifecycle")
+        views.aggregate_lifecycle(raw)
+        self.mox.StubOutWithMock(views, "aggregate_usage")
+        views.aggregate_usage(raw)
+        self.mox.ReplayAll()
+        views.process_raw_data(deployment, args, json_args)
+        self.mox.VerifyAll()
+        views.HANDLERS['monitor.info'] = old_info_handler
+
+    def test_process_raw_data_old_timestamp(self):
+        deployment = self.mox.CreateMockAnything()
+        when = '2013-1-25T13:38:23.123'
+        dict = {
+            '_context_timestamp': when,
+            }
+        args = ('monitor.info', dict)
+        json_args = json.dumps(args)
+        old_info_handler = views.HANDLERS['monitor.info']
+        views.HANDLERS['monitor.info'] = lambda key, mess: {'host': 'api'}
+        raw_values = {
+            'deployment': deployment,
+            'when': utils.decimal_utc(datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")),
+            'host': 'api',
+            'routing_key': 'monitor.info',
+            'json': json_args
+        }
+        raw = self.mox.CreateMockAnything()
+        views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
+        views.STACKDB.save(raw)
+        self.mox.StubOutWithMock(views, "aggregate_lifecycle")
+        views.aggregate_lifecycle(raw)
+        self.mox.StubOutWithMock(views, "aggregate_usage")
+        views.aggregate_usage(raw)
+        self.mox.ReplayAll()
+        views.process_raw_data(deployment, args, json_args)
+        self.mox.VerifyAll()
+        views.HANDLERS['monitor.info'] = old_info_handler
+
 
 class StacktachLifecycleTestCase(unittest.TestCase):
     def setUp(self):
