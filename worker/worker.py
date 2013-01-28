@@ -19,7 +19,6 @@
 import datetime
 import json
 import kombu
-import kombu.connection
 import kombu.entity
 import kombu.mixins
 import logging
@@ -27,8 +26,7 @@ import time
 
 from pympler.process import ProcessMemoryInfo
 
-from stacktach import models, views
-from stacktach import datetime_to_decimal as dt
+from stacktach import db, views
 
 
 LOG = logging.getLogger(__name__)
@@ -39,10 +37,11 @@ LOG.addHandler(handler)
 
 
 class NovaConsumer(kombu.mixins.ConsumerMixin):
-    def __init__(self, name, connection, deployment, durable):
+    def __init__(self, name, connection, deployment, durable, queue_arguments):
         self.connection = connection
         self.deployment = deployment
         self.durable = durable
+        self.queue_arguments = queue_arguments
         self.name = name
         self.last_time = None
         self.pmi = None
@@ -56,19 +55,19 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
 
         nova_queues = [
             kombu.Queue("monitor.info", nova_exchange, durable=self.durable,
-                        auto_delete=False,
-                        exclusive=False, routing_key='monitor.info'),
+                        auto_delete=False, exclusive=False,
+                        queue_arguments=self.queue_arguments,
+                        routing_key='monitor.info'),
             kombu.Queue("monitor.error", nova_exchange, durable=self.durable,
                         auto_delete=False,
+                        queue_arguments=self.queue_arguments,
                         exclusive=False, routing_key='monitor.error'),
         ]
 
         return [Consumer(queues=nova_queues, callbacks=[self.on_nova])]
 
-    def _process(self, body, message):
+    def _process(self, message):
         routing_key = message.delivery_info['routing_key']
-        payload = (routing_key, body)
-        jvalues = json.dumps(payload)
 
         body = str(message.body)
         args = (routing_key, json.loads(body))
@@ -110,10 +109,14 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
 
     def on_nova(self, body, message):
         try:
-            self._process(body, message)
+            self._process(message)
         except Exception, e:
             LOG.exception("Problem %s" % e)
         message.ack()
+
+
+def continue_running():
+    return True
 
 
 def run(deployment_config):
@@ -124,8 +127,9 @@ def run(deployment_config):
     password = deployment_config.get('rabbit_password', 'rabbit')
     virtual_host = deployment_config.get('rabbit_virtual_host', '/')
     durable = deployment_config.get('durable_queue', True)
+    queue_arguments = deployment_config.get('queue_arguments', {})
 
-    deployment, new = models.get_or_create_deployment(name)
+    deployment, new = db.get_or_create_deployment(name)
 
     print "Starting worker for '%s'" % name
     LOG.info("%s: %s %s %s %s" % (name, host, port, user_id, virtual_host))
@@ -137,14 +141,16 @@ def run(deployment_config):
                   transport="librabbitmq",
                   virtual_host=virtual_host)
 
-    while True:
+    while continue_running():
         LOG.debug("Processing on '%s'" % name)
         with kombu.connection.BrokerConnection(**params) as conn:
             try:
-                consumer = NovaConsumer(name, conn, deployment, durable)
+                consumer = NovaConsumer(name, conn, deployment, durable,
+                                        queue_arguments)
                 consumer.run()
             except Exception as e:
                 LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
                                 (name, e))
                 time.sleep(5)
         LOG.debug("Completed processing on '%s'" % name)
+

@@ -1,5 +1,8 @@
 import models
 
+def get_or_create_deployment(name):
+    return models.Deployment.objects.get_or_create(name=name)
+
 def create_rawdata(**kwargs):
     return models.RawData(**kwargs)
 

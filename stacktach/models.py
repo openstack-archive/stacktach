@@ -21,8 +21,7 @@ class Deployment(models.Model):
     name = models.CharField(max_length=50)
 
 
-def get_or_create_deployment(name):
-    return Deployment.objects.get_or_create(name=name)
+
 
 
 class RawData(models.Model):

@@ -1,22 +1,28 @@
+import json
 import unittest
 
 import kombu
 import kombu.entity
+import kombu.connection
 import mox
 
+from stacktach import db, views
 import worker.worker as worker
 
 class NovaConsumerTestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
-    def test_get_consumer(self):
-        created_queues = None
-        created_callback =  None
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_get_consumers(self):
+        created_queues = []
+        created_callbacks =  []
         created_consumers = []
         def Consumer(queues=None, callbacks=None):
-            created_queues = queues
-            created_callback = callbacks
+            created_queues.extend(queues)
+            created_callbacks.extend(callbacks)
             consumer = self.mox.CreateMockAnything()
             created_consumers.append(consumer)
             return consumer
@@ -24,13 +30,154 @@ class NovaConsumerTestCase(unittest.TestCase):
         self.mox.StubOutClassWithMocks(kombu, 'Queue')
         kombu.entity.Exchange('nova', type='topic', exclusive=False,
                               durable=True, auto_delete=False)
-        kombu.Queue('monitor.info', kombu.entity.Exchange, auto_delete=False,
-                    durable=True, exclusive=False, routing_key='monitor.info')
-        kombu.Queue('monitor.error', kombu.entity.Exchange, auto_delete=False,
-                    durable=True, exclusive=False, routing_key='monitor.error')
-        consumer = worker.NovaConsumer('test', None, None, True)
+        info_queue = kombu.Queue('monitor.info', kombu.entity.Exchange,
+                                 auto_delete=False, durable=True,
+                                 exclusive=False, routing_key='monitor.info',
+                                 queue_arguments={})
+        error_queue = kombu.Queue('monitor.error', kombu.entity.Exchange,
+                                  auto_delete=False, durable=True,
+                                  exclusive=False, routing_key='monitor.error',
+                                  queue_arguments={})
+        consumer = worker.NovaConsumer('test', None, None, True, {})
         self.mox.ReplayAll()
         consumers = consumer.get_consumers(Consumer, None)
-        self.assertEqual(len(consumers), len(created_consumers))
+        self.assertEqual(len(consumers), 1)
         self.assertEqual(consumers[0], created_consumers[0])
+        self.assertEqual(len(created_queues), 2)
+        self.assertTrue(info_queue in created_queues)
+        self.assertTrue(error_queue in created_queues)
+        self.assertEqual(len(created_callbacks), 1)
+        self.assertTrue(consumer.on_nova in created_callbacks)
+        self.mox.VerifyAll()
+
+    def test_get_consumers_queue_args(self):
+        created_queues = []
+        created_callbacks =  []
+        created_consumers = []
+        def Consumer(queues=None, callbacks=None):
+            created_queues.extend(queues)
+            created_callbacks.extend(callbacks)
+            consumer = self.mox.CreateMockAnything()
+            created_consumers.append(consumer)
+            return consumer
+        self.mox.StubOutClassWithMocks(kombu.entity, 'Exchange')
+        self.mox.StubOutClassWithMocks(kombu, 'Queue')
+        kombu.entity.Exchange('nova', type='topic', exclusive=False,
+            durable=True, auto_delete=False)
+        queue_args = {'arg': 'val'}
+        info_queue = kombu.Queue('monitor.info', kombu.entity.Exchange,
+                                 auto_delete=False, durable=True,
+                                 exclusive=False, routing_key='monitor.info',
+                                 queue_arguments=queue_args)
+        error_queue = kombu.Queue('monitor.error', kombu.entity.Exchange,
+                                  auto_delete=False, durable=True,
+                                  exclusive=False, routing_key='monitor.error',
+                                  queue_arguments=queue_args)
+        consumer = worker.NovaConsumer('test', None, None, True, queue_args)
+        self.mox.ReplayAll()
+        consumers = consumer.get_consumers(Consumer, None)
+        self.assertEqual(len(consumers), 1)
+        self.assertEqual(consumers[0], created_consumers[0])
+        self.assertEqual(len(created_queues), 2)
+        self.assertTrue(info_queue in created_queues)
+        self.assertTrue(error_queue in created_queues)
+        self.assertEqual(len(created_callbacks), 1)
+        self.assertTrue(consumer.on_nova in created_callbacks)
+        self.mox.VerifyAll()
+
+    def test_process(self):
+        deployment = self.mox.CreateMockAnything()
+        raw = self.mox.CreateMockAnything()
+        message = self.mox.CreateMockAnything()
+
+        consumer = worker.NovaConsumer('test', None, deployment, True, {})
+        routing_key = 'monitor.info'
+        message.delivery_info = {'routing_key': routing_key}
+        body_dict = {u'key': u'value'}
+        message.body = json.dumps(body_dict)
+        self.mox.StubOutWithMock(views, 'process_raw_data',
+                                 use_mock_anything=True)
+        args = (routing_key, body_dict)
+        views.process_raw_data(deployment, args, json.dumps(args))\
+             .AndReturn(raw)
+        self.mox.StubOutWithMock(consumer, '_check_memory',
+                                use_mock_anything=True)
+        consumer._check_memory()
+        self.mox.ReplayAll()
+        consumer._process(message)
+        self.assertEqual(consumer.processed, 1)
+        self.mox.VerifyAll()
+
+    def test_run(self):
+        config = {
+            'name': 'east_coast.prod.global',
+            'durable_queue': False,
+            'rabbit_host': '10.0.0.1',
+            'rabbit_port': 5672,
+            'rabbit_userid': 'rabbit',
+            'rabbit_password': 'rabbit',
+            'rabbit_virtual_host': '/'
+        }
+        self.mox.StubOutWithMock(db, 'get_or_create_deployment')
+        deployment = self.mox.CreateMockAnything()
+        db.get_or_create_deployment(config['name'])\
+          .AndReturn((deployment, True))
+        self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
+        params = dict(hostname=config['rabbit_host'],
+                      port=config['rabbit_port'],
+                      userid=config['rabbit_userid'],
+                      password=config['rabbit_password'],
+                      transport="librabbitmq",
+                      virtual_host=config['rabbit_virtual_host'])
+        self.mox.StubOutWithMock(worker, "continue_running")
+        worker.continue_running().AndReturn(True)
+        conn = self.mox.CreateMockAnything()
+        kombu.connection.BrokerConnection(**params).AndReturn(conn)
+        conn.__enter__().AndReturn(conn)
+        conn.__exit__(None, None, None).AndReturn(None)
+        self.mox.StubOutClassWithMocks(worker, 'NovaConsumer')
+        consumer = worker.NovaConsumer(config['name'], conn, deployment,
+                                       config['durable_queue'], {})
+        consumer.run()
+        worker.continue_running().AndReturn(False)
+        self.mox.ReplayAll()
+        worker.run(config)
+        self.mox.VerifyAll()
+
+    def test_run_queue_args(self):
+        config = {
+            'name': 'east_coast.prod.global',
+            'durable_queue': False,
+            'rabbit_host': '10.0.0.1',
+            'rabbit_port': 5672,
+            'rabbit_userid': 'rabbit',
+            'rabbit_password': 'rabbit',
+            'rabbit_virtual_host': '/',
+            'queue_arguments': {'x-ha-policy': 'all'}
+        }
+        self.mox.StubOutWithMock(db, 'get_or_create_deployment')
+        deployment = self.mox.CreateMockAnything()
+        db.get_or_create_deployment(config['name'])\
+          .AndReturn((deployment, True))
+        self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
+        params = dict(hostname=config['rabbit_host'],
+                      port=config['rabbit_port'],
+                      userid=config['rabbit_userid'],
+                      password=config['rabbit_password'],
+                      transport="librabbitmq",
+                      virtual_host=config['rabbit_virtual_host'])
+        self.mox.StubOutWithMock(worker, "continue_running")
+        worker.continue_running().AndReturn(True)
+        conn = self.mox.CreateMockAnything()
+        kombu.connection.BrokerConnection(**params).AndReturn(conn)
+        conn.__enter__().AndReturn(conn)
+        conn.__exit__(None, None, None).AndReturn(None)
+        self.mox.StubOutClassWithMocks(worker, 'NovaConsumer')
+        consumer = worker.NovaConsumer(config['name'], conn, deployment,
+                                       config['durable_queue'],
+                                       config['queue_arguments'])
+        consumer.run()
+        worker.continue_running().AndReturn(False)
+        self.mox.ReplayAll()
+        worker.run(config)
         self.mox.VerifyAll()
