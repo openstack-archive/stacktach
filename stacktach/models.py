@@ -54,7 +54,7 @@ class RawData(models.Model):
                                 blank=True, db_index=True)
 
     def __repr__(self):
-        return self.event
+        return "%s %s %s" % (self.event, self.instance, self.state)
 
 
 class Lifecycle(models.Model):
@@ -71,6 +71,51 @@ class Lifecycle(models.Model):
     last_task_state = models.CharField(max_length=50, null=True,
                              blank=True, db_index=True)
     last_raw = models.ForeignKey(RawData, null=True)
+
+
+class InstanceUsage(models.Model):
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    #launched_at = models.IntegerField(null=True, db_index=True)
+    launched_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6)
+    #deleted_at = models.IntegerField(null=True, db_index=True)
+    deleted_at = models.DecimalField(null=True, max_digits=20,
+                                     decimal_places=6)
+    request_id =  models.CharField(max_length=50, null=True,
+                                   blank=True, db_index=True)
+    instance_type_id =  models.CharField(max_length=50,
+                                         null=True,
+                                         blank=True,
+                                         db_index=True)
+class InstanceExists(models.Model):
+    PENDING = 'pending'
+    VERIFIED = 'verified'
+    FAILED = 'failed'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending Verification'),
+        (VERIFIED, 'Passed Verification'),
+        (FAILED, 'Failed Verification'),
+    ]
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    #launched_at = models.IntegerField(null=True, db_index=True)
+    launched_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6)
+    #deleted_at = models.IntegerField(null=True, db_index=True)
+    deleted_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6)
+    message_id =  models.CharField(max_length=50, null=True,
+                                   blank=True, db_index=True)
+    instance_type_id =  models.CharField(max_length=50,
+                                         null=True,
+                                         blank=True,
+                                         db_index=True)
+    status = models.CharField(max_length=50, db_index=True,
+                              choices=STATUS_CHOICES,
+                              default=PENDING)
+    raw = models.ForeignKey(RawData, related_name='+', null=True)
+    usage = models.ForeignKey(InstanceUsage, related_name='+', null=True)
 
 
 class Timing(models.Model):

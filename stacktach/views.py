@@ -5,12 +5,16 @@ from django import http
 from django.shortcuts import render_to_response
 from django import template
 
+from stacktach import db as stackdb
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
 
 import datetime
 import json
 import pprint
+
+
+STACKDB = stackdb
 
 
 def _extract_states(payload):
@@ -63,7 +67,7 @@ def _compute_update_message(routing_key, body):
     resp = dict(host=host, instance=instance, publisher=publisher,
                 service=service, event=event, tenant=tenant,
                 request_id=request_id)
-    payload = data.get('payload', {})
+    payload = body.get('payload', {})
     resp.update(_extract_states(payload))
     return resp
 
@@ -83,15 +87,15 @@ def start_kpi_tracking(lifecycle, raw):
     if "api" not in raw.host:
         return
 
-    tracker = models.RequestTracker(request_id=raw.request_id,
-                                    start=raw.when,
-                                    lifecycle=lifecycle,
-                                    last_timing=None,
-                                    duration=str(0.0))
-    tracker.save()
+    tracker = STACKDB.create_request_tracker(request_id=raw.request_id,
+                                             start=raw.when,
+                                             lifecycle=lifecycle,
+                                             last_timing=None,
+                                             duration=str(0.0))
+    STACKDB.save(tracker)
 
 
-def update_kpi(lifecycle, timing, raw):
+def update_kpi(timing, raw):
     """Whenever we get a .end event, use the Timing object to
     compute our current end-to-end duration.
 
@@ -102,18 +106,17 @@ def update_kpi(lifecycle, timing, raw):
 
     Until then, we'll take the lazy route and be aware of these
     potential fence-post issues."""
-    trackers = models.RequestTracker.objects.\
-                                        filter(request_id=raw.request_id)
+    trackers = STACKDB.find_request_trackers(request_id=raw.request_id)
     if len(trackers) == 0:
         return
 
     tracker = trackers[0]
     tracker.last_timing = timing
     tracker.duration = timing.end_when - tracker.start
-    tracker.save()
+    STACKDB.save(tracker)
 
 
-def aggregate(raw):
+def aggregate_lifecycle(raw):
     """Roll up the raw event into a Lifecycle object
     and a bunch of Timing objects.
 
@@ -129,16 +132,15 @@ def aggregate(raw):
     # While we hope only one lifecycle ever exists it's quite
     # likely we get multiple due to the workers and threads.
     lifecycle = None
-    lifecycles = models.Lifecycle.objects.select_related().\
-                                    filter(instance=raw.instance)
+    lifecycles = STACKDB.find_lifecycles(instance=raw.instance)
     if len(lifecycles) > 0:
         lifecycle = lifecycles[0]
     if not lifecycle:
-        lifecycle = models.Lifecycle(instance=raw.instance)
+        lifecycle = STACKDB.create_lifecycle(instance=raw.instance)
     lifecycle.last_raw = raw
     lifecycle.last_state = raw.state
     lifecycle.last_task_state = raw.old_task
-    lifecycle.save()
+    STACKDB.save(lifecycle)
 
     event = raw.event
     parts = event.split('.')
@@ -160,8 +162,7 @@ def aggregate(raw):
     # *shouldn't* happen).
     start = step == 'start'
     timing = None
-    timings = models.Timing.objects.select_related().\
-                                filter(name=name, lifecycle=lifecycle)
+    timings = STACKDB.find_timings(name=name, lifecycle=lifecycle)
     if not start:
         for t in timings:
             try:
@@ -173,7 +174,7 @@ def aggregate(raw):
                 pass
 
     if timing is None:
-        timing = models.Timing(name=name, lifecycle=lifecycle)
+        timing = STACKDB.create_timing(name=name, lifecycle=lifecycle)
 
     if start:
         timing.start_raw = raw
@@ -196,8 +197,127 @@ def aggregate(raw):
         if timing.start_when:
             timing.diff = timing.end_when - timing.start_when
             # Looks like a valid pair ...
-            update_kpi(lifecycle, timing, raw)
-    timing.save()
+            update_kpi(timing, raw)
+    STACKDB.save(timing)
+
+
+INSTANCE_EVENT = {
+    'create_start': 'compute.instance.create.start',
+    'create_end': 'compute.instance.create.end',
+    'resize_prep_start': 'compute.instance.resize.prep.start',
+    'resize_prep_end': 'compute.instance.resize.prep.end',
+    'resize_revert_start': 'compute.instance.resize.revert.start',
+    'resize_revert_end': 'compute.instance.resize.revert.end',
+    'resize_finish_end': 'compute.instance.finish_resize.end',
+    'delete_end': 'compute.instance.delete.end',
+    'exists': 'compute.instance.exists',
+}
+
+
+def _process_usage_for_new_launch(raw):
+    notif = json.loads(raw.json)
+    payload = notif[1]['payload']
+    values = {}
+    values['instance'] = payload['instance_id']
+    values['request_id'] = notif[1]['_context_request_id']
+
+    if raw.event == INSTANCE_EVENT['create_start']:
+        values['instance_type_id'] = payload['instance_type_id']
+
+    usage = STACKDB.create_instance_usage(**values)
+    STACKDB.save(usage)
+
+
+def _process_usage_for_updates(raw):
+    notif = json.loads(raw.json)
+    payload = notif[1]['payload']
+    instance_id = payload['instance_id']
+    request_id = notif[1]['_context_request_id']
+    usage = STACKDB.get_instance_usage(instance=instance_id,
+                                          request_id=request_id)
+
+    if raw.event in [INSTANCE_EVENT['create_end'],
+                     INSTANCE_EVENT['resize_finish_end'],
+                     INSTANCE_EVENT['resize_revert_end']]:
+        usage.launched_at = str_time_to_unix(payload['launched_at'])
+
+    if raw.event == INSTANCE_EVENT['resize_revert_end']:
+        usage.instance_type_id = payload['instance_type_id']
+    elif raw.event == INSTANCE_EVENT['resize_prep_end']:
+        usage.instance_type_id = payload['new_instance_type_id']
+
+    STACKDB.save(usage)
+
+
+def _process_delete(raw):
+    notif = json.loads(raw.json)
+    payload = notif[1]['payload']
+    instance_id = payload['instance_id']
+    launched_at = payload['launched_at']
+    launched_at = str_time_to_unix(launched_at)
+    instance = STACKDB.get_instance_usage(instance=instance_id,
+                                                launched_at=launched_at)
+    instance.deleted_at = str_time_to_unix(payload['deleted_at'])
+    STACKDB.save(instance)
+
+
+def _process_exists(raw):
+    notif = json.loads(raw.json)
+    payload = notif[1]['payload']
+    instance_id = payload['instance_id']
+    launched_at = payload['launched_at']
+    launched_at = str_time_to_unix(launched_at)
+    usage = STACKDB.get_instance_usage(instance=instance_id,
+                                       launched_at=launched_at)
+    values = {}
+    values['message_id'] = notif[1]['message_id']
+    values['instance'] = instance_id
+    values['launched_at'] = launched_at
+    values['instance_type_id'] = payload['instance_type_id']
+    values['usage'] = usage
+    values['raw'] = raw
+
+    deleted_at = payload.get('deleted_at')
+    if deleted_at and deleted_at != '':
+        deleted_at = str_time_to_unix(deleted_at)
+        values['deleted_at'] = deleted_at
+
+    exists = STACKDB.create_instance_exists(**values)
+    STACKDB.save(exists)
+
+
+USAGE_PROCESS_MAPPING = {
+    INSTANCE_EVENT['create_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['resize_prep_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['resize_revert_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['create_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['resize_prep_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['delete_end']: _process_delete,
+    INSTANCE_EVENT['exists']: _process_exists,
+} 
+
+
+def aggregate_usage(raw):
+    if not raw.instance:
+        return
+
+    if raw.event in USAGE_PROCESS_MAPPING:
+        USAGE_PROCESS_MAPPING[raw.event](raw)
+
+
+def str_time_to_unix(when):
+    try:
+        try:
+            when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
+        except ValueError:
+            # Old way of doing it
+            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+    except Exception, e:
+        pass
+    return dt.dt_to_decimal(when)
+
 
 def process_raw_data(deployment, args, json_args):
     """This is called directly by the worker to add the event to the db."""
@@ -227,10 +347,11 @@ def process_raw_data(deployment, args, json_args):
         values['when'] = dt.dt_to_decimal(when)
         values['routing_key'] = routing_key
         values['json'] = json_args
-        record = models.RawData(**values)
-        record.save()
+        record = STACKDB.create_rawdata(**values)
+        STACKDB.save(record)
 
-        aggregate(record)
+        aggregate_lifecycle(record)
+        aggregate_usage(record)
     return record
 
 
