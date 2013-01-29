@@ -21,10 +21,6 @@ class Deployment(models.Model):
     name = models.CharField(max_length=50)
 
 
-def get_or_create_deployment(name):
-    return Deployment.objects.get_or_create(name=name)
-
-
 class RawData(models.Model):
     deployment = models.ForeignKey(Deployment)
     tenant = models.CharField(max_length=50, null=True, blank=True,
