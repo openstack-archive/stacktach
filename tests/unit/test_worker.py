@@ -26,19 +26,17 @@ class NovaConsumerTestCase(unittest.TestCase):
             consumer = self.mox.CreateMockAnything()
             created_consumers.append(consumer)
             return consumer
-        self.mox.StubOutClassWithMocks(kombu.entity, 'Exchange')
-        self.mox.StubOutClassWithMocks(kombu, 'Queue')
-        kombu.entity.Exchange('nova', type='topic', exclusive=False,
-                              durable=True, auto_delete=False)
-        info_queue = kombu.Queue('monitor.info', kombu.entity.Exchange,
-                                 auto_delete=False, durable=True,
-                                 exclusive=False, routing_key='monitor.info',
-                                 queue_arguments={})
-        error_queue = kombu.Queue('monitor.error', kombu.entity.Exchange,
-                                  auto_delete=False, durable=True,
-                                  exclusive=False, routing_key='monitor.error',
-                                  queue_arguments={})
+        self.mox.StubOutWithMock(worker.NovaConsumer, '_create_exchange')
+        self.mox.StubOutWithMock(worker.NovaConsumer, '_create_queue')
         consumer = worker.NovaConsumer('test', None, None, True, {})
+        exchange = self.mox.CreateMockAnything()
+        consumer._create_exchange('nova', 'topic').AndReturn(exchange)
+        info_queue = self.mox.CreateMockAnything()
+        error_queue = self.mox.CreateMockAnything()
+        consumer._create_queue('monitor.info', exchange, 'monitor.info')\
+                .AndReturn(info_queue)
+        consumer._create_queue('monitor.error', exchange, 'monitor.error')\
+                .AndReturn(error_queue)
         self.mox.ReplayAll()
         consumers = consumer.get_consumers(Consumer, None)
         self.assertEqual(len(consumers), 1)
@@ -50,39 +48,47 @@ class NovaConsumerTestCase(unittest.TestCase):
         self.assertTrue(consumer.on_nova in created_callbacks)
         self.mox.VerifyAll()
 
-    def test_get_consumers_queue_args(self):
-        created_queues = []
-        created_callbacks =  []
-        created_consumers = []
-        def Consumer(queues=None, callbacks=None):
-            created_queues.extend(queues)
-            created_callbacks.extend(callbacks)
-            consumer = self.mox.CreateMockAnything()
-            created_consumers.append(consumer)
-            return consumer
+    def test_create_exchange(self):
+        args = {'key': 'value'}
+        consumer = worker.NovaConsumer('test', None, None, True, args)
+
         self.mox.StubOutClassWithMocks(kombu.entity, 'Exchange')
+        exchange = kombu.entity.Exchange('nova', type='topic', exclusive=False,
+                                         durable=True, auto_delete=False)
+        self.mox.ReplayAll()
+        actual_exchange = consumer._create_exchange('nova', 'topic')
+        self.assertEqual(actual_exchange, exchange)
+        self.mox.VerifyAll()
+
+    def test_create_queue(self):
         self.mox.StubOutClassWithMocks(kombu, 'Queue')
-        kombu.entity.Exchange('nova', type='topic', exclusive=False,
-            durable=True, auto_delete=False)
-        queue_args = {'arg': 'val'}
-        info_queue = kombu.Queue('monitor.info', kombu.entity.Exchange,
-                                 auto_delete=False, durable=True,
-                                 exclusive=False, routing_key='monitor.info',
-                                 queue_arguments=queue_args)
-        error_queue = kombu.Queue('monitor.error', kombu.entity.Exchange,
-                                  auto_delete=False, durable=True,
-                                  exclusive=False, routing_key='monitor.error',
-                                  queue_arguments=queue_args)
+        exchange = self.mox.CreateMockAnything()
+        queue = kombu.Queue('name', exchange, auto_delete=False, durable=True,
+                            exclusive=False, routing_key='routing.key',
+                            queue_arguments={})
+        consumer = worker.NovaConsumer('test', None, None, True, {})
+        self.mox.ReplayAll()
+        actual_queue = consumer._create_queue('name', exchange, 'routing.key',
+                                              exclusive=False,
+                                              auto_delete=False)
+        self.assertEqual(actual_queue, queue)
+        self.mox.VerifyAll()
+
+
+
+    def test_create_queue_with_queue_args(self):
+        self.mox.StubOutClassWithMocks(kombu, 'Queue')
+        exchange = self.mox.CreateMockAnything()
+        queue_args = {'key': 'value'}
+        queue = kombu.Queue('name', exchange, auto_delete=False, durable=True,
+                            exclusive=False, routing_key='routing.key',
+                            queue_arguments=queue_args)
         consumer = worker.NovaConsumer('test', None, None, True, queue_args)
         self.mox.ReplayAll()
-        consumers = consumer.get_consumers(Consumer, None)
-        self.assertEqual(len(consumers), 1)
-        self.assertEqual(consumers[0], created_consumers[0])
-        self.assertEqual(len(created_queues), 2)
-        self.assertTrue(info_queue in created_queues)
-        self.assertTrue(error_queue in created_queues)
-        self.assertEqual(len(created_callbacks), 1)
-        self.assertTrue(consumer.on_nova in created_callbacks)
+        actual_queue = consumer._create_queue('name', exchange, 'routing.key',
+                                              exclusive=False,
+                                              auto_delete=False)
+        self.assertEqual(actual_queue, queue)
         self.mox.VerifyAll()
 
     def test_process(self):

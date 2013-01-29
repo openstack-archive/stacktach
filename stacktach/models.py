@@ -21,9 +21,6 @@ class Deployment(models.Model):
     name = models.CharField(max_length=50)
 
 
-
-
-
 class RawData(models.Model):
     deployment = models.ForeignKey(Deployment)
     tenant = models.CharField(max_length=50, null=True, blank=True,

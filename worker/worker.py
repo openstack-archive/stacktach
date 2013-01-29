@@ -48,20 +48,23 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         self.processed = 0
         self.total_processed = 0
 
+    def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
+        return kombu.entity.Exchange(name, type=type, exclusive=exclusive,
+                                     durable=self.durable, auto_delete=auto_delete)
+
+    def _create_queue(self, name, nova_exchange, routing_key, exclusive=False,
+                     auto_delete=False):
+        return kombu.Queue(name, nova_exchange, durable=self.durable,
+                           auto_delete=exclusive, exclusive=auto_delete,
+                           queue_arguments=self.queue_arguments,
+                           routing_key=routing_key)
+
     def get_consumers(self, Consumer, channel):
-        nova_exchange = kombu.entity.Exchange("nova", type="topic",
-                        exclusive=False, durable=self.durable,
-                        auto_delete=False)
+        nova_exchange = self._create_exchange("nova", "topic")
 
         nova_queues = [
-            kombu.Queue("monitor.info", nova_exchange, durable=self.durable,
-                        auto_delete=False, exclusive=False,
-                        queue_arguments=self.queue_arguments,
-                        routing_key='monitor.info'),
-            kombu.Queue("monitor.error", nova_exchange, durable=self.durable,
-                        auto_delete=False,
-                        queue_arguments=self.queue_arguments,
-                        exclusive=False, routing_key='monitor.error'),
+            self._create_queue('monitor.info', nova_exchange, 'monitor.info'),
+            self._create_queue('monitor.error', nova_exchange, 'monitor.error')
         ]
 
         return [Consumer(queues=nova_queues, callbacks=[self.on_nova])]
