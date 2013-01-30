@@ -84,7 +84,7 @@ def start_kpi_tracking(lifecycle, raw):
     if raw.event != "compute.instance.update":
         return
 
-    if "api" not in raw.host:
+    if "api" not in raw.service:
         return
 
     tracker = STACKDB.create_request_tracker(request_id=raw.request_id,

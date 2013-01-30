@@ -226,7 +226,7 @@ class StacktachLifecycleTestCase(unittest.TestCase):
     def test_start_kpi_tracking_not_from_api(self):
         raw = self.mox.CreateMockAnything()
         raw.event = 'compute.instance.update'
-        raw.host = 'compute'
+        raw.service = 'compute'
         self.mox.ReplayAll()
         views.start_kpi_tracking(None, raw)
         self.mox.VerifyAll()
@@ -236,7 +236,7 @@ class StacktachLifecycleTestCase(unittest.TestCase):
         tracker = self.mox.CreateMockAnything()
         when = utils.decimal_utc()
         raw = utils.create_raw(self.mox, when, 'compute.instance.update',
-                               host='api')
+                               host='nova.example.com', service='api')
         views.STACKDB.create_request_tracker(lifecycle=lifecycle,
                                              request_id=REQUEST_ID_1,
                                              start=when,
@@ -244,6 +244,16 @@ class StacktachLifecycleTestCase(unittest.TestCase):
                                              duration=str(0.0))\
                                              .AndReturn(tracker)
         views.STACKDB.save(tracker)
+        self.mox.ReplayAll()
+        views.start_kpi_tracking(lifecycle, raw)
+        self.mox.VerifyAll()
+
+    def test_start_kpi_tracking_not_using_host(self):
+        lifecycle = self.mox.CreateMockAnything()
+        tracker = self.mox.CreateMockAnything()
+        when = utils.decimal_utc()
+        raw = utils.create_raw(self.mox, when, 'compute.instance.update',
+                               host='api.example.com', service='compute')
         self.mox.ReplayAll()
         views.start_kpi_tracking(lifecycle, raw)
         self.mox.VerifyAll()
