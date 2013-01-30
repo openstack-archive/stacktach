@@ -47,9 +47,10 @@ def create_nova_notif(request_id=None, instance=INSTANCE_ID_1, type_id='1',
 
 def create_raw(mox, when, event, instance=INSTANCE_ID_1,
                request_id=REQUEST_ID_1, state='active', old_task='',
-               host='compute', json_str=''):
+               host='c.example.com', service='compute', json_str=''):
     raw = mox.CreateMockAnything()
     raw.host = host
+    raw.service = service
     raw.instance = instance
     raw.event = event
     raw.when = when
