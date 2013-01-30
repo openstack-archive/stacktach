@@ -221,10 +221,11 @@ def _process_usage_for_new_launch(raw):
     values['instance'] = payload['instance_id']
     values['request_id'] = notif[1]['_context_request_id']
 
-    if raw.event == INSTANCE_EVENT['create_start']:
-        values['instance_type_id'] = payload['instance_type_id']
+    (usage, new) = STACKDB.get_or_create_instance_usage(**values)
 
-    usage = STACKDB.create_instance_usage(**values)
+    if raw.event == INSTANCE_EVENT['create_start']:
+        usage.instance_type_id = payload['instance_type_id']
+
     STACKDB.save(usage)
 
 
@@ -233,8 +234,8 @@ def _process_usage_for_updates(raw):
     payload = notif[1]['payload']
     instance_id = payload['instance_id']
     request_id = notif[1]['_context_request_id']
-    usage = STACKDB.get_instance_usage(instance=instance_id,
-                                          request_id=request_id)
+    (usage, new) = STACKDB.get_or_create_instance_usage(instance=instance_id,
+                                                        request_id=request_id)
 
     if raw.event in [INSTANCE_EVENT['create_end'],
                      INSTANCE_EVENT['resize_finish_end'],

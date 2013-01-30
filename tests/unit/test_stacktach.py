@@ -410,13 +410,13 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         event = 'compute.instance.create.start'
         raw = utils.create_raw(self.mox, when, event=event, json_str=json_str)
         usage = self.mox.CreateMockAnything()
-        views.STACKDB.create_instance_usage(instance=INSTANCE_ID_1,
-                                            request_id=REQUEST_ID_1,
-                                            instance_type_id = '1')\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
         views._process_usage_for_new_launch(raw)
+        self.assertEquals(usage.instance_type_id, '1')
         self.mox.VerifyAll()
 
     def test_process_usage_for_updates_create_end(self):
@@ -433,9 +433,9 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.request_id = REQUEST_ID_1
         usage.instance_type_id = '1'
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         request_id=REQUEST_ID_1)\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
@@ -459,9 +459,9 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.request_id = REQUEST_ID_1
         usage.instance_type_id = '1'
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         request_id=REQUEST_ID_1)\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
@@ -484,9 +484,9 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         usage = self.mox.CreateMockAnything()
         usage.instance = INSTANCE_ID_1
         usage.request_id = REQUEST_ID_1
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         request_id=REQUEST_ID_1)\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
