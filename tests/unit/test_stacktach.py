@@ -508,23 +508,22 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         event = 'compute.instance.delete.end'
         raw = utils.create_raw(self.mox, delete_decimal, event=event,
                                json_str=json_str)
-        usage = self.mox.CreateMockAnything()
-        usage.instance = INSTANCE_ID_1
-        usage.request_id = REQUEST_ID_1
-        usage.instance_type_id = '1'
-        usage.launched_at = launch_decimal
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         launched_at=launch_decimal)\
-                     .AndReturn(usage)
-        views.STACKDB.save(usage)
+        delete = self.mox.CreateMockAnything()
+        delete.instance = INSTANCE_ID_1
+        delete.launched_at = launch_decimal
+        delete.deleted_at = delete_decimal
+        views.STACKDB.create_instance_delete(instance=INSTANCE_ID_1,
+                                             launched_at=launch_decimal,
+                                             deleted_at=delete_decimal,
+                                             raw=raw)\
+                     .AndReturn(delete)
+        views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
         views._process_delete(raw)
-        self.assertEqual(usage.instance, INSTANCE_ID_1)
-        self.assertEqual(usage.request_id, REQUEST_ID_1)
-        self.assertEqual(usage.instance_type_id, '1')
-        self.assertEqual(usage.launched_at, launch_decimal)
-        self.assertEqual(usage.deleted_at, delete_decimal)
+        self.assertEqual(delete.instance, INSTANCE_ID_1)
+        self.assertEqual(delete.launched_at, launch_decimal)
+        self.assertEqual(delete.deleted_at, delete_decimal)
         self.mox.VerifyAll()
 
     def test_process_exists(self):

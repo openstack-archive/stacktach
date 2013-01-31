@@ -33,6 +33,9 @@ def get_or_create_instance_usage(**kwargs):
 def get_instance_usage(**kwargs):
     return models.InstanceUsage.objects.get(**kwargs)
 
+def create_instance_delete(**kwargs):
+    return models.InstanceDeletes(**kwargs)
+
 def create_instance_exists(**kwargs):
     return models.InstanceExists(**kwargs)
 
