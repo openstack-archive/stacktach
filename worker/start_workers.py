@@ -10,7 +10,7 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
-import worker
+import worker.worker as worker
 
 config_filename = os.environ.get('STACKTACH_DEPLOYMENTS_FILE',
                                  'stacktach_worker_config.json')
