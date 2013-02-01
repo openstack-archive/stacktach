@@ -103,10 +103,8 @@ class InstanceExists(models.Model):
     ]
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
-    #launched_at = models.IntegerField(null=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
                                       decimal_places=6)
-    #deleted_at = models.IntegerField(null=True, db_index=True)
     deleted_at = models.DecimalField(null=True, max_digits=20,
                                       decimal_places=6)
     message_id =  models.CharField(max_length=50, null=True,
@@ -120,6 +118,7 @@ class InstanceExists(models.Model):
                               default=PENDING)
     raw = models.ForeignKey(RawData, related_name='+', null=True)
     usage = models.ForeignKey(InstanceUsage, related_name='+', null=True)
+    delete = models.ForeignKey(InstanceDeletes, related_name='+', null=True)
 
 
 class Timing(models.Model):

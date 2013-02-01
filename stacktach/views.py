@@ -270,16 +270,21 @@ def _process_exists(raw):
     notif = json.loads(raw.json)
     payload = notif[1]['payload']
     instance_id = payload['instance_id']
-    launched_at = payload['launched_at']
-    launched_at = str_time_to_unix(launched_at)
+    launched_at = str_time_to_unix(payload['launched_at'])
+    launched_range = (launched_at, launched_at+1)
     usage = STACKDB.get_instance_usage(instance=instance_id,
-                                       launched_at=launched_at)
+                                       launched_at__range=launched_range)
+    delete = STACKDB.get_instance_delete(instance=instance_id,
+                                         launched_at__range=launched_range)
     values = {}
     values['message_id'] = notif[1]['message_id']
     values['instance'] = instance_id
     values['launched_at'] = launched_at
     values['instance_type_id'] = payload['instance_type_id']
-    values['usage'] = usage
+    if usage:
+        values['usage'] = usage
+    if delete:
+        values['delete'] = delete
     values['raw'] = raw
 
     deleted_at = payload.get('deleted_at')

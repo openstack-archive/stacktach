@@ -537,9 +537,13 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         raw = utils.create_raw(self.mox, current_decimal, event=event,
                                json_str=json_str)
         usage = self.mox.CreateMockAnything()
+        launched_range = (launch_decimal, launch_decimal+1)
         views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         launched_at=launch_decimal)\
+                                         launched_at__range=launched_range)\
                      .AndReturn(usage)
+        views.STACKDB.get_instance_delete(instance=INSTANCE_ID_1,
+                                          launched_at__range=launched_range)\
+             .AndReturn(None)
         exists_values = {
             'message_id': MESSAGE_ID_1,
             'instance': INSTANCE_ID_1,
@@ -569,9 +573,14 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         raw = utils.create_raw(self.mox, current_decimal, event=event,
                                json_str=json_str)
         usage = self.mox.CreateMockAnything()
+        launched_range = (launch_decimal, launch_decimal+1)
         views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         launched_at=launch_decimal)\
+                                         launched_at__range=launched_range)\
                      .AndReturn(usage)
+        delete = self.mox.CreateMockAnything()
+        views.STACKDB.get_instance_delete(instance=INSTANCE_ID_1,
+                                          launched_at__range=launched_range)\
+             .AndReturn(delete)
         exists_values = {
             'message_id': MESSAGE_ID_1,
             'instance': INSTANCE_ID_1,
@@ -579,6 +588,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
             'deleted_at': deleted_decimal,
             'instance_type_id': '1',
             'usage': usage,
+            'delete': delete,
             'raw': raw,
         }
         exists = self.mox.CreateMockAnything()
