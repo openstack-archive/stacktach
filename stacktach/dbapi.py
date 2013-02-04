@@ -9,7 +9,7 @@ import models
 
 
 def rsp(data):
-    return HttpResponse(json.dumps(data))
+    return HttpResponse(json.dumps(data), content_type="application/json")
 
 
 def list_usage_launches(request):
