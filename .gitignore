@@ -5,3 +5,5 @@ local_settings.py
 .coverage
 worker.log
 worker.log.*
+etc/stacktach_config.sh
+etc/stacktach_worker_config.json
