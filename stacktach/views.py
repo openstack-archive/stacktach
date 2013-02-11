@@ -1,23 +1,26 @@
 # Copyright 2012 - Dark Secret Software Inc.
 
+import datetime
+import json
+import pprint
+
 from django import db
 from django import http
 from django.shortcuts import render_to_response
 from django import template
 
-from stacktach import models
 from stacktach import datetime_to_decimal as dt
-
-import datetime
-import json
-import pprint
+from stacktach import image_type
+from stacktach import models
 
 
 def _extract_states(payload):
     return {
         'state' : payload.get('state', ""),
         'old_state' : payload.get('old_state', ""),
-        'old_task' : payload.get('old_task_state', "")
+        'old_task' : payload.get('old_task_state', ""),
+        'task' : payload.get('new_task_state', ""),
+        'image_type' : image_type.get_numeric_code(payload)
     }
 
 

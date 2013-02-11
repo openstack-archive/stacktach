@@ -23,6 +23,7 @@ import kombu.connection
 import kombu.entity
 import kombu.mixins
 import logging
+import sys
 import time
 
 from pympler.process import ProcessMemoryInfo
@@ -35,6 +36,8 @@ LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
 handler = logging.handlers.TimedRotatingFileHandler('worker.log',
                                            when='h', interval=6, backupCount=4)
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
 LOG.addHandler(handler)
 
 
@@ -138,13 +141,20 @@ def run(deployment_config):
                   virtual_host=virtual_host)
 
     while True:
-        LOG.debug("Processing on '%s'" % name)
-        with kombu.connection.BrokerConnection(**params) as conn:
-            try:
-                consumer = NovaConsumer(name, conn, deployment, durable)
-                consumer.run()
-            except Exception as e:
-                LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
-                                (name, e))
-                time.sleep(5)
-        LOG.debug("Completed processing on '%s'" % name)
+        try:
+            LOG.debug("Processing on '%s'" % name)
+            with kombu.connection.BrokerConnection(**params) as conn:
+                try:
+                    consumer = NovaConsumer(name, conn, deployment, durable)
+                    consumer.run()
+                except Exception as e:
+                    LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
+                                    (name, e))
+                    time.sleep(5)
+            LOG.debug("Completed processing on '%s'" % name)
+        except:
+            e = sys.exc_info()[0]
+            msg = "Uncaught exception: deployment=%s, exception=%s. Retrying in 5s"
+            LOG.exception(msg % (name, e))
+            time.sleep(5)
+

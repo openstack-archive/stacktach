@@ -12,6 +12,8 @@ def dt_to_decimal(utc):
 
 
 def dt_from_decimal(dec):
+    if dec == None:
+        return "n/a"
     integer = int(dec)
     micro = (dec - decimal.Decimal(integer)) * decimal.Decimal(1000000)
 
