@@ -26,9 +26,10 @@ if len(sys.argv) == 2:
         sys.exit(1)
 
 hours = 0
-length = 24
+length = 6
 
-start = datetime.datetime(year=yesterday.year, month=yesterday.month, day=yesterday.day) 
+start = datetime.datetime(year=yesterday.year, month=yesterday.month, 
+                          day=yesterday.day) 
 end = start + datetime.timedelta(hours=length-1, minutes=59, seconds=59)
 
 print "Generating report for %s to %s" % (start, end)
@@ -48,6 +49,7 @@ cmds = ['create', 'rebuild', 'rescue', 'resize', 'snapshot']
 
 failures = {}
 causes = {}
+durations = {}
 error_messages = {}
 successes = {}
 tenant_issues = {}
@@ -71,10 +73,10 @@ for uuid_dict in updates:
         start = None
         err = None
 
-        operation = "n/a"
+        operation = "aux"
         platform = 0
         tenant = 0
-        cell = "n/a"
+        cell = "unk"
 
         for raw in raws:
             if not start:
@@ -107,6 +109,17 @@ for uuid_dict in updates:
             report = True
 
         key = (operation, platform, cell)
+
+        # Track durations for all attempts, good and bad ...
+        duration_min, duration_max, duration_count, duration_total = \
+            durations.get(key, (9999999, 0, 0, 0))
+        duration_min = min(duration_min, diff)
+        duration_max = max(duration_max, diff)
+        duration_count += 1
+        duration_total += diff
+        durations[key] = (duration_min, duration_max, duration_count,
+                          duration_total)
+
         if not report:
             successes[key] = successes.get(key, 0) + 1
         else:
@@ -124,14 +137,16 @@ for uuid_dict in updates:
                 payload = body['payload']
                 print "Error. EventID: %s, Tenant %s, Service %s, Host %s, "\
                       "Deployment %s, Event %s, When %s"\
-                    % (err.id, err.tenant, err.service, err.host, err.deployment.name, 
+                    % (err.id, err.tenant, err.service, err.host, 
+                       err.deployment.name, 
                        err.event, dt.dt_from_decimal(err.when))
                 exc = payload.get('exception')
                 if exc:
                     # group the messages ...
                     exc_str = str(exc)
                     print exc_str
-                    error_messages[exc_str] = error_messages.get(exc_str, 0) + 1
+                    error_messages[exc_str] = \
+                                        error_messages.get(exc_str, 0) + 1
                     
                     # extract the code, if any ...
                     code = exc.get('kwargs', {}).get('code')
@@ -151,9 +166,15 @@ def dump_breakdown(totals, label):
     print p
 
 
+
+
 def dump_summary(info, label):
     print "-- %s by operation by cell by platform --" % (label,)
-    p = prettytable.PrettyTable(["Operation", "Cell", "Platform", "Count"])
+    p = prettytable.PrettyTable(["Operation", "Cell", "Platform", "Count",
+                                 "Min", "Max", "Avg"])
+    for c in ["Count", "Min", "Max", "Avg"]:
+        p.align[c] = 'r'
+
     total = 0
     op_totals = {}
     cell_totals = {}
@@ -164,11 +185,18 @@ def dump_summary(info, label):
         text = "n/a"
         if readable:
             text = ", ".join(readable)
+
+        _min, _max, _count, _total = durations[key]
+        _avg = float(_total) / float(_count)
+        _fmin = dt.sec_to_str(_min)
+        _fmax = dt.sec_to_str(_max)
+        _favg = dt.sec_to_str(_avg * 100.0)
+
         op_totals[operation] = op_totals.get(operation, 0) + count
         cell_totals[cell] = cell_totals.get(cell, 0) + count
         platform_totals[text] = platform_totals.get(text, 0) + count
 
-        p.add_row([operation, cell, text, count])
+        p.add_row([operation, cell, text, count, _fmin, _fmax, _favg])
         total += count
     p.sortby = 'Count'
     print p

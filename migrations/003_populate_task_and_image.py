@@ -54,7 +54,7 @@ def fix_chunk(hours, length):
     for kv in states.iteritems():
         print "%s = %d" % kv
 
-for day in xrange(2, 90):
+for day in xrange(0, 90):
     hours = day * 24
     steps = 12
     chunk = 24 / steps

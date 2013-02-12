@@ -9,6 +9,8 @@ OS_RHEL = 0x800
 
 
 def isset(num, flag):
+    if not num:
+        return False
     return num & flag > 0
 
 
@@ -41,7 +43,7 @@ def get_numeric_code(payload, default=0):
     if image_type == 'snapshot':
         num |= SNAPSHOT_IMAGE
 
-    os_type = meta.get('os_type', '')
+    os_type = meta.get('os_type', payload.get('os_type', ''))
     if os_type == 'linux':
         num |= LINUX_IMAGE
 
