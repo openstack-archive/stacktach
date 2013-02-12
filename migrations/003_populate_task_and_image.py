@@ -39,7 +39,7 @@ def fix_chunk(hours, length):
             states[task] = states.get(task, 0) + 1
             raw.task = task
 
-        image_type_num = image_type.get_numeric_code(payload)
+        raw.image_type = image_type.get_numeric_code(payload, raw.image_type)
         updated += 1
         raw.save()
 
