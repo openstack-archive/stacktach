@@ -1,6 +1,7 @@
 import datetime
 import json
 import sys
+import time
 
 import prettytable
 
@@ -14,14 +15,24 @@ from stacktach import models
 if __name__ != '__main__':
     sys.exit(1)
 
+yesterday = datetime.datetime.utcnow().date() - datetime.timedelta(days=1)
+if len(sys.argv) == 2:
+    try:
+        t = time.strptime(sys.argv[1], "%Y-%m-%d")
+        yesterday = datetime.datetime(*t[:6])
+    except Exception, e:
+        print e
+        print "Usage: python requests.py YYYY-MM-DD (the end date)"
+        sys.exit(1)
+
 hours = 0
 length = 24
 
-now = datetime.datetime.utcnow()
-start = now - datetime.timedelta(hours=hours+length)
-end = now - datetime.timedelta(hours=hours)
+start = datetime.datetime(year=yesterday.year, month=yesterday.month, day=yesterday.day) 
+end = start + datetime.timedelta(hours=length-1, minutes=59, seconds=59)
 
-dnow = dt.dt_to_decimal(now)
+print "Generating report for %s to %s" % (start, end)
+
 dstart = dt.dt_to_decimal(start)
 dend = dt.dt_to_decimal(end)
 
@@ -30,7 +41,7 @@ codes = {}
 # Get all the instances that have changed in the last N hours ...
 updates = models.RawData.objects.filter(event='compute.instance.update',
                                         when__gt=dstart, when__lte=dend)\
-                                 .values('instance').distinct()
+                                .values('instance').distinct()
 
 expiry = 60 * 60  # 1 hour
 cmds = ['create', 'rebuild', 'rescue', 'resize', 'snapshot']
