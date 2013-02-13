@@ -4,6 +4,7 @@ import datetime
 import json
 import pprint
 
+from django import db
 from django import http
 from django.shortcuts import render_to_response
 from django import template
@@ -321,13 +322,16 @@ def aggregate_usage(raw):
 
 def str_time_to_unix(when):
     try:
+        when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S")
+    except ValueError:
         try:
             when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
         except ValueError:
-            # Old way of doing it
-            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
-    except Exception, e:
-        pass
+            try:
+                # Old way of doing it
+                when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
+            except Exception, e:
+                print "BAD DATE: ", e
     return dt.dt_to_decimal(when)
 
 
