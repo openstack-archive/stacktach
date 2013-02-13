@@ -152,7 +152,8 @@ def run(deployment_config):
             LOG.debug("Processing on '%s'" % name)
             with kombu.connection.BrokerConnection(**params) as conn:
                 try:
-                    consumer = NovaConsumer(name, conn, deployment, durable)
+                    consumer = NovaConsumer(name, conn, deployment, durable,
+                                            queue_arguments)
                     consumer.run()
                 except Exception as e:
                     LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
