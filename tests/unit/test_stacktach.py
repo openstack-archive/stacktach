@@ -410,13 +410,13 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         event = 'compute.instance.create.start'
         raw = utils.create_raw(self.mox, when, event=event, json_str=json_str)
         usage = self.mox.CreateMockAnything()
-        views.STACKDB.create_instance_usage(instance=INSTANCE_ID_1,
-                                            request_id=REQUEST_ID_1,
-                                            instance_type_id = '1')\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
         views._process_usage_for_new_launch(raw)
+        self.assertEquals(usage.instance_type_id, '1')
         self.mox.VerifyAll()
 
     def test_process_usage_for_updates_create_end(self):
@@ -433,9 +433,9 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.request_id = REQUEST_ID_1
         usage.instance_type_id = '1'
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         request_id=REQUEST_ID_1)\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
@@ -459,9 +459,9 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.request_id = REQUEST_ID_1
         usage.instance_type_id = '1'
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         request_id=REQUEST_ID_1)\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
@@ -484,9 +484,9 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         usage = self.mox.CreateMockAnything()
         usage.instance = INSTANCE_ID_1
         usage.request_id = REQUEST_ID_1
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         request_id=REQUEST_ID_1)\
-                     .AndReturn(usage)
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1)\
+                     .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
@@ -508,23 +508,22 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         event = 'compute.instance.delete.end'
         raw = utils.create_raw(self.mox, delete_decimal, event=event,
                                json_str=json_str)
-        usage = self.mox.CreateMockAnything()
-        usage.instance = INSTANCE_ID_1
-        usage.request_id = REQUEST_ID_1
-        usage.instance_type_id = '1'
-        usage.launched_at = launch_decimal
-        views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         launched_at=launch_decimal)\
-                     .AndReturn(usage)
-        views.STACKDB.save(usage)
+        delete = self.mox.CreateMockAnything()
+        delete.instance = INSTANCE_ID_1
+        delete.launched_at = launch_decimal
+        delete.deleted_at = delete_decimal
+        views.STACKDB.create_instance_delete(instance=INSTANCE_ID_1,
+                                             launched_at=launch_decimal,
+                                             deleted_at=delete_decimal,
+                                             raw=raw)\
+                     .AndReturn(delete)
+        views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
         views._process_delete(raw)
-        self.assertEqual(usage.instance, INSTANCE_ID_1)
-        self.assertEqual(usage.request_id, REQUEST_ID_1)
-        self.assertEqual(usage.instance_type_id, '1')
-        self.assertEqual(usage.launched_at, launch_decimal)
-        self.assertEqual(usage.deleted_at, delete_decimal)
+        self.assertEqual(delete.instance, INSTANCE_ID_1)
+        self.assertEqual(delete.launched_at, launch_decimal)
+        self.assertEqual(delete.deleted_at, delete_decimal)
         self.mox.VerifyAll()
 
     def test_process_exists(self):
@@ -538,9 +537,13 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         raw = utils.create_raw(self.mox, current_decimal, event=event,
                                json_str=json_str)
         usage = self.mox.CreateMockAnything()
+        launched_range = (launch_decimal, launch_decimal+1)
         views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         launched_at=launch_decimal)\
+                                         launched_at__range=launched_range)\
                      .AndReturn(usage)
+        views.STACKDB.get_instance_delete(instance=INSTANCE_ID_1,
+                                          launched_at__range=launched_range)\
+             .AndReturn(None)
         exists_values = {
             'message_id': MESSAGE_ID_1,
             'instance': INSTANCE_ID_1,
@@ -570,9 +573,14 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         raw = utils.create_raw(self.mox, current_decimal, event=event,
                                json_str=json_str)
         usage = self.mox.CreateMockAnything()
+        launched_range = (launch_decimal, launch_decimal+1)
         views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
-                                         launched_at=launch_decimal)\
+                                         launched_at__range=launched_range)\
                      .AndReturn(usage)
+        delete = self.mox.CreateMockAnything()
+        views.STACKDB.get_instance_delete(instance=INSTANCE_ID_1,
+                                          launched_at__range=launched_range)\
+             .AndReturn(delete)
         exists_values = {
             'message_id': MESSAGE_ID_1,
             'instance': INSTANCE_ID_1,
@@ -580,6 +588,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
             'deleted_at': deleted_decimal,
             'instance_type_id': '1',
             'usage': usage,
+            'delete': delete,
             'raw': raw,
         }
         exists = self.mox.CreateMockAnything()
