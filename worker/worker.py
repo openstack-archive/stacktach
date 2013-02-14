@@ -147,7 +147,8 @@ def run(deployment_config):
                   transport="librabbitmq",
                   virtual_host=virtual_host)
 
-    while True:
+    # continue_running() is used for testing
+    while continue_running():
         try:
             LOG.debug("Processing on '%s'" % name)
             with kombu.connection.BrokerConnection(**params) as conn:
