@@ -35,7 +35,7 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
         when3 = views.str_time_to_unix('2012-12-21 12:36:56.124')
         self.update_raw = create_raw(self.deployment, when1,
                                           'compute.instance.update',
-                                          host='api')
+                                          host='api', service='api')
         self.start_raw = create_raw(self.deployment, when2,
                                          'compute.instance.reboot.start')
         self.end_raw = create_raw(self.deployment, when3,
@@ -105,7 +105,7 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
                                       'compute.instance.update',
                                       instance=INSTANCE_ID_2,
                                       request_id=REQUEST_ID_2,
-                                      host='api')
+                                      host='api', service='api')
         start_raw2 = create_raw(self.deployment, when2,
                                      'compute.instance.resize.start',
                                      instance=INSTANCE_ID_2,
@@ -157,7 +157,7 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
         update_raw2 = create_raw(self.deployment, when1,
                                       'compute.instance.update',
                                       request_id=REQUEST_ID_2,
-                                      host='api')
+                                      host='api', service='api')
         start_raw2 = create_raw(self.deployment, when2,
                                      'compute.instance.resize.start',
                                      request_id=REQUEST_ID_2)
@@ -227,7 +227,7 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
                                       'compute.instance.update',
                                       instance=INSTANCE_ID_2,
                                       request_id=REQUEST_ID_2,
-                                      host='api')
+                                      host='api', service='api')
         start_raw2 = create_raw(self.deployment, when2,
                                      'compute.instance.resize.start',
                                      instance=INSTANCE_ID_2,
@@ -268,9 +268,9 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
         when2 = views.str_time_to_unix('2012-12-21 13:34:50.123')
         when3 = views.str_time_to_unix('2012-12-21 13:37:50.124')
         update_raw2 = create_raw(self.deployment, when1,
-            'compute.instance.update',
-            request_id=REQUEST_ID_2,
-            host='api')
+                                 'compute.instance.update',
+                                 request_id=REQUEST_ID_2,
+                                 host='api', service='api')
         start_raw2 = create_raw(self.deployment, when2,
             'compute.instance.resize.start',
             request_id=REQUEST_ID_2)
@@ -309,7 +309,7 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
         update_raw2 = create_raw(self.deployment, when1,
                                       'compute.instance.update',
                                       request_id=REQUEST_ID_2,
-                                      host='api')
+                                      host='api', service='api')
         start_raw2 = create_raw(self.deployment, when2,
                                      'compute.instance.resize.start',
                                      request_id=REQUEST_ID_2)
@@ -492,14 +492,6 @@ class ViewsUsageTestCase(unittest.TestCase):
     def test_process_delete(self):
         launched_str = '2012-12-21 06:34:50.123'
         launched = views.str_time_to_unix(launched_str)
-        values = {
-            'instance': INSTANCE_ID_1,
-            'request_id': REQUEST_ID_1,
-            'instance_type_id': '1',
-            'launched_at': launched,
-            }
-        InstanceUsage(**values).save()
-
         deleted_str = '2012-12-21 12:34:50.123'
         deleted = views.str_time_to_unix(deleted_str)
         json = test_utils.make_delete_end_json(launched_str, deleted_str)
@@ -508,10 +500,13 @@ class ViewsUsageTestCase(unittest.TestCase):
 
         views._process_delete(raw)
 
-        usages = InstanceUsage.objects.all()
-        self.assertEqual(len(usages), 1)
-        usage = usages[0]
-        self.assertEqual(usage.deleted_at, deleted)
+        delete = InstanceDeletes.objects.all()
+        self.assertEqual(len(delete), 1)
+        delete = delete[0]
+        self.assertEqual(delete.instance, INSTANCE_ID_1)
+        self.assertEqual(delete.launched_at, launched)
+        self.assertEqual(delete.deleted_at, deleted)
+        self.assertEqual(delete.raw.id, raw.id)
 
     def test_process_exists(self):
         launched_str = '2012-12-21 06:34:50.123'
@@ -556,7 +551,6 @@ class ViewsUsageTestCase(unittest.TestCase):
             'request_id': REQUEST_ID_1,
             'instance_type_id': '1',
             'launched_at': launched,
-            'deleted_at': deleted,
             }
         InstanceUsage(**values).save()
 
@@ -621,7 +615,6 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         usage = usages[0]
         self.assertOnUsage(usage, INSTANCE_ID_1, '1', launched, REQUEST_ID_1)
 
-    @unittest.skip("can't handle late starts yet")
     def test_create_workflow_start_late(self):
         created_str = '2012-12-21 06:30:50.123'
         created = views.str_time_to_unix(created_str)
@@ -749,7 +742,6 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         self.assertOnUsage(usage_after, INSTANCE_ID_1, '2', finish_time,
                            REQUEST_ID_2)
 
-    @unittest.skip("can't handle late starts yet")
     def test_resize_workflow_start_late(self):
         launched_str = '2012-12-21 06:34:50.123'
         launched = views.str_time_to_unix(launched_str)
@@ -852,7 +844,6 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         self.assertOnUsage(usage_after_revert, INSTANCE_ID_1, '1', end_time,
                            REQUEST_ID_3)
 
-    @unittest.skip("can't handle late starts yet")
     def test_resize_revert_workflow_start_late(self):
         launched_str = '2012-12-21 06:34:50.123'
         launched = views.str_time_to_unix(launched_str)

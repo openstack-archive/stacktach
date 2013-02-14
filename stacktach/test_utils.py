@@ -160,10 +160,11 @@ def make_resize_revert_end_json(launched_at, instance_type_id='1',
 
 def create_raw(deployment, when, event, instance=INSTANCE_ID_1,
                request_id=REQUEST_ID_1, state='active', old_task='',
-               host='compute', json=''):
+               host='compute', service='compute', json=''):
     raw_values  = {
         'deployment': deployment,
         'host': host,
+        'service': service,
         'state': state,
         'old_task': old_task,
         'when': when,

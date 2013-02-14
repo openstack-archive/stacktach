@@ -72,7 +72,7 @@ def sec_to_time(diff):
 
 
 def rsp(data):
-    return HttpResponse(json.dumps(data))
+    return HttpResponse(json.dumps(data), content_type="application/json")
 
 
 def do_deployments(request):
@@ -296,4 +296,82 @@ def do_kpi(request, tenant_id=None):
         if tenant_id == None or (tenant_id == end_event.tenant):
             results.append([event, sec_to_time(track.duration),
                    uuid, end_event.deployment.name])
+    return rsp(results)
+
+
+def do_list_usage_launches(request):
+
+    filter_args = {}
+    if 'instance' in request.GET:
+        filter_args['instance'] = request.GET['instance']
+
+    if len(filter_args) > 0:
+        launches = models.InstanceUsage.objects.filter(**filter_args)
+    else:
+        launches = models.InstanceUsage.objects.all()
+
+    results = []
+    results.append(["UUID", "Launched At", "Instance Type Id"])
+
+    for launch in launches:
+        launched = None
+        if launch.launched_at:
+            launched = str(dt.dt_from_decimal(launch.launched_at))
+        results.append([launch.instance, launched, launch.instance_type_id])
+
+    return rsp(results)
+
+
+def do_list_usage_deletes(request):
+
+    filter_args = {}
+    if 'instance' in request.GET:
+        filter_args['instance'] = request.GET['instance']
+
+    if len(filter_args) > 0:
+        deletes = models.InstanceDeletes.objects.filter(**filter_args)
+    else:
+        deletes = models.InstanceDeletes.objects.all()
+
+    results = []
+    results.append(["UUID", "Launched At", "Deleted At"])
+
+    for delete in deletes:
+        launched = None
+        if delete.launched_at:
+            launched = str(dt.dt_from_decimal(delete.launched_at))
+        deleted = None
+        if delete.deleted_at:
+            deleted = str(dt.dt_from_decimal(delete.deleted_at))
+        results.append([delete.instance, launched, deleted])
+
+    return rsp(results)
+
+
+def do_list_usage_exists(request):
+
+    filter_args = {}
+    if 'instance' in request.GET:
+        filter_args['instance'] = request.GET['instance']
+
+    if len(filter_args) > 0:
+        exists = models.InstanceExists.objects.filter(**filter_args)
+    else:
+        exists = models.InstanceExists.objects.all()
+
+    results = []
+    results.append(["UUID", "Launched At", "Deleted At", "Instance Type Id",
+                    "Message ID", "Status"])
+
+    for exist in exists:
+        launched = None
+        if exist.launched_at:
+            launched = str(dt.dt_from_decimal(exist.launched_at))
+        deleted = None
+        if exist.deleted_at:
+            deleted = str(dt.dt_from_decimal(exist.deleted_at))
+        results.append([exist.instance, launched, deleted,
+                        exist.instance_type_id, exist.message_id,
+                        exist.status])
+
     return rsp(results)

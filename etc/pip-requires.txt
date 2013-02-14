@@ -1,3 +1,5 @@
 Django>=1.4.2
 MySQL-python>=1.2.3
 eventlet>=0.9.17
+kombu>=2.4.7
+librabbitmq>=1.0.0

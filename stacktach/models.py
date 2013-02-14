@@ -34,6 +34,9 @@ class RawData(models.Model):
                              blank=True, db_index=True)
     old_task = models.CharField(max_length=30, null=True,
                              blank=True, db_index=True)
+    task = models.CharField(max_length=30, null=True,
+                             blank=True, db_index=True)
+    image_type = models.IntegerField(null=True, default=0, db_index=True)
     when = models.DecimalField(max_digits=20, decimal_places=6,
                                                db_index=True)
     publisher = models.CharField(max_length=100, null=True,
@@ -72,18 +75,26 @@ class Lifecycle(models.Model):
 class InstanceUsage(models.Model):
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
-    #launched_at = models.IntegerField(null=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
                                       decimal_places=6)
-    #deleted_at = models.IntegerField(null=True, db_index=True)
-    deleted_at = models.DecimalField(null=True, max_digits=20,
-                                     decimal_places=6)
     request_id =  models.CharField(max_length=50, null=True,
                                    blank=True, db_index=True)
     instance_type_id =  models.CharField(max_length=50,
                                          null=True,
                                          blank=True,
                                          db_index=True)
+
+
+class InstanceDeletes(models.Model):
+    instance = models.CharField(max_length=50, null=True,
+        blank=True, db_index=True)
+    launched_at = models.DecimalField(null=True, max_digits=20,
+        decimal_places=6)
+    deleted_at = models.DecimalField(null=True, max_digits=20,
+        decimal_places=6)
+    raw = models.ForeignKey(RawData, null=True)
+
+
 class InstanceExists(models.Model):
     PENDING = 'pending'
     VERIFIED = 'verified'
@@ -95,10 +106,8 @@ class InstanceExists(models.Model):
     ]
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
-    #launched_at = models.IntegerField(null=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
                                       decimal_places=6)
-    #deleted_at = models.IntegerField(null=True, db_index=True)
     deleted_at = models.DecimalField(null=True, max_digits=20,
                                       decimal_places=6)
     message_id =  models.CharField(max_length=50, null=True,
@@ -112,6 +121,7 @@ class InstanceExists(models.Model):
                               default=PENDING)
     raw = models.ForeignKey(RawData, related_name='+', null=True)
     usage = models.ForeignKey(InstanceUsage, related_name='+', null=True)
+    delete = models.ForeignKey(InstanceDeletes, related_name='+', null=True)
 
 
 class Timing(models.Model):
