@@ -257,14 +257,18 @@ def _process_delete(raw):
     notif = json.loads(raw.json)
     payload = notif[1]['payload']
     instance_id = payload['instance_id']
-    launched_at = str_time_to_unix(payload['launched_at'])
     deleted_at = str_time_to_unix(payload['deleted_at'])
     values = {
         'instance': instance_id,
-        'launched_at': launched_at,
         'deleted_at': deleted_at,
         'raw': raw
     }
+
+    launched_at = payload.get('launched_at')
+    if launched_at and launched_at != '':
+        launched_at = str_time_to_unix(launched_at)
+        values['launched_at'] = launched_at
+
     delete = STACKDB.create_instance_delete(**values)
     STACKDB.save(delete)
 
