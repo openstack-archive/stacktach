@@ -364,15 +364,7 @@ def process_raw_data(deployment, args, json_args):
             when = body['timestamp']
         except KeyError:
             when = body['_context_timestamp']  # Old way of doing it
-        try:
-            try:
-                when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
-            except ValueError:
-                # Old way of doing it
-                when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
-        except Exception, e:
-            pass
-        values['when'] = dt.dt_to_decimal(when)
+        values['when'] = str_time_to_unix(when)
         values['routing_key'] = routing_key
         values['json'] = json_args
         record = STACKDB.create_rawdata(**values)
