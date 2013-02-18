@@ -161,7 +161,7 @@ class JsonReport(models.Model):
        via stacky/rest. All DateTimes are UTC."""
     period_start = models.DateTimeField(db_index=True)
     period_end = models.DateTimeField(db_index=True)
-    created = models.DateTimeField(db_index=True)
+    created = models.DecimalField(max_digits=20, decimal_places=6, db_index=True)
     name = models.CharField(max_length=50, db_index=True)
     version = models.IntegerField(default=1)
     json = models.TextField()

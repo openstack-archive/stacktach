@@ -7,23 +7,24 @@ import time
 import prettytable
 
 sys.path.append("/stacktach")
-sys.path.append(".")
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import image_type
 from stacktach import models
 
 
-def make_report(yesterday=None, start_hour=0, hours=24, percentile=90, store=False):
+def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
+                store=False):
     if not yesterday:
-        yesterday = datetime.datetime.utcnow().date() - datetime.timedelta(days=1)
+        yesterday = datetime.datetime.utcnow().date() - \
+                    datetime.timedelta(days=1)
 
-    start = datetime.datetime(year=yesterday.year, month=yesterday.month, 
-                              day=yesterday.day, hour=start_hour) 
-    end = start + datetime.timedelta(hours=hours-1, minutes=59, seconds=59)
+    rstart = datetime.datetime(year=yesterday.year, month=yesterday.month,
+                              day=yesterday.day, hour=start_hour)
+    rend = rstart + datetime.timedelta(hours=hours-1, minutes=59, seconds=59)
 
-    dstart = dt.dt_to_decimal(start)
-    dend = dt.dt_to_decimal(end)
+    dstart = dt.dt_to_decimal(rstart)
+    dend = dt.dt_to_decimal(rend)
 
     codes = {}
 
@@ -52,8 +53,8 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90, store=Fal
             report = False
             req = req_dict['request_id']
             raws = models.RawData.objects.filter(request_id=req)\
-                                         .exclude(event='compute.instance.exists')\
-                                         .order_by('when')
+                                      .exclude(event='compute.instance.exists')\
+                                      .order_by('when')
 
             start = None
             err = None
@@ -74,7 +75,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90, store=Fal
                         break
 
                 if raw.image_type:
-                    image_type_num |= raw.image_type                 
+                    image_type_num |= raw.image_type
 
             image = "?"
             if image_type.isset(image_type_num, image_type.BASE_IMAGE):
@@ -106,8 +107,8 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90, store=Fal
     # Summarize the results ...
     report = []
     pct = (float(100 - percentile) / 2.0) / 100.0
-    details = {'percentile': percentile, 'pct': pct, 'hours': hours, 
-                   'start': start, 'end': end}
+    details = {'percentile': percentile, 'pct': pct, 'hours': hours,
+                   'start': float(dstart), 'end': float(dend)}
     report.append(details)
 
     cols = ["Operation", "Image", "Min*", "Max*", "Avg*",
@@ -143,13 +144,13 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90, store=Fal
         _fmax = dt.sec_to_str(_max)
         _favg = dt.sec_to_str(_avg)
 
-        report.add_row([operation, image, _fmin, _fmax, _favg, count, 
-                   failure_count, failure_percentage])
+        report.append([operation, image, _fmin, _fmax, _favg, count,
+                       failure_count, failure_percentage])
 
     details['total'] = total
-    details['failures'] = failures
+    details['failure_total'] = failure_total
     details['failure_rate'] = (float(failure_total)/float(total)) * 100.0
-    return report
+    return (rstart, rend, report)
 
 
 def valid_date(date):
@@ -157,39 +158,57 @@ def valid_date(date):
         t = time.strptime(date, "%Y-%m-%d")
         return datetime.datetime(*t[:6])
     except Exception, e:
-        raise argparse.ArgumentTypeError("'%s' is not in YYYY-MM-DD format." % date)
+        raise argparse.ArgumentTypeError(
+                                    "'%s' is not in YYYY-MM-DD format." % date)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('StackTach Nova Usage Summary Report')
-    parser.add_argument('--utcdate', help='Report start date YYYY-MM-DD. Default yesterday midnight.', 
-                                     type=valid_date, default=None)
-    parser.add_argument('--hours', help='Report span in hours. Default: 24', default=24, type=int)
-    parser.add_argument('--start_hour', help='Starting hour 0-23. Default: 0', default=0, type=int)
-    parser.add_argument('--percentile', help='Percentile for timings. Default: 90', default=90, type=int)
-    parser.add_argument('--store', help='Store report in database. Default: False', default=False, 
-                                                                action="store_true")
-    parser.add_argument('--silent', help="Do not show summary report. Default: False", default=False, 
-                                                                action="store_true")
+    parser.add_argument('--utcdate',
+            help='Report start date YYYY-MM-DD. Default yesterday midnight.',
+            type=valid_date, default=None)
+    parser.add_argument('--hours',
+            help='Report span in hours. Default: 24', default=24,
+            type=int)
+    parser.add_argument('--start_hour',
+            help='Starting hour 0-23. Default: 0', default=0,
+            type=int)
+    parser.add_argument('--percentile',
+            help='Percentile for timings. Default: 90', default=90,
+            type=int)
+    parser.add_argument('--store',
+            help='Store report in database. Default: False',
+            default=False, action="store_true")
+    parser.add_argument('--silent',
+            help="Do not show summary report. Default: False",
+            default=False, action="store_true")
     args = parser.parse_args()
 
     yesterday = args.utcdate
     percentile = args.percentile
     hours = args.hours
     start_hour = args.start_hour
+    store_report = args.store
 
-    print args
-    sys.exit(1)
-    raw_report = make_report(yesterday, start_hour, hours, percentile, args['store'])
+    start, end, raw_report = make_report(yesterday, start_hour, hours,
+                                         percentile, store_report)
+    details = raw_report[0]
+    pct = details['pct']
 
-    if not args.show:
+    if store_report:
+        values = {'json': json.dumps(raw_report),
+                  'created': float(dt.dt_to_decimal(datetime.datetime.utcnow())),
+                  'period_start': start,
+                  'period_end': end,
+                  'version': 1,
+                  'name': 'summary report'}
+        report = models.JsonReport(**values)
+        report.save()
+        print "Report stored (id=%d)" % report.id
+
+    if args.silent:
         sys.exit(1)
 
-    details = raw_report[0]
-    percentile = details['percentile']
-    pct = details['pct']
-    start = details['start']
-    end = details['end']
     print "Report for %s to %s" % (start, end)
 
     cols = raw_report[1]
@@ -203,11 +222,13 @@ if __name__ == '__main__':
     print "* Using %d-th percentile for results (+/-%.1f%% cut)" % \
                                 (percentile, pct * 100.0)
     for row in raw_report[2:]:
-        p.add_row(row)
+        frow = row[:]
+        frow[-1] = "%.1f%%" % (row[-1] * 100.0)
+        p.add_row(frow)
     print p
 
     total = details['total']
     failure_total = details['failure_total']
+    failure_rate = details['failure_rate']
     print "Total: %d, Failures: %d, Failure Rate: %.1f%%" % \
-                    (total, failure_total, 
-                        (float(failure_total)/float(total)) * 100.0)
+                    (total, failure_total, failure_rate)
