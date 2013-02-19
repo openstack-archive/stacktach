@@ -257,14 +257,18 @@ def _process_delete(raw):
     notif = json.loads(raw.json)
     payload = notif[1]['payload']
     instance_id = payload['instance_id']
-    launched_at = str_time_to_unix(payload['launched_at'])
     deleted_at = str_time_to_unix(payload['deleted_at'])
     values = {
         'instance': instance_id,
-        'launched_at': launched_at,
         'deleted_at': deleted_at,
         'raw': raw
     }
+
+    launched_at = payload.get('launched_at')
+    if launched_at and launched_at != '':
+        launched_at = str_time_to_unix(launched_at)
+        values['launched_at'] = launched_at
+
     delete = STACKDB.create_instance_delete(**values)
     STACKDB.save(delete)
 
@@ -339,7 +343,6 @@ def str_time_to_unix(when):
                 when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S")
             except Exception, e:
                 print "BAD DATE: ", e
-            
     return dt.dt_to_decimal(when)
 
 
@@ -360,15 +363,7 @@ def process_raw_data(deployment, args, json_args):
             when = body['timestamp']
         except KeyError:
             when = body['_context_timestamp']  # Old way of doing it
-        try:
-            try:
-                when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
-            except ValueError:
-                # Old way of doing it
-                when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
-        except Exception, e:
-            pass
-        values['when'] = dt.dt_to_decimal(when)
+        values['when'] = str_time_to_unix(when)
         values['routing_key'] = routing_key
         values['json'] = json_args
         record = STACKDB.create_rawdata(**values)

@@ -526,6 +526,30 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         self.assertEqual(delete.deleted_at, delete_decimal)
         self.mox.VerifyAll()
 
+    def test_process_delete_no_launch(self):
+        delete_time = datetime.datetime.utcnow()
+        delete_decimal = utils.decimal_utc(delete_time)
+        notif = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                        deleted=str(delete_time))
+        json_str = json.dumps(notif)
+        event = 'compute.instance.delete.end'
+        raw = utils.create_raw(self.mox, delete_decimal, event=event,
+                               json_str=json_str)
+        delete = self.mox.CreateMockAnything()
+        delete.instance = INSTANCE_ID_1
+        delete.deleted_at = delete_decimal
+        views.STACKDB.create_instance_delete(instance=INSTANCE_ID_1,
+                                             deleted_at=delete_decimal,
+                                             raw=raw) \
+            .AndReturn(delete)
+        views.STACKDB.save(delete)
+        self.mox.ReplayAll()
+
+        views._process_delete(raw)
+        self.assertEqual(delete.instance, INSTANCE_ID_1)
+        self.assertEqual(delete.deleted_at, delete_decimal)
+        self.mox.VerifyAll()
+
     def test_process_exists(self):
         launch_time = datetime.datetime.utcnow()-datetime.timedelta(hours=23)
         launch_decimal = utils.decimal_utc(launch_time)
