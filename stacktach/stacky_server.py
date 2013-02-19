@@ -383,8 +383,8 @@ def do_jsonreports(request):
     now = datetime.datetime.utcnow()
     yesterday = dt.dt_to_decimal(yesterday)
     now = dt.dt_to_decimal(now)
-    _from = float(request.GET.get('created_from', yesterday))
-    _to = float(request.GET.get('created_to', now))
+    _from = request.GET.get('created_from', yesterday)
+    _to = request.GET.get('created_to', now)
     reports = models.JsonReport.objects.filter(created__gte=_from,
                                                created__lte=_to)
     results = []
