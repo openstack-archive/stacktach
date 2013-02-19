@@ -197,7 +197,7 @@ if __name__ == '__main__':
 
     if store_report:
         values = {'json': json.dumps(raw_report),
-                  'created': float(dt.dt_to_decimal(datetime.datetime.utcnow())),
+                  'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
                   'period_start': start,
                   'period_end': end,
                   'version': 1,
