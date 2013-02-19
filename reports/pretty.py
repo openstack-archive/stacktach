@@ -52,7 +52,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
     expiry = 60 * 60  # 1 hour
     cmds = ['create', 'rebuild', 'rescue', 'resize', 'snapshot']
 
-    failures = {}
+    failures = {}  # { key : {failure_type: count} }
     durations = {}
     attempts = {}
 
@@ -66,7 +66,6 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
 
 
         for req_dict in reqs:
-            report = False
             req = req_dict['request_id']
             raws = models.RawData.objects.filter(request_id=req)\
                                       .exclude(event='compute.instance.exists')\
@@ -74,6 +73,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
 
             start = None
             err = None
+            failure_type = None
 
             operation = "aux"
             image_type_num = 0
@@ -83,7 +83,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
                     start = raw.when
                 if 'error' in raw.routing_key:
                     err = raw
-                    report = True
+                    failure_type = 'http'
 
                 for cmd in cmds:
                     if cmd in raw.event:
@@ -106,7 +106,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
             diff = end - start
 
             if diff > 3600:
-                report = True
+                failure_type = '> 60'
 
             key = (operation, image)
 
@@ -117,8 +117,20 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
 
             attempts[key] = attempts.get(key, 0) + 1
 
-            if report:
-                failures[key] = failures.get(key, 0) + 1
+            if failure_type:
+                if err:
+                    queue, body = json.loads(err.json)
+                    payload = body['payload']
+                    exc = payload.get('exception')
+                    if exc:
+                        code = int(exc.get('kwargs', {}).get('code', 0))
+                        if code >= 400 and code < 500:
+                            failure_type = "4xx"
+                        if code >= 500 and code < 600:
+                            failure_type = "5xx"
+                breakdown = failures.get(key, {})
+                breakdown[failure_type] = breakdown.get(failure_type, 0) + 1
+                failures[key] = breakdown
 
     # Summarize the results ...
     report = []
@@ -128,19 +140,32 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
                'cells': cells}
     report.append(details)
 
+    failure_types = ["4xx", "5xx", "> 60"]
     cols = ["Operation", "Image", "Min*", "Max*", "Avg*",
-            "Requests", "# Fail", "Fail %"]
+            "Requests"]
+    for failure_type in failure_types:
+        cols.append("%s" % failure_type)
+        cols.append("%% %s" % failure_type)
     report.append(cols)
 
     total = 0
-    failure_total = 0
+    failure_totals = {}
     for key, count in attempts.iteritems():
         total += count
         operation, image = key
 
-        failure_count = failures.get(key, 0)
-        failure_total += failure_count
-        failure_percentage = float(failure_count) / float(count)
+        breakdown = failures.get(key, {})
+        this_failure_pair = []
+        for failure_type in failure_types:
+            # Failure counts for this attempt.
+            # Sum for grand totals.
+            failure_count = breakdown.get(failure_type, 0)
+            failure_totals[failure_type] = \
+                         failure_totals.get(failure_type, 0) + failure_count
+
+            # Failure percentage for this attempt.
+            percentage = float(failure_count) / float(count)
+            this_failure_pair.append((failure_count, percentage))
 
         # N-th % of durations ...
         _values = durations[key]
@@ -161,12 +186,23 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
         _fmax = dt.sec_to_str(_max)
         _favg = dt.sec_to_str(_avg)
 
-        report.append([operation, image, _fmin, _fmax, _favg, count,
-                       failure_count, failure_percentage])
+        row = [operation, image, _fmin, _fmax, _favg, count]
+        for failure_count, failure_percentage in this_failure_pair:
+            row.append(failure_count)
+            row.append(failure_percentage)
+        report.append(row)
 
     details['total'] = total
-    details['failure_total'] = failure_total
-    details['failure_rate'] = (float(failure_total)/float(total)) * 100.0
+    failure_grand_total = 0
+    for failure_type in failure_types:
+        failure_total = failure_totals.get(failure_type, 0)
+        failure_grand_total += failure_total
+        details["%s failure count" % failure_type] = failure_total
+        failure_percentage = (float(failure_total)/float(total)) * 100.0
+        details["%s failure percentage" % failure_type] = failure_percentage
+
+    details['failure_grand_total'] = failure_grand_total
+    details['failure_grand_rate'] = (float(failure_grand_total)/float(total)) * 100.0
     return (rstart, rend, report)
 
 
@@ -224,7 +260,7 @@ if __name__ == '__main__':
                   'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
                   'period_start': start,
                   'period_end': end,
-                  'version': 1,
+                  'version': 2,
                   'name': 'summary for region: %s' % region_name}
         report = models.JsonReport(**values)
         report.save()
@@ -247,12 +283,13 @@ if __name__ == '__main__':
                                 (percentile, pct * 100.0)
     for row in raw_report[2:]:
         frow = row[:]
-        frow[-1] = "%.1f%%" % (row[-1] * 100.0)
+        for col in [7, 9, 11]:
+            frow[col] = "%.1f%%" % (row[col] * 100.0)
         p.add_row(frow)
     print p
 
     total = details['total']
-    failure_total = details['failure_total']
-    failure_rate = details['failure_rate']
+    failure_total = details['failure_grand_total']
+    failure_rate = details['failure_grand_rate']
     print "Total: %d, Failures: %d, Failure Rate: %.1f%%" % \
                     (total, failure_total, failure_rate)
