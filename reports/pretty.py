@@ -14,7 +14,7 @@ from stacktach import models
 
 
 def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
-                store=False):
+                store=False, region=None):
     if not yesterday:
         yesterday = datetime.datetime.utcnow().date() - \
                     datetime.timedelta(days=1)
@@ -28,9 +28,25 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
 
     codes = {}
 
+    cells = []
+    regions = []
+    if region:
+        region = region.upper()
+    deployments = models.Deployment.objects.all()
+    for deployment in deployments:
+        name = deployment.name.upper()
+        if not region or region in name:
+            regions.append(deployment.id)
+            cells.append(deployment.name)
+
+    if not len(regions):
+        print "No regions found for '%s'" % region
+        sys.exit(1)
+
     # Get all the instances that have changed in the last N hours ...
     updates = models.RawData.objects.filter(event='compute.instance.update',
-                                            when__gt=dstart, when__lte=dend)\
+                                            when__gt=dstart, when__lte=dend,
+                                            deployment__in=regions)\
                                     .values('instance').distinct()
 
     expiry = 60 * 60  # 1 hour
@@ -108,7 +124,8 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
     report = []
     pct = (float(100 - percentile) / 2.0) / 100.0
     details = {'percentile': percentile, 'pct': pct, 'hours': hours,
-                   'start': float(dstart), 'end': float(dend)}
+               'start': float(dstart), 'end': float(dend), 'region': region,
+               'cells': cells}
     report.append(details)
 
     cols = ["Operation", "Image", "Min*", "Max*", "Avg*",
@@ -167,6 +184,8 @@ if __name__ == '__main__':
     parser.add_argument('--utcdate',
             help='Report start date YYYY-MM-DD. Default yesterday midnight.',
             type=valid_date, default=None)
+    parser.add_argument('--region',
+            help='Report Region. Default is all regions.', default=None)
     parser.add_argument('--hours',
             help='Report span in hours. Default: 24', default=24,
             type=int)
@@ -189,11 +208,16 @@ if __name__ == '__main__':
     hours = args.hours
     start_hour = args.start_hour
     store_report = args.store
+    region = args.region
 
     start, end, raw_report = make_report(yesterday, start_hour, hours,
-                                         percentile, store_report)
+                                         percentile, store_report, region)
     details = raw_report[0]
     pct = details['pct']
+
+    region_name = "all"
+    if region:
+        region_name = region
 
     if store_report:
         values = {'json': json.dumps(raw_report),
@@ -201,7 +225,7 @@ if __name__ == '__main__':
                   'period_start': start,
                   'period_end': end,
                   'version': 1,
-                  'name': 'summary report'}
+                  'name': 'summary for region: %s' % region_name}
         report = models.JsonReport(**values)
         report.save()
         print "Report stored (id=%d)" % report.id
@@ -209,7 +233,7 @@ if __name__ == '__main__':
     if args.silent:
         sys.exit(1)
 
-    print "Report for %s to %s" % (start, end)
+    print "'%s' Report for %s to %s" % (region_name, start, end)
 
     cols = raw_report[1]
 
