@@ -2,6 +2,7 @@ import decimal
 import functools
 import json
 
+from django.db.models import FieldDoesNotExist
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
@@ -51,7 +52,7 @@ def api_call(func):
 
 @api_call
 def list_usage_launches(request):
-    filter_args = _get_filter_args(request)
+    filter_args = _get_filter_args(models.InstanceUsage, request)
 
     if len(filter_args) > 0:
         objects = models.InstanceUsage.objects.filter(**filter_args)
@@ -69,7 +70,7 @@ def get_usage_launch(request, launch_id):
 
 @api_call
 def list_usage_deletes(request):
-    filter_args = _get_filter_args(request)
+    filter_args = _get_filter_args(models.InstanceDeletes, request)
 
     if len(filter_args) > 0:
         objects = models.InstanceDeletes.objects.filter(**filter_args)
@@ -87,7 +88,7 @@ def get_usage_delete(request, delete_id):
 
 @api_call
 def list_usage_exists(request):
-    filter_args = _get_filter_args(request)
+    filter_args = _get_filter_args(models.InstanceExists, request)
 
     if len(filter_args) > 0:
         objects = models.InstanceExists.objects.filter(**filter_args)
@@ -109,7 +110,15 @@ def _get_model_by_id(klass, model_id):
     return model_dict
 
 
-def _get_filter_args(request):
+def _check_has_field(klass, field_name):
+    try:
+        klass._meta.get_field_by_name(field_name)
+    except FieldDoesNotExist:
+        msg = "No such field '%s'." % field_name
+        raise BadRequestException(msg)
+
+
+def _get_filter_args(klass, request):
     filter_args = {}
     if 'instance' in request.GET:
         filter_args['instance'] = request.GET['instance']
@@ -118,6 +127,7 @@ def _get_filter_args(request):
 
             if key.endswith('_min'):
                 k = key[0:-4]
+                _check_has_field(klass, k)
                 try:
                     filter_args['%s__gte' % k] = utils.str_time_to_unix(value)
                 except AttributeError:
@@ -125,6 +135,7 @@ def _get_filter_args(request):
                     raise BadRequestException(message=msg)
             elif key.endswith('_max'):
                 k = key[0:-4]
+                _check_has_field(klass, k)
                 try:
                     filter_args['%s__lte' % k] = utils.str_time_to_unix(value)
                 except AttributeError:
