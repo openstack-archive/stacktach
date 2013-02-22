@@ -9,6 +9,7 @@ import mox
 from stacktach import db, views
 import worker.worker as worker
 
+
 class NovaConsumerTestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()

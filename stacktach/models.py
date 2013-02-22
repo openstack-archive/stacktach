@@ -87,11 +87,11 @@ class InstanceUsage(models.Model):
 
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
-        blank=True, db_index=True)
+                                blank=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
-        decimal_places=6)
+                                      decimal_places=6)
     deleted_at = models.DecimalField(null=True, max_digits=20,
-        decimal_places=6)
+                                     decimal_places=6)
     raw = models.ForeignKey(RawData, null=True)
 
 
@@ -109,13 +109,13 @@ class InstanceExists(models.Model):
     launched_at = models.DecimalField(null=True, max_digits=20,
                                       decimal_places=6)
     deleted_at = models.DecimalField(null=True, max_digits=20,
-                                      decimal_places=6)
-    message_id =  models.CharField(max_length=50, null=True,
-                                   blank=True, db_index=True)
-    instance_type_id =  models.CharField(max_length=50,
-                                         null=True,
-                                         blank=True,
-                                         db_index=True)
+                                     decimal_places=6)
+    message_id = models.CharField(max_length=50, null=True,
+                                  blank=True, db_index=True)
+    instance_type_id = models.CharField(max_length=50,
+                                        null=True,
+                                        blank=True,
+                                        db_index=True)
     status = models.CharField(max_length=50, db_index=True,
                               choices=STATUS_CHOICES,
                               default=PENDING)

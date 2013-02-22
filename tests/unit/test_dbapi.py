@@ -20,6 +20,8 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         fake_model = self.mox.CreateMockAnything()
         fake_meta = self.mox.CreateMockAnything()
         fake_model._meta = fake_meta
+        fake_orm = self.mox.CreateMockAnything()
+        fake_model.objects = fake_orm
         return fake_model
 
     def test_get_filter_args(self):
@@ -80,5 +82,120 @@ class StacktachRawParsingTestCase(unittest.TestCase):
 
         self.assertRaises(dbapi.BadRequestException, dbapi._get_filter_args,
                           fake_model, fake_request)
+
+        self.mox.VerifyAll()
+
+    def test_get_db_objects(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
+        self.mox.StubOutWithMock(dbapi, '_get_filter_args')
+        dbapi._get_filter_args(fake_model, fake_request).AndReturn({})
+        self.mox.StubOutWithMock(dbapi, '_check_has_field')
+        dbapi._check_has_field(fake_model, 'id')
+        result = self.mox.CreateMockAnything()
+        fake_model.objects.all().AndReturn(result)
+        result.order_by('id').AndReturn(result)
+        result.__getitem__(slice(None, None, None)).AndReturn(result)
+        self.mox.ReplayAll()
+
+        query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
+        self.assertEquals(query_result, result)
+
+        self.mox.VerifyAll()
+
+    def test_get_db_objects_desc(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'direction': 'desc'}
+        self.mox.StubOutWithMock(dbapi, '_get_filter_args')
+        dbapi._get_filter_args(fake_model, fake_request).AndReturn({})
+        self.mox.StubOutWithMock(dbapi, '_check_has_field')
+        dbapi._check_has_field(fake_model, 'id')
+        result = self.mox.CreateMockAnything()
+        fake_model.objects.all().AndReturn(result)
+        result.order_by('-id').AndReturn(result)
+        result.__getitem__(slice(None, None, None)).AndReturn(result)
+        self.mox.ReplayAll()
+
+        query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
+        self.assertEquals(query_result, result)
+
+        self.mox.VerifyAll()
+
+    def test_get_db_objects_limit(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'limit': 1}
+        self.mox.StubOutWithMock(dbapi, '_get_filter_args')
+        dbapi._get_filter_args(fake_model, fake_request).AndReturn({})
+        self.mox.StubOutWithMock(dbapi, '_check_has_field')
+        dbapi._check_has_field(fake_model, 'id')
+        result = self.mox.CreateMockAnything()
+        fake_model.objects.all().AndReturn(result)
+        result.order_by('id').AndReturn(result)
+        result.__getitem__(slice(None, 1, None)).AndReturn(result)
+        self.mox.ReplayAll()
+
+        query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
+        self.assertEquals(query_result, result)
+
+        self.mox.VerifyAll()
+
+    def test_get_db_objects_offset(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'offset': 1}
+        self.mox.StubOutWithMock(dbapi, '_get_filter_args')
+        dbapi._get_filter_args(fake_model, fake_request).AndReturn({})
+        self.mox.StubOutWithMock(dbapi, '_check_has_field')
+        dbapi._check_has_field(fake_model, 'id')
+        result = self.mox.CreateMockAnything()
+        fake_model.objects.all().AndReturn(result)
+        result.order_by('id').AndReturn(result)
+        result.__getitem__(slice(1, None, None)).AndReturn(result)
+        self.mox.ReplayAll()
+
+        query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
+        self.assertEquals(query_result, result)
+
+        self.mox.VerifyAll()
+
+    def test_get_db_objects_offset_and_limit(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'offset': 2, 'limit': 2}
+        self.mox.StubOutWithMock(dbapi, '_get_filter_args')
+        dbapi._get_filter_args(fake_model, fake_request).AndReturn({})
+        self.mox.StubOutWithMock(dbapi, '_check_has_field')
+        dbapi._check_has_field(fake_model, 'id')
+        result = self.mox.CreateMockAnything()
+        fake_model.objects.all().AndReturn(result)
+        result.order_by('id').AndReturn(result)
+        result.__getslice__(2, 4).AndReturn(result)
+        self.mox.ReplayAll()
+
+        query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
+        self.assertEquals(query_result, result)
+
+        self.mox.VerifyAll()
+
+    def test_get_db_objects_with_filter(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        filters = {'instance': INSTANCE_ID_1}
+        fake_request.GET = filters
+        self.mox.StubOutWithMock(dbapi, '_get_filter_args')
+        dbapi._get_filter_args(fake_model, fake_request).AndReturn(filters)
+        self.mox.StubOutWithMock(dbapi, '_check_has_field')
+        dbapi._check_has_field(fake_model, 'id')
+        result = self.mox.CreateMockAnything()
+        fake_model.objects.filter(**filters).AndReturn(result)
+        result.order_by('id').AndReturn(result)
+        result.__getitem__(slice(None, None, None)).AndReturn(result)
+        self.mox.ReplayAll()
+
+        query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
+        self.assertEquals(query_result, result)
 
         self.mox.VerifyAll()
