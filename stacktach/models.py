@@ -20,6 +20,9 @@ from django.db import models
 class Deployment(models.Model):
     name = models.CharField(max_length=50)
 
+    def __repr__(self):
+        return self.name
+
 
 class RawData(models.Model):
     deployment = models.ForeignKey(Deployment)
@@ -154,3 +157,14 @@ class RequestTracker(models.Model):
 
     # Not used ... but soon hopefully.
     completed = models.BooleanField(default=False, db_index=True)
+
+
+class JsonReport(models.Model):
+    """Stores cron-job reports in raw json format for extraction
+       via stacky/rest. All DateTimes are UTC."""
+    period_start = models.DateTimeField(db_index=True)
+    period_end = models.DateTimeField(db_index=True)
+    created = models.DecimalField(max_digits=20, decimal_places=6, db_index=True)
+    name = models.CharField(max_length=50, db_index=True)
+    version = models.IntegerField(default=1)
+    json = models.TextField()
