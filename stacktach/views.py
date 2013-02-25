@@ -343,7 +343,6 @@ def str_time_to_unix(when):
                 when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S")
             except Exception, e:
                 print "BAD DATE: ", e
-
     return dt.dt_to_decimal(when)
 
 
