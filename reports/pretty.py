@@ -13,7 +13,7 @@ from stacktach import image_type
 from stacktach import models
 
 
-def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
+def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                 store=False, region=None):
     if not yesterday:
         yesterday = datetime.datetime.utcnow().date() - \
@@ -149,7 +149,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
     report.append(details)
 
     failure_types = ["4xx", "5xx", "> 60", "state"]
-    cols = ["Operation", "Image", "Min*", "Max*", "Avg*",
+    cols = ["Operation", "Image", "Min", "Max", "Med", "%d%%" % percentile,
             "Requests"]
     for failure_type in failure_types:
         cols.append("%s" % failure_type)
@@ -178,10 +178,6 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
         # N-th % of durations ...
         _values = durations[key]
         _values.sort()
-        _outliers = int(float(len(_values)) * pct)
-        if _outliers > 0:
-            before = len(_values)
-            _values = _values[_outliers:-_outliers]
         _min = 99999999
         _max = 0
         _total = 0.0
@@ -189,12 +185,20 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
             _min = min(_min, value)
             _max = max(_max, value)
             _total += float(value)
-        _avg = float(_total) / float(len(_values))
+        _num = len(_values)
+        _avg = float(_total) / float(_num)
+        half = _num / 2
+        _median = _values[half]
+        _percentile_index = int((float(percentile) / 100.0) * float(_num))
+        _percentile = _values[_percentile_index]
+
         _fmin = dt.sec_to_str(_min)
         _fmax = dt.sec_to_str(_max)
         _favg = dt.sec_to_str(_avg)
+        _fmedian = dt.sec_to_str(_median)
+        _fpercentile = dt.sec_to_str(_percentile)
 
-        row = [operation, image, _fmin, _fmax, _favg, count]
+        row = [operation, image, _fmin, _fmax, _fmedian, _fpercentile, count]
         for failure_count, failure_percentage in this_failure_pair:
             row.append(failure_count)
             row.append(failure_percentage)
@@ -237,7 +241,7 @@ if __name__ == '__main__':
             help='Starting hour 0-23. Default: 0', default=0,
             type=int)
     parser.add_argument('--percentile',
-            help='Percentile for timings. Default: 90', default=90,
+            help='Percentile for timings. Default: 97', default=97,
             type=int)
     parser.add_argument('--store',
             help='Store report in database. Default: False',
@@ -268,7 +272,7 @@ if __name__ == '__main__':
                   'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
                   'period_start': start,
                   'period_end': end,
-                  'version': 2,
+                  'version': 3,
                   'name': 'summary for region: %s' % region_name}
         report = models.JsonReport(**values)
         report.save()
@@ -287,11 +291,9 @@ if __name__ == '__main__':
         p.align[c] = 'r'
     p.sortby = cols[0]
 
-    print "* Using %d-th percentile for results (+/-%.1f%% cut)" % \
-                                (percentile, pct * 100.0)
     for row in raw_report[2:]:
         frow = row[:]
-        for col in [7, 9, 11]:
+        for col in [8, 10, 12, 14]:
             frow[col] = "%.1f%%" % (row[col] * 100.0)
         p.add_row(frow)
     print p
