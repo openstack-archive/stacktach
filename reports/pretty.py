@@ -81,9 +81,17 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
             for raw in raws:
                 if not start:
                     start = raw.when
+
                 if 'error' in raw.routing_key:
                     err = raw
                     failure_type = 'http'
+
+                if raw.old_state != 'error' and raw.state == 'error':
+                    failure_type = 'state'
+
+                if raw.old_state == 'error' and \
+                                (not raw.state in ['deleted', 'error']):
+                    failure_type = None
 
                 for cmd in cmds:
                     if cmd in raw.event:
@@ -140,7 +148,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=90,
                'cells': cells}
     report.append(details)
 
-    failure_types = ["4xx", "5xx", "> 60"]
+    failure_types = ["4xx", "5xx", "> 60", "state"]
     cols = ["Operation", "Image", "Min*", "Max*", "Avg*",
             "Requests"]
     for failure_type in failure_types:
