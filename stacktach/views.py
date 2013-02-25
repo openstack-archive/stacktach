@@ -5,14 +5,13 @@ import json
 import pprint
 
 from django import db
-from django import http
 from django.shortcuts import render_to_response
-from django import template
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import db as stackdb
 from stacktach import models
 from stacktach import image_type
+from stacktach import utils
 
 
 STACKDB = stackdb
@@ -243,7 +242,7 @@ def _process_usage_for_updates(raw):
     if raw.event in [INSTANCE_EVENT['create_end'],
                      INSTANCE_EVENT['resize_finish_end'],
                      INSTANCE_EVENT['resize_revert_end']]:
-        usage.launched_at = str_time_to_unix(payload['launched_at'])
+        usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
 
     if raw.event == INSTANCE_EVENT['resize_revert_end']:
         usage.instance_type_id = payload['instance_type_id']
@@ -257,7 +256,7 @@ def _process_delete(raw):
     notif = json.loads(raw.json)
     payload = notif[1]['payload']
     instance_id = payload['instance_id']
-    deleted_at = str_time_to_unix(payload['deleted_at'])
+    deleted_at = utils.str_time_to_unix(payload['deleted_at'])
     values = {
         'instance': instance_id,
         'deleted_at': deleted_at,
@@ -266,7 +265,7 @@ def _process_delete(raw):
 
     launched_at = payload.get('launched_at')
     if launched_at and launched_at != '':
-        launched_at = str_time_to_unix(launched_at)
+        launched_at = utils.str_time_to_unix(launched_at)
         values['launched_at'] = launched_at
 
     delete = STACKDB.create_instance_delete(**values)
@@ -277,7 +276,7 @@ def _process_exists(raw):
     notif = json.loads(raw.json)
     payload = notif[1]['payload']
     instance_id = payload['instance_id']
-    launched_at = str_time_to_unix(payload['launched_at'])
+    launched_at = utils.str_time_to_unix(payload['launched_at'])
     launched_range = (launched_at, launched_at+1)
     usage = STACKDB.get_instance_usage(instance=instance_id,
                                        launched_at__range=launched_range)
@@ -296,7 +295,7 @@ def _process_exists(raw):
 
     deleted_at = payload.get('deleted_at')
     if deleted_at and deleted_at != '':
-        deleted_at = str_time_to_unix(deleted_at)
+        deleted_at = utils.str_time_to_unix(deleted_at)
         values['deleted_at'] = deleted_at
 
     exists = STACKDB.create_instance_exists(**values)
@@ -324,28 +323,6 @@ def aggregate_usage(raw):
         USAGE_PROCESS_MAPPING[raw.event](raw)
 
 
-def str_time_to_unix(when):
-    if 'T' in when:
-        try:
-            # Old way of doing it
-            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
-        except ValueError:
-            try:
-                # Old way of doing it, no millis
-                when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S")
-            except Exception, e:
-                print "BAD DATE: ", e
-    else:
-        try:
-            when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
-        except ValueError:
-            try:
-                when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S")
-            except Exception, e:
-                print "BAD DATE: ", e
-    return dt.dt_to_decimal(when)
-
-
 def process_raw_data(deployment, args, json_args):
     """This is called directly by the worker to add the event to the db."""
     db.reset_queries()
@@ -363,7 +340,7 @@ def process_raw_data(deployment, args, json_args):
             when = body['timestamp']
         except KeyError:
             when = body['_context_timestamp']  # Old way of doing it
-        values['when'] = str_time_to_unix(when)
+        values['when'] = utils.str_time_to_unix(when)
         values['routing_key'] = routing_key
         values['json'] = json_args
         record = STACKDB.create_rawdata(**values)

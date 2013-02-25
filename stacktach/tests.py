@@ -14,13 +14,14 @@ from test_utils import REQUEST_ID_1
 from test_utils import REQUEST_ID_2
 from test_utils import REQUEST_ID_3
 from test_utils import create_raw
+import utils
 import views
 
 
 class ViewsUtilsTestCase(unittest.TestCase):
 
     def test_srt_time_to_unix(self):
-        unix = views.str_time_to_unix('2012-12-21 12:34:56.123')
+        unix = utils.str_time_to_unix('2012-12-21 12:34:56.123')
         self.assertEqual(unix, decimal.Decimal('1356093296.123'))
 
 
@@ -30,9 +31,9 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
         self.deployment = Deployment(name='TestDeployment')
         self.deployment.save()
 
-        when1 = views.str_time_to_unix('2012-12-21 12:34:50.123')
-        when2 = views.str_time_to_unix('2012-12-21 12:34:56.123')
-        when3 = views.str_time_to_unix('2012-12-21 12:36:56.124')
+        when1 = utils.str_time_to_unix('2012-12-21 12:34:50.123')
+        when2 = utils.str_time_to_unix('2012-12-21 12:34:56.123')
+        when3 = utils.str_time_to_unix('2012-12-21 12:36:56.124')
         self.update_raw = create_raw(self.deployment, when1,
                                           'compute.instance.update',
                                           host='api', service='api')
@@ -98,9 +99,9 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
                             expected_diff)
 
     def test_multiple_instance_lifecycles(self):
-        when1 = views.str_time_to_unix('2012-12-21 13:32:50.123')
-        when2 = views.str_time_to_unix('2012-12-21 13:34:50.123')
-        when3 = views.str_time_to_unix('2012-12-21 13:37:50.124')
+        when1 = utils.str_time_to_unix('2012-12-21 13:32:50.123')
+        when2 = utils.str_time_to_unix('2012-12-21 13:34:50.123')
+        when3 = utils.str_time_to_unix('2012-12-21 13:37:50.124')
         update_raw2 = create_raw(self.deployment, when1,
                                       'compute.instance.update',
                                       instance=INSTANCE_ID_2,
@@ -151,9 +152,9 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
 
 
     def test_same_instance_multiple_timings(self):
-        when1 = views.str_time_to_unix('2012-12-21 13:32:50.123')
-        when2 = views.str_time_to_unix('2012-12-21 13:34:50.123')
-        when3 = views.str_time_to_unix('2012-12-21 13:37:50.124')
+        when1 = utils.str_time_to_unix('2012-12-21 13:32:50.123')
+        when2 = utils.str_time_to_unix('2012-12-21 13:34:50.123')
+        when3 = utils.str_time_to_unix('2012-12-21 13:37:50.124')
         update_raw2 = create_raw(self.deployment, when1,
                                       'compute.instance.update',
                                       request_id=REQUEST_ID_2,
@@ -220,9 +221,9 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
                              self.update_raw.when, expected_diff)
 
     def test_multiple_instance_kpi(self):
-        when1 = views.str_time_to_unix('2012-12-21 13:32:50.123')
-        when2 = views.str_time_to_unix('2012-12-21 13:34:50.123')
-        when3 = views.str_time_to_unix('2012-12-21 13:37:50.124')
+        when1 = utils.str_time_to_unix('2012-12-21 13:32:50.123')
+        when2 = utils.str_time_to_unix('2012-12-21 13:34:50.123')
+        when3 = utils.str_time_to_unix('2012-12-21 13:37:50.124')
         update_raw2 = create_raw(self.deployment, when1,
                                       'compute.instance.update',
                                       instance=INSTANCE_ID_2,
@@ -264,9 +265,9 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
                              update_raw2.when, expected_diff2)
 
     def test_single_instance_multiple_kpi(self):
-        when1 = views.str_time_to_unix('2012-12-21 13:32:50.123')
-        when2 = views.str_time_to_unix('2012-12-21 13:34:50.123')
-        when3 = views.str_time_to_unix('2012-12-21 13:37:50.124')
+        when1 = utils.str_time_to_unix('2012-12-21 13:32:50.123')
+        when2 = utils.str_time_to_unix('2012-12-21 13:34:50.123')
+        when3 = utils.str_time_to_unix('2012-12-21 13:37:50.124')
         update_raw2 = create_raw(self.deployment, when1,
                                  'compute.instance.update',
                                  request_id=REQUEST_ID_2,
@@ -303,9 +304,9 @@ class ViewsLifecycleWorkflowTestCase(unittest.TestCase):
                              update_raw2.when, expected_diff2)
 
     def test_single_instance_multiple_kpi_out_of_order(self):
-        when1 = views.str_time_to_unix('2012-12-21 13:32:50.123')
-        when2 = views.str_time_to_unix('2012-12-21 13:34:50.123')
-        when3 = views.str_time_to_unix('2012-12-21 13:37:50.124')
+        when1 = utils.str_time_to_unix('2012-12-21 13:32:50.123')
+        when2 = utils.str_time_to_unix('2012-12-21 13:34:50.123')
+        when3 = utils.str_time_to_unix('2012-12-21 13:37:50.124')
         update_raw2 = create_raw(self.deployment, when1,
                                       'compute.instance.update',
                                       request_id=REQUEST_ID_2,
@@ -357,7 +358,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         InstanceExists.objects.all().delete()
 
     def test_process_new_launch_create_start(self):
-        when = views.str_time_to_unix('2012-12-21 12:34:50.123')
+        when = utils.str_time_to_unix('2012-12-21 12:34:50.123')
         json = test_utils.make_create_start_json()
         raw = create_raw(self.deployment, when,
                          views.INSTANCE_EVENT['create_start'], json=json)
@@ -372,7 +373,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         self.assertEqual(usage.request_id, REQUEST_ID_1)
 
     def test_process_new_launch_resize_prep_start(self):
-        when = views.str_time_to_unix('2012-12-21 12:34:50.123')
+        when = utils.str_time_to_unix('2012-12-21 12:34:50.123')
         json = test_utils.make_resize_prep_start_json()
         raw = create_raw(self.deployment, when,
                          views.INSTANCE_EVENT['resize_prep_start'], json=json)
@@ -389,7 +390,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         self.assertIsNone(usage.instance_type_id)
 
     def test_process_new_launch_resize_revert_start(self):
-        when = views.str_time_to_unix('2012-12-21 12:34:50.123')
+        when = utils.str_time_to_unix('2012-12-21 12:34:50.123')
         json = test_utils.make_resize_revert_start_json()
         raw = create_raw(self.deployment, when,
                          views.INSTANCE_EVENT['resize_revert_start'],
@@ -415,7 +416,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         sent = '2012-12-21 12:34:50.123'
-        when = views.str_time_to_unix(sent)
+        when = utils.str_time_to_unix(sent)
         json = test_utils.make_create_end_json(sent)
         raw = create_raw(self.deployment, when,
                          views.INSTANCE_EVENT['create_end'], json=json)
@@ -436,7 +437,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         sent = '2012-12-21 12:34:50.123'
-        when = views.str_time_to_unix(sent)
+        when = utils.str_time_to_unix(sent)
         json = test_utils.make_resize_finish_json(sent)
         raw = create_raw(self.deployment, when,
                          views.INSTANCE_EVENT['resize_finish_end'], json=json)
@@ -456,7 +457,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         sent = '2012-12-21 12:34:50.123'
-        when = views.str_time_to_unix(sent)
+        when = utils.str_time_to_unix(sent)
         json = test_utils.make_resize_revert_end_json(sent)
         raw = create_raw(self.deployment, when,
                          views.INSTANCE_EVENT['resize_revert_end'], json=json)
@@ -477,7 +478,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         sent = '2012-12-21 12:34:50.123'
-        when = views.str_time_to_unix(sent)
+        when = utils.str_time_to_unix(sent)
         json = test_utils.make_resize_prep_end_json(sent)
         raw = create_raw(self.deployment, when,
                          views.INSTANCE_EVENT['resize_prep_end'], json=json)
@@ -491,9 +492,9 @@ class ViewsUsageTestCase(unittest.TestCase):
 
     def test_process_delete(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         deleted_str = '2012-12-21 12:34:50.123'
-        deleted = views.str_time_to_unix(deleted_str)
+        deleted = utils.str_time_to_unix(deleted_str)
         json = test_utils.make_delete_end_json(launched_str, deleted_str)
         raw = create_raw(self.deployment, deleted,
                          views.INSTANCE_EVENT['delete_end'], json=json)
@@ -510,7 +511,7 @@ class ViewsUsageTestCase(unittest.TestCase):
 
     def test_process_exists(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_1,
@@ -520,7 +521,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         exists_str = '2012-12-21 23:30:00.000'
-        exists_time = views.str_time_to_unix(exists_str)
+        exists_time = utils.str_time_to_unix(exists_str)
         json = test_utils.make_exists_json(launched_str)
         raw = create_raw(self.deployment, exists_time,
                          views.INSTANCE_EVENT['exists'], json=json)
@@ -543,9 +544,9 @@ class ViewsUsageTestCase(unittest.TestCase):
 
     def test_process_exists_with_deleted_at(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         deleted_str = '2012-12-21 06:36:50.123'
-        deleted = views.str_time_to_unix(deleted_str)
+        deleted = utils.str_time_to_unix(deleted_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_1,
@@ -555,7 +556,7 @@ class ViewsUsageTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         exists_str = '2012-12-21 23:30:00.000'
-        exists_time = views.str_time_to_unix(exists_str)
+        exists_time = utils.str_time_to_unix(exists_str)
         json = test_utils.make_exists_json(launched_str, deleted_at=deleted_str)
         raw = create_raw(self.deployment, exists_time,
             views.INSTANCE_EVENT['exists'], json=json)
@@ -595,9 +596,9 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
 
     def test_create_workflow(self):
         created_str = '2012-12-21 06:30:50.123'
-        created = views.str_time_to_unix(created_str)
+        created = utils.str_time_to_unix(created_str)
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         create_start_json = test_utils.make_create_start_json()
         create_end_json = test_utils.make_create_end_json(launched_str)
         create_start_raw = create_raw(self.deployment, created,
@@ -617,9 +618,9 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
 
     def test_create_workflow_start_late(self):
         created_str = '2012-12-21 06:30:50.123'
-        created = views.str_time_to_unix(created_str)
+        created = utils.str_time_to_unix(created_str)
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         create_start_json = test_utils.make_create_start_json()
         create_end_json = test_utils.make_create_end_json(launched_str)
         create_start_raw = create_raw(self.deployment, created,
@@ -639,7 +640,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
 
     def test_resize_workflow(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_1,
@@ -649,11 +650,11 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         started_str = '2012-12-22 06:34:50.123'
-        started_time = views.str_time_to_unix(started_str)
+        started_time = utils.str_time_to_unix(started_str)
         pre_end_str = '2012-12-22 06:36:50.123'
-        prep_end_time = views.str_time_to_unix(pre_end_str)
+        prep_end_time = utils.str_time_to_unix(pre_end_str)
         finish_str = '2012-12-22 06:38:50.123'
-        finish_time = views.str_time_to_unix(finish_str)
+        finish_time = utils.str_time_to_unix(finish_str)
         prep_start_json = test_utils\
                           .make_resize_prep_start_json(request_id=REQUEST_ID_2)
         prep_end_json = test_utils\
@@ -690,7 +691,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
 
     def test_resize_workflow_out_of_order(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_1,
@@ -700,11 +701,11 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         started_str = '2012-12-22 06:34:50.123'
-        started_time = views.str_time_to_unix(started_str)
+        started_time = utils.str_time_to_unix(started_str)
         pre_end_str = '2012-12-22 06:36:50.123'
-        prep_end_time = views.str_time_to_unix(pre_end_str)
+        prep_end_time = utils.str_time_to_unix(pre_end_str)
         finish_str = '2012-12-22 06:38:50.123'
-        finish_time = views.str_time_to_unix(finish_str)
+        finish_time = utils.str_time_to_unix(finish_str)
         prep_start_json = test_utils\
         .make_resize_prep_start_json(request_id=REQUEST_ID_2)
         prep_end_json = test_utils\
@@ -744,7 +745,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
 
     def test_resize_workflow_start_late(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_1,
@@ -754,11 +755,11 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         started_str = '2012-12-22 06:34:50.123'
-        started_time = views.str_time_to_unix(started_str)
+        started_time = utils.str_time_to_unix(started_str)
         pre_end_str = '2012-12-22 06:36:50.123'
-        prep_end_time = views.str_time_to_unix(pre_end_str)
+        prep_end_time = utils.str_time_to_unix(pre_end_str)
         finish_str = '2012-12-22 06:38:50.123'
-        finish_time = views.str_time_to_unix(finish_str)
+        finish_time = utils.str_time_to_unix(finish_str)
         prep_start_json = test_utils\
         .make_resize_prep_start_json(request_id=REQUEST_ID_2)
         prep_end_json = test_utils\
@@ -795,7 +796,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
 
     def test_resize_revert_workflow(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_1,
@@ -804,7 +805,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
             }
         InstanceUsage(**values).save()
         resize_launched_str = '2012-12-22 06:34:50.123'
-        resize_launched = views.str_time_to_unix(resize_launched_str)
+        resize_launched = utils.str_time_to_unix(resize_launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_2,
@@ -814,9 +815,9 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         started_str = '2012-12-22 06:34:50.123'
-        started_time = views.str_time_to_unix(started_str)
+        started_time = utils.str_time_to_unix(started_str)
         end_str = '2012-12-22 06:36:50.123'
-        end_time = views.str_time_to_unix(end_str)
+        end_time = utils.str_time_to_unix(end_str)
         start_json = test_utils\
                      .make_resize_revert_start_json(request_id=REQUEST_ID_3)
         end_json = test_utils\
@@ -846,7 +847,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
 
     def test_resize_revert_workflow_start_late(self):
         launched_str = '2012-12-21 06:34:50.123'
-        launched = views.str_time_to_unix(launched_str)
+        launched = utils.str_time_to_unix(launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_1,
@@ -855,7 +856,7 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
             }
         InstanceUsage(**values).save()
         resize_launched_str = '2012-12-22 06:34:50.123'
-        resize_launched = views.str_time_to_unix(resize_launched_str)
+        resize_launched = utils.str_time_to_unix(resize_launched_str)
         values = {
             'instance': INSTANCE_ID_1,
             'request_id': REQUEST_ID_2,
@@ -865,9 +866,9 @@ class ViewsUsageWorkflowTestCase(unittest.TestCase):
         InstanceUsage(**values).save()
 
         started_str = '2012-12-22 06:34:50.123'
-        started_time = views.str_time_to_unix(started_str)
+        started_time = utils.str_time_to_unix(started_str)
         end_str = '2012-12-22 06:36:50.123'
-        end_time = views.str_time_to_unix(end_str)
+        end_time = utils.str_time_to_unix(end_str)
         start_json = test_utils\
                      .make_resize_revert_start_json(request_id=REQUEST_ID_3)
         end_json = test_utils\
