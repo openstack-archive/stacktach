@@ -4,6 +4,7 @@ import json
 
 from django.db.models import Q
 from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
 
 import datetime_to_decimal as dt
 import models
@@ -375,3 +376,30 @@ def do_list_usage_exists(request):
                         exist.status])
 
     return rsp(results)
+
+
+def do_jsonreports(request):
+    yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
+    now = datetime.datetime.utcnow()
+    yesterday = dt.dt_to_decimal(yesterday)
+    now = dt.dt_to_decimal(now)
+    _from = request.GET.get('created_from', yesterday)
+    _to = request.GET.get('created_to', now)
+    reports = models.JsonReport.objects.filter(created__gte=_from,
+                                               created__lte=_to)
+    results = []
+    results.append(['Id', 'Start', 'End', 'Created', 'Name', 'Version'])
+    for report in reports:
+        results.append([report.id,
+                        float(dt.dt_to_decimal(report.period_start)),
+                        float(dt.dt_to_decimal(report.period_end)),
+                        float(report.created),
+                        report.name,
+                        report.version])
+    return rsp(results)
+
+
+def do_jsonreport(request, report_id):
+    report_id = int(report_id)
+    report = get_object_or_404(models.JsonReport, pk=report_id)
+    return rsp(report.json)

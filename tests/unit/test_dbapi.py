@@ -9,7 +9,7 @@ import utils
 from utils import INSTANCE_ID_1
 
 
-class StacktachRawParsingTestCase(unittest.TestCase):
+class DBAPITestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
