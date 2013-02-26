@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 
 import datetime_to_decimal as dt
 import models
-import views
+import utils
 
 SECS_PER_HOUR = 60 * 60
 SECS_PER_DAY = SECS_PER_HOUR * 24
@@ -76,6 +76,11 @@ def rsp(data, status=200):
                         status=status)
 
 
+def error_response(status, type, message):
+    results = [["Error", "Message"], [type, message]]
+    return rsp(results, status)
+
+
 def do_deployments(request):
     deployments = get_deployments()
     results = [["#", "Name"]]
@@ -102,6 +107,10 @@ def do_hosts(request):
 
 def do_uuid(request):
     uuid = str(request.GET['uuid'])
+    if not utils.is_uuid_like(uuid):
+        msg = "%s is not uuid-like" % uuid
+        return error_response(400, 'Bad Request', msg)
+
     related = models.RawData.objects.select_related().filter(instance=uuid)\
                                                      .order_by('when')
     results = [["#", "?", "When", "Deployment", "Event", "Host", "State",
@@ -116,6 +125,10 @@ def do_uuid(request):
 
 def do_timings_uuid(request):
     uuid = request.GET['uuid']
+    if not utils.is_uuid_like(uuid):
+        msg = "%s is not uuid-like" % uuid
+        return error_response(400, 'Bad Request', msg)
+
     return rsp(get_timings_for_uuid(uuid))
 
 
@@ -167,6 +180,10 @@ def do_summary(request):
 
 def do_request(request):
     request_id = request.GET['request_id']
+    if not utils.is_request_id_like(request_id):
+        msg = "%s is not request-id-like" % request_id
+        return error_response(400, 'Bad Request', msg)
+
     events = models.RawData.objects.filter(request_id=request_id) \
                                    .order_by('when')
     results = [["#", "?", "When", "Deployment", "Event", "Host",
@@ -270,10 +287,8 @@ def do_watch(request, deployment_id):
 def do_kpi(request, tenant_id=None):
     if tenant_id:
         if models.RawData.objects.filter(tenant=tenant_id).count() == 0:
-            results = [["Error", "Message"]]
             message = "Could not find raws for tenant %s" % tenant_id
-            results.append(["NotFound", message])
-            return rsp(results, 404)
+            return error_response(404, 'Not Found', message)
 
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     yesterday = dt.dt_to_decimal(yesterday)
@@ -297,7 +312,11 @@ def do_list_usage_launches(request):
 
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            return error_response(400, 'Bad Request', msg)
+        filter_args['instance'] = uuid
 
     if len(filter_args) > 0:
         launches = models.InstanceUsage.objects.filter(**filter_args)
@@ -319,7 +338,11 @@ def do_list_usage_deletes(request):
 
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            return error_response(400, 'Bad Request', msg)
+        filter_args['instance'] = uuid
 
     if len(filter_args) > 0:
         deletes = models.InstanceDeletes.objects.filter(**filter_args)
@@ -344,7 +367,11 @@ def do_list_usage_exists(request):
 
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            return error_response(400, 'Bad Request', msg)
+        filter_args['instance'] = uuid
 
     if len(filter_args) > 0:
         exists = models.InstanceExists.objects.filter(**filter_args)

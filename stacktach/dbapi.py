@@ -103,7 +103,11 @@ def _check_has_field(klass, field_name):
 def _get_filter_args(klass, request):
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        filter_args['instance'] = uuid
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            raise BadRequestException(msg)
 
     for (key, value) in request.GET.items():
 

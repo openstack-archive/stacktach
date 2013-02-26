@@ -47,6 +47,17 @@ class DBAPITestCase(unittest.TestCase):
         self.assertEquals(filter_args.get('launched_at__lte'),
                           end_decimal)
 
+    def test_get_filter_args_bad_uuid(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'instance': 'obviouslybaduuid'}
+        self.mox.ReplayAll()
+
+        self.assertRaises(dbapi.BadRequestException, dbapi._get_filter_args,
+                          fake_model, fake_request)
+
+        self.mox.VerifyAll()
+
     def test_get_filter_args_bad_min_value(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.GET = {'launched_at_min': 'obviouslybaddatetime'}

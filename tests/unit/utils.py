@@ -7,15 +7,15 @@ TENANT_ID_1 = 'testtenantid1'
 
 from stacktach import datetime_to_decimal as dt
 
-INSTANCE_ID_1 = 'testinstanceid1'
-INSTANCE_ID_2 = 'testinstanceid2'
+INSTANCE_ID_1 = "08f685d9-6352-4dbc-8271-96cc54bf14cd"
+INSTANCE_ID_2 = "515adf96-41d3-b86d-5467-e584edc61dab"
 
-MESSAGE_ID_1 = 'testmessageid1'
-MESSAGE_ID_2 = 'testmessageid2'
+MESSAGE_ID_1 = "7f28f81b-29a2-43f2-9ba1-ccb3e53ab6c8"
+MESSAGE_ID_2 = "4d596126-0f04-4329-865f-7b9a7bd69bcf"
 
-REQUEST_ID_1 = 'testrequestid1'
-REQUEST_ID_2 = 'testrequestid2'
-REQUEST_ID_3 = 'testrequestid3'
+REQUEST_ID_1 = 'req-611a4d70-9e47-4b27-a95e-27996cc40c06'
+REQUEST_ID_2 = 'req-a951dec0-52ee-425d-9f56-d68bd1ad00ac'
+REQUEST_ID_3 = 'req-039a33f7-5849-4406-8166-4db8cd085f52'
 
 
 def decimal_utc(t = datetime.datetime.utcnow()):

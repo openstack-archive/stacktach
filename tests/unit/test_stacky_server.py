@@ -10,6 +10,7 @@ from stacktach import stacky_server
 import utils
 from utils import INSTANCE_ID_1
 from utils import INSTANCE_ID_2
+from utils import REQUEST_ID_1
 
 
 class StackyServerTestCase(unittest.TestCase):
@@ -58,7 +59,7 @@ class StackyServerTestCase(unittest.TestCase):
         raw.publisher = "api.example.com"
         raw.service = 'api'
         raw.host = 'example.com'
-        raw.request_id = 'req-1'
+        raw.request_id = REQUEST_ID_1
         raw.json = '{"key": "value"}'
         return raw
 
@@ -250,6 +251,36 @@ class StackyServerTestCase(unittest.TestCase):
         self.assertEqual(json_resp[1], body)
         self.mox.VerifyAll()
 
+    def test_do_uuid_bad_uuid(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'uuid': "obviouslybaduuid"}
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_uuid(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        resp_json = json.loads(resp.content)
+        self.assertEqual(len(resp_json), 2)
+        self.assertEqual(resp_json[0], ['Error', 'Message'])
+        msg = 'obviouslybaduuid is not uuid-like'
+        self.assertEqual(resp_json[1], ['Bad Request', msg])
+        self.mox.VerifyAll()
+
+    def test_do_timings_uuid_bad_uuid(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'uuid': "obviouslybaduuid"}
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_timings_uuid(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        resp_json = json.loads(resp.content)
+        self.assertEqual(len(resp_json), 2)
+        self.assertEqual(resp_json[0], ['Error', 'Message'])
+        msg = 'obviouslybaduuid is not uuid-like'
+        self.assertEqual(resp_json[1], ['Bad Request', msg])
+        self.mox.VerifyAll()
+
     def test_do_timings(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.GET = {'name': 'test.event'}
@@ -314,10 +345,10 @@ class StackyServerTestCase(unittest.TestCase):
 
     def test_do_request(self):
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'request_id': 'req-1'}
+        fake_request.GET = {'request_id': REQUEST_ID_1}
         raw = self._create_raw()
         results = self.mox.CreateMockAnything()
-        models.RawData.objects.filter(request_id='req-1').AndReturn(results)
+        models.RawData.objects.filter(request_id=REQUEST_ID_1).AndReturn(results)
         results.order_by('when').AndReturn(results)
         results.__iter__().AndReturn([raw].__iter__())
         self.mox.ReplayAll()
@@ -339,6 +370,21 @@ class StackyServerTestCase(unittest.TestCase):
         self.assertEqual(json_resp[1][6], u'active')
         self.assertEqual(json_resp[1][7], None)
         self.assertEqual(json_resp[1][8], None)
+        self.mox.VerifyAll()
+
+    def test_do_request_bad_request_id(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'request_id': "obviouslybaduuid"}
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_request(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        resp_json = json.loads(resp.content)
+        self.assertEqual(len(resp_json), 2)
+        self.assertEqual(resp_json[0], ['Error', 'Message'])
+        msg = 'obviouslybaduuid is not request-id-like'
+        self.assertEqual(resp_json[1], ['Bad Request', msg])
         self.mox.VerifyAll()
 
     def _assert_on_show(self, values, raw):
@@ -587,7 +633,7 @@ class StackyServerTestCase(unittest.TestCase):
         self.assertEqual(len(body), 2)
         self.assertEqual(body[0], ['Error', 'Message'])
         msg = 'Could not find raws for tenant 55555'
-        self.assertEqual(body[1], ['NotFound', msg])
+        self.assertEqual(body[1], ['Not Found', msg])
 
         self.mox.VerifyAll()
 
@@ -642,6 +688,21 @@ class StackyServerTestCase(unittest.TestCase):
 
         self.mox.VerifyAll()
 
+    def test_do_list_usage_launches_bad_instance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'instance': "obviouslybaduuid"}
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_list_usage_launches(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        resp_json = json.loads(resp.content)
+        self.assertEqual(len(resp_json), 2)
+        self.assertEqual(resp_json[0], ['Error', 'Message'])
+        msg = 'obviouslybaduuid is not uuid-like'
+        self.assertEqual(resp_json[1], ['Bad Request', msg])
+        self.mox.VerifyAll()
+
     def test_do_list_usage_deletes(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.GET = {}
@@ -691,6 +752,21 @@ class StackyServerTestCase(unittest.TestCase):
         self.assertEqual(resp_json[1][1], str(launch_time_str))
         delete_time_str = dt.dt_from_decimal(usage.deleted_at)
         self.assertEqual(resp_json[1][2], str(delete_time_str))
+        self.mox.VerifyAll()
+
+    def test_do_list_usage_deletes_bad_instance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'instance': "obviouslybaduuid"}
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_list_usage_deletes(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        resp_json = json.loads(resp.content)
+        self.assertEqual(len(resp_json), 2)
+        self.assertEqual(resp_json[0], ['Error', 'Message'])
+        msg = 'obviouslybaduuid is not uuid-like'
+        self.assertEqual(resp_json[1], ['Bad Request', msg])
         self.mox.VerifyAll()
 
     def test_do_list_usage_exists(self):
@@ -750,5 +826,20 @@ class StackyServerTestCase(unittest.TestCase):
         self.assertEqual(resp_json[1][1], str(launch_time_str))
         delete_time_str = dt.dt_from_decimal(usage.deleted_at)
         self.assertEqual(resp_json[1][2], str(delete_time_str))
+        self.mox.VerifyAll()
+
+    def test_do_list_usage_exists_bad_instance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'instance': "obviouslybaduuid"}
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_list_usage_exists(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        resp_json = json.loads(resp.content)
+        self.assertEqual(len(resp_json), 2)
+        self.assertEqual(resp_json[0], ['Error', 'Message'])
+        msg = 'obviouslybaduuid is not uuid-like'
+        self.assertEqual(resp_json[1], ['Bad Request', msg])
         self.mox.VerifyAll()
 
