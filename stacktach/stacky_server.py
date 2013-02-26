@@ -268,6 +268,13 @@ def do_watch(request, deployment_id):
 
 
 def do_kpi(request, tenant_id=None):
+    if tenant_id:
+        if models.RawData.objects.filter(tenant=tenant_id).count() == 0:
+            results = [["Error", "Message"]]
+            message = "Could not find raws for tenant %s" % tenant_id
+            results.append(["NotFound", message])
+            return rsp(results, 404)
+
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     yesterday = dt.dt_to_decimal(yesterday)
     trackers = models.RequestTracker.objects.select_related()\

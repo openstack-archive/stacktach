@@ -508,6 +508,9 @@ class StackyServerTestCase(unittest.TestCase):
 
     def test_do_kpi_with_tenant(self):
         fake_request = self.mox.CreateMockAnything()
+        objects = self.mox.CreateMockAnything()
+        models.RawData.objects.filter(tenant='55555').AndReturn(objects)
+        objects.count().AndReturn(1)
         results = self.mox.CreateMockAnything()
         models.RequestTracker.objects.select_related().AndReturn(results)
         results.exclude(last_timing=None).AndReturn(results)
@@ -540,6 +543,9 @@ class StackyServerTestCase(unittest.TestCase):
 
     def test_do_kpi_with_tenant_no_match(self):
         fake_request = self.mox.CreateMockAnything()
+        objects = self.mox.CreateMockAnything()
+        models.RawData.objects.filter(tenant='55555').AndReturn(objects)
+        objects.count().AndReturn(1)
         results = self.mox.CreateMockAnything()
         models.RequestTracker.objects.select_related().AndReturn(results)
         results.exclude(last_timing=None).AndReturn(results)
@@ -564,6 +570,24 @@ class StackyServerTestCase(unittest.TestCase):
         body = resp.content
         body = json.loads(body)
         self.assertEqual(len(body), 1)
+
+        self.mox.VerifyAll()
+
+    def test_do_kpi_tenant_doesnt_exist(self):
+        fake_request = self.mox.CreateMockAnything()
+        objects = self.mox.CreateMockAnything()
+        models.RawData.objects.filter(tenant='55555').AndReturn(objects)
+        objects.count().AndReturn(0)
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_kpi(fake_request, '55555')
+        self.assertEqual(resp.status_code, 404)
+        body = resp.content
+        body = json.loads(body)
+        self.assertEqual(len(body), 2)
+        self.assertEqual(body[0], ['Error', 'Message'])
+        msg = 'Could not find raws for tenant 55555'
+        self.assertEqual(body[1], ['NotFound', msg])
 
         self.mox.VerifyAll()
 
