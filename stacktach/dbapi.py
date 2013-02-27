@@ -52,14 +52,8 @@ def api_call(func):
 
 @api_call
 def list_usage_launches(request):
-    filter_args = _get_filter_args(models.InstanceUsage, request)
-
-    if len(filter_args) > 0:
-        objects = models.InstanceUsage.objects.filter(**filter_args)
-    else:
-        objects = models.InstanceUsage.objects.all()
-
-    dicts = _convert_model_list(objects.order_by("launched_at"))
+    objects = get_db_objects(models.InstanceUsage, request, 'launched_at')
+    dicts = _convert_model_list(objects)
     return {'launches': dicts}
 
 
@@ -70,14 +64,8 @@ def get_usage_launch(request, launch_id):
 
 @api_call
 def list_usage_deletes(request):
-    filter_args = _get_filter_args(models.InstanceDeletes, request)
-
-    if len(filter_args) > 0:
-        objects = models.InstanceDeletes.objects.filter(**filter_args)
-    else:
-        objects = models.InstanceDeletes.objects.all()
-
-    dicts = _convert_model_list(objects.order_by("launched_at"))
+    objects = get_db_objects(models.InstanceDeletes, request, 'launched_at')
+    dicts = _convert_model_list(objects)
     return {'deletes': dicts}
 
 
@@ -88,14 +76,8 @@ def get_usage_delete(request, delete_id):
 
 @api_call
 def list_usage_exists(request):
-    filter_args = _get_filter_args(models.InstanceExists, request)
-
-    if len(filter_args) > 0:
-        objects = models.InstanceExists.objects.filter(**filter_args)
-    else:
-        objects = models.InstanceExists.objects.all()
-
-    dicts = _convert_model_list(objects.order_by("id"))
+    objects = get_db_objects(models.InstanceExists, request, 'id')
+    dicts = _convert_model_list(objects)
     return {'exists': dicts}
 
 
@@ -121,7 +103,11 @@ def _check_has_field(klass, field_name):
 def _get_filter_args(klass, request):
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        filter_args['instance'] = uuid
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            raise BadRequestException(msg)
 
     for (key, value) in request.GET.items():
 
@@ -143,6 +129,35 @@ def _get_filter_args(klass, request):
                     raise BadRequestException(message=msg)
 
     return filter_args
+
+
+def get_db_objects(klass, request, default_order_by, direction='asc'):
+    filter_args = _get_filter_args(klass, request)
+
+    if len(filter_args) > 0:
+        objects = klass.objects.filter(**filter_args)
+    else:
+        objects = klass.objects.all()
+
+    order_by = request.GET.get('order_by', default_order_by)
+    _check_has_field(klass, order_by)
+
+    direction = request.GET.get('direction', direction)
+    if direction == 'desc':
+        order_by = '-%s' % order_by
+
+    offset = request.GET.get('offset')
+    limit = request.GET.get('limit')
+    if offset:
+        start = int(offset)
+    else:
+        start = None
+        offset = 0
+    if limit:
+        end = int(offset) + int(limit)
+    else:
+        end = None
+    return objects.order_by(order_by)[start:end]
 
 
 def _convert_model(model):

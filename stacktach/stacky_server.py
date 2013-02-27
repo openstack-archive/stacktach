@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 
 import datetime_to_decimal as dt
 import models
-import views
+import utils
 
 SECS_PER_HOUR = 60 * 60
 SECS_PER_DAY = SECS_PER_HOUR * 24
@@ -39,8 +39,7 @@ def get_deployments():
 def get_timings_for_uuid(uuid):
     lifecycles = models.Lifecycle.objects.filter(instance=uuid)
 
-    results = []
-    results.append(["?", "Event", "Time (secs)"])
+    results = [["?", "Event", "Time (secs)"]]
     for lc in lifecycles:
         timings = models.Timing.objects.filter(lifecycle=lc)
         if not timings:
@@ -72,14 +71,19 @@ def sec_to_time(diff):
     return "%dd %02d:%02d:%02d%s" % (days, hours, minutes, seconds, usec)
 
 
-def rsp(data):
-    return HttpResponse(json.dumps(data), content_type="application/json")
+def rsp(data, status=200):
+    return HttpResponse(json.dumps(data), content_type="application/json",
+                        status=status)
+
+
+def error_response(status, type, message):
+    results = [["Error", "Message"], [type, message]]
+    return rsp(results, status)
 
 
 def do_deployments(request):
     deployments = get_deployments()
-    results = []
-    results.append(["#", "Name"])
+    results = [["#", "Name"]]
     for deployment in deployments:
         results.append([deployment.id, deployment.name])
     return rsp(results)
@@ -87,8 +91,7 @@ def do_deployments(request):
 
 def do_events(request):
     events = get_event_names()
-    results = []
-    results.append(["Event Name"])
+    results = [["Event Name"]]
     for event in events:
         results.append([event['event']])
     return rsp(results)
@@ -96,8 +99,7 @@ def do_events(request):
 
 def do_hosts(request):
     hosts = get_host_names()
-    results = []
-    results.append(["Host Name"])
+    results = [["Host Name"]]
     for host in hosts:
         results.append([host['host']])
     return rsp(results)
@@ -105,32 +107,37 @@ def do_hosts(request):
 
 def do_uuid(request):
     uuid = str(request.GET['uuid'])
-    related = models.RawData.objects.select_related(). \
-                        filter(instance=uuid).order_by('when')
-    results = []
-    results.append(["#", "?", "When", "Deployment", "Event", "Host",
-                        "State", "State'", "Task'"])
+    if not utils.is_uuid_like(uuid):
+        msg = "%s is not uuid-like" % uuid
+        return error_response(400, 'Bad Request', msg)
+
+    related = models.RawData.objects.select_related().filter(instance=uuid)\
+                                                     .order_by('when')
+    results = [["#", "?", "When", "Deployment", "Event", "Host", "State",
+                "State'", "Task'"]]
     for e in related:
         when = dt.dt_from_decimal(e.when)
         results.append([e.id, routing_key_type(e.routing_key), str(when),
-                                        e.deployment.name, e.event,
-                                        e.host,
-                                        e.state, e.old_state, e.old_task])
+                        e.deployment.name, e.event, e.host, e.state,
+                        e.old_state, e.old_task])
     return rsp(results)
 
 
 def do_timings_uuid(request):
     uuid = request.GET['uuid']
+    if not utils.is_uuid_like(uuid):
+        msg = "%s is not uuid-like" % uuid
+        return error_response(400, 'Bad Request', msg)
+
     return rsp(get_timings_for_uuid(uuid))
 
 
 def do_timings(request):
     name = request.GET['name']
-    results = []
-    results.append([name, "Time"])
-    timings = models.Timing.objects.select_related().filter(name=name) \
-                                 .exclude(Q(start_raw=None) | Q(end_raw=None)) \
-                                 .order_by('diff')
+    results = [[name, "Time"]]
+    timings = models.Timing.objects.select_related().filter(name=name)\
+                           .exclude(Q(start_raw=None) | Q(end_raw=None))\
+                           .order_by('diff')
 
     for t in timings:
         results.append([t.lifecycle.instance, sec_to_time(t.diff)])
@@ -145,8 +152,7 @@ def do_summary(request):
         if ev.endswith('.start'):
             interesting.append(ev[:-len('.start')])
 
-    results = []
-    results.append(["Event", "N", "Min", "Max", "Avg"])
+    results = [["Event", "N", "Min", "Max", "Avg"]]
 
     for name in interesting:
         timings = models.Timing.objects.filter(name=name) \
@@ -168,23 +174,25 @@ def do_summary(request):
             _max = max(_max, seconds)
 
         results.append([name, int(num), sec_to_time(_min),
-                   sec_to_time(_max), sec_to_time(int(total/num)) ])
+                        sec_to_time(_max), sec_to_time(int(total / num))])
     return rsp(results)
 
 
 def do_request(request):
     request_id = request.GET['request_id']
+    if not utils.is_request_id_like(request_id):
+        msg = "%s is not request-id-like" % request_id
+        return error_response(400, 'Bad Request', msg)
+
     events = models.RawData.objects.filter(request_id=request_id) \
                                    .order_by('when')
-    results = []
-    results.append(["#", "?", "When", "Deployment", "Event", "Host",
-                        "State", "State'", "Task'"])
+    results = [["#", "?", "When", "Deployment", "Event", "Host",
+                "State", "State'", "Task'"]]
     for e in events:
         when = dt.dt_from_decimal(e.when)
         results.append([e.id, routing_key_type(e.routing_key), str(when),
-                                            e.deployment.name, e.event,
-                                            e.host, e.state,
-                                            e.old_state, e.old_task])
+                        e.deployment.name, e.event, e.host, e.state,
+                        e.old_state, e.old_task])
     return rsp(results)
 
 
@@ -229,8 +237,6 @@ def do_watch(request, deployment_id):
         deployment_map[d.id] = d
     events = get_event_names()
     max_event_width = max([len(event['event']) for event in events])
-    hosts = get_host_names()
-    max_host_width = max([len(host['host']) for host in hosts])
 
     base_events = models.RawData.objects.order_by('when')
     if deployment_id > 0:
@@ -260,8 +266,6 @@ def do_watch(request, deployment_id):
     events = base_events.filter(when__lte=dec_now)
 
     c = [10, 1, 15, 20, max_event_width, 36]
-    header = ("+%s" * len(c)) + "+"
-    splat = header.replace("+", "|")
 
     results = []
 
@@ -281,22 +285,26 @@ def do_watch(request, deployment_id):
 
 
 def do_kpi(request, tenant_id=None):
+    if tenant_id:
+        if models.RawData.objects.filter(tenant=tenant_id).count() == 0:
+            message = "Could not find raws for tenant %s" % tenant_id
+            return error_response(404, 'Not Found', message)
+
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     yesterday = dt.dt_to_decimal(yesterday)
-    trackers = models.RequestTracker.objects.select_related() \
-                                   .exclude(last_timing=None)  \
-                                   .exclude(start__lt=yesterday) \
-                                   .order_by('duration')
+    trackers = models.RequestTracker.objects.select_related()\
+                                    .exclude(last_timing=None)\
+                                    .exclude(start__lt=yesterday)\
+                                    .order_by('duration')
 
-    results = []
-    results.append(["Event", "Time", "UUID", "Deployment"])
+    results = [["Event", "Time", "UUID", "Deployment"]]
     for track in trackers:
         end_event = track.last_timing.end_raw
         event = end_event.event[:-len(".end")]
         uuid = track.lifecycle.instance
-        if tenant_id == None or (tenant_id == end_event.tenant):
+        if tenant_id is None or (tenant_id == end_event.tenant):
             results.append([event, sec_to_time(track.duration),
-                   uuid, end_event.deployment.name])
+                            uuid, end_event.deployment.name])
     return rsp(results)
 
 
@@ -304,15 +312,18 @@ def do_list_usage_launches(request):
 
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            return error_response(400, 'Bad Request', msg)
+        filter_args['instance'] = uuid
 
     if len(filter_args) > 0:
         launches = models.InstanceUsage.objects.filter(**filter_args)
     else:
         launches = models.InstanceUsage.objects.all()
 
-    results = []
-    results.append(["UUID", "Launched At", "Instance Type Id"])
+    results = [["UUID", "Launched At", "Instance Type Id"]]
 
     for launch in launches:
         launched = None
@@ -327,15 +338,18 @@ def do_list_usage_deletes(request):
 
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            return error_response(400, 'Bad Request', msg)
+        filter_args['instance'] = uuid
 
     if len(filter_args) > 0:
         deletes = models.InstanceDeletes.objects.filter(**filter_args)
     else:
         deletes = models.InstanceDeletes.objects.all()
 
-    results = []
-    results.append(["UUID", "Launched At", "Deleted At"])
+    results = [["UUID", "Launched At", "Deleted At"]]
 
     for delete in deletes:
         launched = None
@@ -353,16 +367,19 @@ def do_list_usage_exists(request):
 
     filter_args = {}
     if 'instance' in request.GET:
-        filter_args['instance'] = request.GET['instance']
+        uuid = request.GET['instance']
+        if not utils.is_uuid_like(uuid):
+            msg = "%s is not uuid-like" % uuid
+            return error_response(400, 'Bad Request', msg)
+        filter_args['instance'] = uuid
 
     if len(filter_args) > 0:
         exists = models.InstanceExists.objects.filter(**filter_args)
     else:
         exists = models.InstanceExists.objects.all()
 
-    results = []
-    results.append(["UUID", "Launched At", "Deleted At", "Instance Type Id",
-                    "Message ID", "Status"])
+    results = [["UUID", "Launched At", "Deleted At", "Instance Type Id",
+                "Message ID", "Status"]]
 
     for exist in exists:
         launched = None
@@ -387,8 +404,7 @@ def do_jsonreports(request):
     _to = request.GET.get('created_to', now)
     reports = models.JsonReport.objects.filter(created__gte=_from,
                                                created__lte=_to)
-    results = []
-    results.append(['Id', 'Start', 'End', 'Created', 'Name', 'Version'])
+    results = [['Id', 'Start', 'End', 'Created', 'Name', 'Version']]
     for report in reports:
         results.append([report.id,
                         float(dt.dt_to_decimal(report.period_start)),
