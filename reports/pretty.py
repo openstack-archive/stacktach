@@ -237,6 +237,9 @@ if __name__ == '__main__':
     parser.add_argument('--hours',
             help='Report span in hours. Default: 24', default=24,
             type=int)
+    parser.add_argument('--days_back',
+            help='Report start date. N days back from now. Default: 0', default=0,
+            type=int)
     parser.add_argument('--start_hour',
             help='Starting hour 0-23. Default: 0', default=0,
             type=int)
@@ -252,11 +255,16 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     yesterday = args.utcdate
+    days_back = args.days_back
     percentile = args.percentile
     hours = args.hours
     start_hour = args.start_hour
     store_report = args.store
     region = args.region
+
+    if (not yesterday) and days_back > 0:
+        yesterday = datetime.datetime.utcnow().date() - \
+                    datetime.timedelta(days=days_back)
 
     start, end, raw_report = make_report(yesterday, start_hour, hours,
                                          percentile, store_report, region)
