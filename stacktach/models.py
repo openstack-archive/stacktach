@@ -100,10 +100,12 @@ class InstanceDeletes(models.Model):
 
 class InstanceExists(models.Model):
     PENDING = 'pending'
+    VERIFYING = 'verifying'
     VERIFIED = 'verified'
     FAILED = 'failed'
     STATUS_CHOICES = [
         (PENDING, 'Pending Verification'),
+        (VERIFYING, 'Currently Being Verified'),
         (VERIFIED, 'Passed Verification'),
         (FAILED, 'Failed Verification'),
     ]
