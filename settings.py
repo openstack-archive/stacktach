@@ -9,6 +9,7 @@ try:
     db_host = STACKTACH_DB_HOST
     db_username = STACKTACH_DB_USERNAME
     db_password = STACKTACH_DB_PASSWORD
+    db_port = STACKTACH_DB_PORT
     install_dir = STACKTACH_INSTALL_DIR
 except ImportError:
     db_engine = os.environ.get('STACKTACH_DB_ENGINE',
@@ -17,6 +18,7 @@ except ImportError:
     db_host = os.environ.get('STACKTACH_DB_HOST', "")
     db_username = os.environ['STACKTACH_DB_USERNAME']
     db_password = os.environ['STACKTACH_DB_PASSWORD']
+    db_port = os.environ.get('STACKTACH_DB_PORT', "")
     install_dir = os.environ['STACKTACH_INSTALL_DIR']
 
 DEBUG = False
@@ -35,7 +37,7 @@ DATABASES = {
         'USER': db_username,
         'PASSWORD': db_password,
         'HOST': db_host,    # Set to empty string for localhost.
-        'PORT': '',    # Set to empty string for default.
+        'PORT': db_port,    # Set to empty string for default.
     }
 }
 
@@ -139,6 +141,8 @@ INSTALLED_APPS = (
     'stacktach',
 )
 
+ALLOWED_HOSTS = ['*']
+
 # A sample logging configuration. The only tangible logging
 # performed by this configuration is to send an email to
 # the site admins on every HTTP 500 error.
@@ -150,7 +154,8 @@ LOGGING = {
     'handlers': {
         'mail_admins': {
             'level': 'ERROR',
-            'class': 'django.utils.log.AdminEmailHandler'
+            'class': 'django.utils.log.AdminEmailHandler',
+            'filters': []
         }
     },
     'loggers': {
