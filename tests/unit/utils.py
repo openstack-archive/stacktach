@@ -1,3 +1,5 @@
+# Copyright 2012 - Rackspace Inc.
+
 import datetime
 import os
 import sys

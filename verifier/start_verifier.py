@@ -1,3 +1,5 @@
+# Copyright 2012 - Rackspace Inc.
+
 import json
 import os
 import signal

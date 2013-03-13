@@ -1,3 +1,5 @@
+# Copyright 2012 - Rackspace Inc.
+
 class VerificationException(Exception):
     def __init__(self, reason):
         self.reason = reason
