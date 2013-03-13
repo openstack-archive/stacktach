@@ -5,7 +5,11 @@ import decimal
 import json
 import unittest
 
+import kombu.common
+import kombu.entity
+import kombu.pools
 import mox
+import multiprocessing
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
@@ -397,7 +401,7 @@ class VerifierTestCase(unittest.TestCase):
         dbverifier._verify(exist)
         self.mox.VerifyAll()
 
-    def test_verify_for_range(self):
+    def test_verify_for_range_without_callback(self):
         pool = self.mox.CreateMockAnything()
         when_max = datetime.datetime.utcnow()
         results = self.mox.CreateMockAnything()
@@ -416,10 +420,167 @@ class VerifierTestCase(unittest.TestCase):
         results.__iter__().AndReturn([exist1, exist2].__iter__())
         exist1.save()
         exist2.save()
-        pool.apply_async(dbverifier._verify, args=(exist1,))
-        pool.apply_async(dbverifier._verify, args=(exist2,))
+        pool.apply_async(dbverifier._verify, args=(exist1,), callback=None)
+        pool.apply_async(dbverifier._verify, args=(exist2,), callback=None)
         self.mox.ReplayAll()
         dbverifier.verify_for_range(pool, when_max)
         self.assertEqual(exist1.status, 'verifying')
         self.assertEqual(exist2.status, 'verifying')
+        self.mox.VerifyAll()
+
+    def test_verify_for_range_with_callback(self):
+        callback = self.mox.CreateMockAnything()
+        pool = self.mox.CreateMockAnything()
+        when_max = datetime.datetime.utcnow()
+        results = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_related().AndReturn(results)
+        models.InstanceExists.PENDING = 'pending'
+        models.InstanceExists.VERIFYING = 'verifying'
+        filters = {
+            'raw__when__lte': dt.dt_to_decimal(when_max),
+            'status': 'pending'
+        }
+        results.filter(**filters).AndReturn(results)
+        results.order_by('id').AndReturn(results)
+        results.count().AndReturn(2)
+        exist1 = self.mox.CreateMockAnything()
+        exist2 = self.mox.CreateMockAnything()
+        results.__iter__().AndReturn([exist1, exist2].__iter__())
+        exist1.save()
+        exist2.save()
+        pool.apply_async(dbverifier._verify, args=(exist1,), callback=callback)
+        pool.apply_async(dbverifier._verify, args=(exist2,), callback=callback)
+        self.mox.ReplayAll()
+        dbverifier.verify_for_range(pool, when_max, callback=callback)
+        self.assertEqual(exist1.status, 'verifying')
+        self.assertEqual(exist2.status, 'verifying')
+        self.mox.VerifyAll()
+
+    def test_send_verified_notification(self):
+        connection = self.mox.CreateMockAnything()
+        exchange = self.mox.CreateMockAnything()
+        exist = self.mox.CreateMockAnything()
+        exist.raw = self.mox.CreateMockAnything()
+        exist_dict = ['monitor.info', {'event_type': 'test', 'key': 'value'}]
+        exist_str = json.dumps(exist_dict)
+        exist.raw.json = exist_str
+        self.mox.StubOutWithMock(kombu.pools, 'producers')
+        self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
+        producer = self.mox.CreateMockAnything()
+        producer.channel = self.mox.CreateMockAnything()
+        kombu.pools.producers[connection].AndReturn(producer)
+        producer.acquire(block=True).AndReturn(producer)
+        producer.__enter__().AndReturn(producer)
+        kombu.common.maybe_declare(exchange, producer.channel)
+        message = {'event_type': 'compute.instance.exists.verified.old',
+                   'key': 'value'}
+        producer.publish(message, exist_dict[0])
+        producer.__exit__(None, None, None)
+        self.mox.ReplayAll()
+
+        dbverifier.send_verified_notification(exist, exchange, connection)
+        self.mox.VerifyAll()
+
+    def test_run_notifications(self):
+        config = {
+            "tick_time": 30,
+            "settle_time": 5,
+            "settle_units": "minutes",
+            "pool_size": 2,
+            "enable_notifications": True,
+            "rabbit": {
+                "durable_queue": False,
+                "host": "10.0.0.1",
+                "port": 5672,
+                "userid": "rabbit",
+                "password": "rabbit",
+                "virtual_host": "/",
+                "exchange_name": "stacktach"
+            }
+        }
+        self.mox.StubOutWithMock(multiprocessing, 'Pool')
+        pool = self.mox.CreateMockAnything()
+        multiprocessing.Pool(2).AndReturn(pool)
+        self.mox.StubOutWithMock(dbverifier, '_create_exchange')
+        exchange = self.mox.CreateMockAnything()
+        dbverifier._create_exchange('stacktach', 'topic', durable=False)\
+                  .AndReturn(exchange)
+        self.mox.StubOutWithMock(dbverifier, '_create_connection')
+        conn = self.mox.CreateMockAnything()
+        dbverifier._create_connection(config).AndReturn(conn)
+        conn.__enter__().AndReturn(conn)
+        self.mox.StubOutWithMock(dbverifier, '_run')
+        dbverifier._run(config, pool, callback=mox.IgnoreArg())
+        conn.__exit__(None, None, None)
+        self.mox.ReplayAll()
+        dbverifier.run(config)
+        self.mox.VerifyAll()
+
+    def test_run_no_notifications(self):
+        config = {
+            "tick_time": 30,
+            "settle_time": 5,
+            "settle_units": "minutes",
+            "pool_size": 2,
+            "enable_notifications": False,
+        }
+        self.mox.StubOutWithMock(multiprocessing, 'Pool')
+        pool = self.mox.CreateMockAnything()
+        multiprocessing.Pool(2).AndReturn(pool)
+        self.mox.StubOutWithMock(dbverifier, '_run')
+        dbverifier._run(config, pool)
+        self.mox.ReplayAll()
+        dbverifier.run(config)
+        self.mox.VerifyAll()
+
+    def test_run_once_notifications(self):
+        config = {
+            "tick_time": 30,
+            "settle_time": 5,
+            "settle_units": "minutes",
+            "pool_size": 2,
+            "enable_notifications": True,
+            "rabbit": {
+                "durable_queue": False,
+                "host": "10.0.0.1",
+                "port": 5672,
+                "userid": "rabbit",
+                "password": "rabbit",
+                "virtual_host": "/",
+                "exchange_name": "stacktach"
+            }
+        }
+        self.mox.StubOutWithMock(multiprocessing, 'Pool')
+        pool = self.mox.CreateMockAnything()
+        multiprocessing.Pool(2).AndReturn(pool)
+        self.mox.StubOutWithMock(dbverifier, '_create_exchange')
+        exchange = self.mox.CreateMockAnything()
+        dbverifier._create_exchange('stacktach', 'topic', durable=False) \
+            .AndReturn(exchange)
+        self.mox.StubOutWithMock(dbverifier, '_create_connection')
+        conn = self.mox.CreateMockAnything()
+        dbverifier._create_connection(config).AndReturn(conn)
+        conn.__enter__().AndReturn(conn)
+        self.mox.StubOutWithMock(dbverifier, '_run_once')
+        dbverifier._run_once(config, pool, callback=mox.IgnoreArg())
+        conn.__exit__(None, None, None)
+        self.mox.ReplayAll()
+        dbverifier.run_once(config)
+        self.mox.VerifyAll()
+
+    def test_run_once_no_notifications(self):
+        config = {
+            "tick_time": 30,
+            "settle_time": 5,
+            "settle_units": "minutes",
+            "pool_size": 2,
+            "enable_notifications": False,
+        }
+        self.mox.StubOutWithMock(multiprocessing, 'Pool')
+        pool = self.mox.CreateMockAnything()
+        multiprocessing.Pool(2).AndReturn(pool)
+        self.mox.StubOutWithMock(dbverifier, '_run_once')
+        dbverifier._run_once(config, pool)
+        self.mox.ReplayAll()
+        dbverifier.run_once(config)
         self.mox.VerifyAll()
