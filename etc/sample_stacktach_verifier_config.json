@@ -1,0 +1,16 @@
+{
+    "tick_time": 30,
+    "settle_time": 5,
+    "settle_units": "minutes",
+    "pool_size": 2,
+    "enable_notifications": true,
+    "rabbit": {
+        "durable_queue": false,
+        "host": "10.0.0.1",
+        "port": 5672,
+        "userid": "rabbit",
+        "password": "rabbit",
+        "virtual_host": "/",
+        "exchange_name": "stacktach"
+    }
+}

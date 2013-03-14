@@ -2,11 +2,16 @@
 
 import argparse
 import datetime
+import json
 import logging
 import os
 import sys
 from time import sleep
 
+from django.db import transaction
+import kombu.common
+import kombu.entity
+import kombu.pools
 import multiprocessing
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -175,6 +180,7 @@ def _verify_for_delete(exist):
 
 
 def _verify(exist):
+    verified = False
     try:
         if not exist.launched_at:
             raise VerificationException("Exists without a launched_at")
@@ -182,6 +188,7 @@ def _verify(exist):
         _verify_for_launch(exist)
         _verify_for_delete(exist)
 
+        verified = True
         _mark_exist_verified(exist)
     except VerificationException:
         _mark_exists_failed(exist)
@@ -189,18 +196,20 @@ def _verify(exist):
         _mark_exists_failed(exist)
         LOG.exception(e)
 
+    return verified, exist
+
 
 results = []
 
 
-def verify_for_range(pool, when_max):
+def verify_for_range(pool, when_max, callback=None):
     exists = _list_exists(received_max=when_max,
                           status=models.InstanceExists.PENDING)
     count = exists.count()
     for exist in exists:
         exist.status = models.InstanceExists.VERIFYING
         exist.save()
-        result = pool.apply_async(_verify, args=(exist,))
+        result = pool.apply_async(_verify, args=(exist,), callback=callback)
         results.append(result)
 
     return count
@@ -226,37 +235,103 @@ def clean_results():
     return len(results), successful, errored
 
 
-def run(config):
-    pool = multiprocessing.Pool(config['pool_size'])
+def _send_notification(message, routing_key, connection, exchange):
+        with kombu.pools.producers[connection].acquire(block=True) as producer:
+            kombu.common.maybe_declare(exchange, producer.channel)
+            producer.publish(message, routing_key)
 
+
+def send_verified_notification(exist, connection, exchange):
+    body = exist.raw.json
+    json_body = json.loads(body)
+    json_body[1]['event_type'] = 'compute.instance.exists.verified.old'
+    _send_notification(json_body[1], json_body[0], connection, exchange)
+
+
+def _create_exchange(name, type, exclusive=False, auto_delete=False,
+                     durable=True):
+    return kombu.entity.Exchange(name, type=type, exclusive=auto_delete,
+                                 auto_delete=exclusive, durable=durable)
+
+
+def _create_connection(config):
+    rabbit = config['rabbit']
+    conn_params = dict(hostname=rabbit['host'],
+                       port=rabbit['port'],
+                       userid=rabbit['userid'],
+                       password=rabbit['password'],
+                       transport="librabbitmq",
+                       virtual_host=rabbit['virtual_host'])
+    return kombu.connection.BrokerConnection(**conn_params)
+
+
+def _run(config, pool, callback=None):
     tick_time = config['tick_time']
     settle_units = config['settle_units']
     settle_time = config['settle_time']
     while True:
-        now = datetime.datetime.utcnow()
-        kwargs = {settle_units: settle_time}
-        when_max = now - datetime.timedelta(**kwargs)
-        new = verify_for_range(pool, when_max)
+        with transaction.commit_on_success():
+            now = datetime.datetime.utcnow()
+            kwargs = {settle_units: settle_time}
+            when_max = now - datetime.timedelta(**kwargs)
+            new = verify_for_range(pool, when_max, callback=callback)
 
-        LOG.info("N: %s, %s" % (new, "P: %s, S: %s, E: %s" % clean_results()))
+            msg = "N: %s, P: %s, S: %s, E: %s" % ((new,) + clean_results())
+            LOG.info(msg)
         sleep(tick_time)
 
 
-def run_once(config):
+def run(config):
     pool = multiprocessing.Pool(config['pool_size'])
 
+    if config['enable_notifications']:
+        exchange = _create_exchange(config['rabbit']['exchange_name'],
+                                    'topic',
+                                    durable=config['rabbit']['durable_queue'])
+
+        with _create_connection(config) as conn:
+            def callback(result):
+                (verified, exist) = result
+                if verified:
+                    send_verified_notification(exist, conn, exchange)
+
+            _run(config, pool, callback=callback)
+    else:
+        _run(config, pool)
+
+
+def _run_once(config, pool, callback=None):
     tick_time = config['tick_time']
     settle_units = config['settle_units']
     settle_time = config['settle_time']
     now = datetime.datetime.utcnow()
     kwargs = {settle_units: settle_time}
     when_max = now - datetime.timedelta(**kwargs)
-    new = verify_for_range(pool, when_max)
+    new = verify_for_range(pool, when_max, callback=callback)
 
     LOG.info("Verifying %s exist events" % new)
     while len(results) > 0:
         LOG.info("P: %s, F: %s, E: %s" % clean_results())
         sleep(tick_time)
+
+
+def run_once(config):
+    pool = multiprocessing.Pool(config['pool_size'])
+
+    if config['enable_notifications']:
+        exchange = _create_exchange(config['rabbit']['exchange_name'],
+                                    'topic',
+                                    durable=config['rabbit']['durable_queue'])
+
+        with _create_connection(config) as conn:
+            def callback(result):
+                (verified, exist) = result
+                if verified:
+                    send_verified_notification(exist, conn, exchange)
+
+            _run_once(config, pool, callback=callback)
+    else:
+        _run_once(config, pool)
 
 
 if __name__ == '__main__':
