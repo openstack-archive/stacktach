@@ -33,7 +33,7 @@ def add_past_usage(raws):
             if datetime.datetime.utcnow() > next_update:
                 (processed, count - processed, float(processed) / count)
                 print "%s processed, %s to go, %.2f percent done"
-    print "%s events processed successfully" % count
+    print "completed processing %s events" % count
 
 
 start_raws = models.RawData.objects.filter(event=REBUILD_START)
