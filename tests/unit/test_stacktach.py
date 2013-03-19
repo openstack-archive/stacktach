@@ -172,7 +172,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         self.mox.StubOutWithMock(views, "aggregate_lifecycle")
         views.aggregate_lifecycle(raw)
         self.mox.StubOutWithMock(views, "aggregate_usage")
-        views.aggregate_usage(raw)
+        views.aggregate_usage(raw, dict)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
@@ -201,7 +201,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         self.mox.StubOutWithMock(views, "aggregate_lifecycle")
         views.aggregate_lifecycle(raw)
         self.mox.StubOutWithMock(views, "aggregate_usage")
-        views.aggregate_usage(raw)
+        views.aggregate_usage(raw, dict)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
@@ -415,7 +415,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
                      .AndReturn((usage, True))
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
-        views._process_usage_for_new_launch(raw)
+        views._process_usage_for_new_launch(raw, notif[1])
         self.assertEquals(usage.instance_type_id, '1')
         self.mox.VerifyAll()
 
@@ -439,7 +439,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
-        views._process_usage_for_updates(raw)
+        views._process_usage_for_updates(raw, notif[1])
         self.assertEqual(usage.instance, INSTANCE_ID_1)
         self.assertEqual(usage.request_id, REQUEST_ID_1)
         self.assertEqual(usage.instance_type_id, '1')
@@ -465,7 +465,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
-        views._process_usage_for_updates(raw)
+        views._process_usage_for_updates(raw, notif[1])
         self.assertEqual(usage.instance, INSTANCE_ID_1)
         self.assertEqual(usage.request_id, REQUEST_ID_1)
         self.assertEqual(usage.instance_type_id, '1')
@@ -490,7 +490,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.save(usage)
         self.mox.ReplayAll()
 
-        views._process_usage_for_updates(raw)
+        views._process_usage_for_updates(raw, notif[1])
         self.assertEqual(usage.instance, INSTANCE_ID_1)
         self.assertEqual(usage.request_id, REQUEST_ID_1)
         self.assertEqual(usage.instance_type_id, '2')
@@ -520,7 +520,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
-        views._process_delete(raw)
+        views._process_delete(raw, notif[1])
         self.assertEqual(delete.instance, INSTANCE_ID_1)
         self.assertEqual(delete.launched_at, launch_decimal)
         self.assertEqual(delete.deleted_at, delete_decimal)
@@ -545,7 +545,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
-        views._process_delete(raw)
+        views._process_delete(raw, notif[1])
         self.assertEqual(delete.instance, INSTANCE_ID_1)
         self.assertEqual(delete.deleted_at, delete_decimal)
         self.mox.VerifyAll()
@@ -580,7 +580,7 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.create_instance_exists(**exists_values).AndReturn(exists)
         views.STACKDB.save(exists)
         self.mox.ReplayAll()
-        views._process_exists(raw)
+        views._process_exists(raw, notif[1])
         self.mox.VerifyAll()
 
     def test_process_exists_with_deleted_at(self):
@@ -619,6 +619,6 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.create_instance_exists(**exists_values).AndReturn(exists)
         views.STACKDB.save(exists)
         self.mox.ReplayAll()
-        views._process_exists(raw)
+        views._process_exists(raw, notif[1])
         self.mox.VerifyAll()
 
