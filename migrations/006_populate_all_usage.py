@@ -52,48 +52,34 @@ def populate_usage(raw):
         views.aggregate_usage(raw)
 
 
-def add_usage_for_instance(raws):
-    completed = 0
-    for raw in raws:
-        populate_usage(raw)
-        completed += 1
-    return completed
-
-
-def print_status(event, completed, total):
-    out = (event, completed, total - completed)
-    print "%s: %s completed, %s remaining" % out
+def print_status(event, completed, errored, total):
+    out = (event, completed, errored, total - (completed + errored))
+    print "%s: %s completed, %s errored, %s remaining" % out
 
 
 for event in events:
-    pool = multiprocessing.Pool(processes=10)
-    raws = models.RawData.objects.filter(event=event).order_by('instance')
+    start = datetime.datetime.utcnow()
 
-    count = raws.count()
+    raws = models.RawData.objects.filter(event=event)
+    total = raws.count()
     completed = 0
-    print_status(event, completed, count)
+    errored = 0
 
-    def callback(result):
-        global completed
-        completed += result
-        if completed % 1000 == 0:
-            print_status(event, completed, count)
-
-    current = None
-    raws_for_instance = []
+    print_status(event, completed, errored, total)
+    update_interval = datetime.timedelta(seconds=30)
+    next_update = start + update_interval
     for raw in raws:
-        if current is None:
-            current = raw.instance
+        try:
+            populate_usage(raw)
+            completed += 1
+        except Exception:
+            errored += 1
+            print "Error with raw: %s" % raw.id
 
-        if raw.instance != current:
-            pool.apply_async(add_usage_for_instance,
-                             args=(raws_for_instance,),
-                             callback=callback)
-            current = raw.instance
-            raws_for_instance = [raw]
-        else:
-            raws_for_instance.append(raw)
+        if datetime.datetime.utcnow() < next_update:
+            print_status(event, completed, errored, total)
+            next_update = datetime.datetime.utcnow() + update_interval
 
-    pool.close()
-    pool.join()
-    print_status(event, completed, count)
+    end = datetime.datetime.utcnow()
+    print_status(event, completed, errored, total)
+    print "%s took %s" % (event, end - start)
