@@ -33,6 +33,7 @@ events = ['compute.instance.create.start',
 
 def usage_already_exists(raw):
     if raw.event == 'compute.instance.delete.end':
+        # Since deletes only have one event, they either exist or they don't
         try:
             models.InstanceDeletes.objects.get(raw=raw)
         except models.InstanceDeletes.DoesNotExist:
@@ -41,15 +42,9 @@ def usage_already_exists(raw):
             return True
         return True
     else:
-        try:
-            models.InstanceUsage.objects.get(instance=raw.instance,
-                                             request_id=raw.request_id)
-        except models.InstanceUsage.DoesNotExist:
-            return False
-        except MultipleObjectsReturned:
-            print raw.instance
-            return True
-        return True
+        # All other usage has multiple events, thus they can exist but be
+        # incomplete.
+        return False
 
 
 def populate_usage(raw):
