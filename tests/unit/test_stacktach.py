@@ -421,22 +421,6 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         self.assertEquals(usage.instance_type_id, '1')
         self.mox.VerifyAll()
 
-    def test_process_usage_for_new_launch(self):
-        when = utils.decimal_utc()
-        notif = utils.create_nova_notif(request_id=REQUEST_ID_1)
-        json_str = json.dumps(notif)
-        event = 'compute.instance.rebuild.start'
-        raw = utils.create_raw(self.mox, when, event=event, json_str=json_str)
-        usage = self.mox.CreateMockAnything()
-        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
-                                                   request_id=REQUEST_ID_1) \
-            .AndReturn((usage, True))
-        views.STACKDB.save(usage)
-        self.mox.ReplayAll()
-        views._process_usage_for_new_launch(raw)
-        self.assertEquals(usage.instance_type_id, '1')
-        self.mox.VerifyAll()
-
     def test_process_usage_for_updates_create_end(self):
         when_time = datetime.datetime.utcnow()
         when_str = str(when_time)
@@ -458,33 +442,6 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         self.mox.ReplayAll()
 
         views._process_usage_for_updates(raw, notif[1])
-        self.assertEqual(usage.instance, INSTANCE_ID_1)
-        self.assertEqual(usage.request_id, REQUEST_ID_1)
-        self.assertEqual(usage.instance_type_id, '1')
-        self.assertEqual(usage.launched_at, when_decimal)
-        self.mox.VerifyAll()
-
-    def test_process_usage_for_updates_create_end(self):
-        when_time = datetime.datetime.utcnow()
-        when_str = str(when_time)
-        when_decimal = utils.decimal_utc(when_time)
-        notif = utils.create_nova_notif(request_id=REQUEST_ID_1,
-                                        launched=str(when_time))
-        json_str = json.dumps(notif)
-        event = 'compute.instance.rebuild.end'
-        raw = utils.create_raw(self.mox, when_decimal, event=event,
-                               json_str=json_str)
-        usage = self.mox.CreateMockAnything()
-        usage.instance = INSTANCE_ID_1
-        usage.request_id = REQUEST_ID_1
-        usage.instance_type_id = '1'
-        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
-                                                   request_id=REQUEST_ID_1) \
-            .AndReturn((usage, True))
-        views.STACKDB.save(usage)
-        self.mox.ReplayAll()
-
-        views._process_usage_for_updates(raw)
         self.assertEqual(usage.instance, INSTANCE_ID_1)
         self.assertEqual(usage.request_id, REQUEST_ID_1)
         self.assertEqual(usage.instance_type_id, '1')

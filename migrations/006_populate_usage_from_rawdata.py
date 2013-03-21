@@ -4,7 +4,13 @@ import datetime
 import os
 import sys
 
-import multiprocessing
+try:
+    import ujson as json
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        import json
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                                 os.pardir, os.pardir))
@@ -48,9 +54,9 @@ def usage_already_exists(raw):
         return False
 
 
-def populate_usage(raw):
+def populate_usage(raw, body):
     if not usage_already_exists(raw):
-        views.aggregate_usage(raw)
+        views.aggregate_usage(raw, body)
 
 
 def print_status(event, completed, errored, total):
@@ -86,7 +92,8 @@ for event in events:
         new_loc = loc + 500
         for raw in raws[loc:new_loc]:
             try:
-                populate_usage(raw)
+                json_dict = json.dumps(raw.json)
+                populate_usage(raw, json_dict[1])
                 completed += 1
             except Exception:
                 errored += 1
