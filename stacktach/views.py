@@ -206,6 +206,8 @@ def aggregate_lifecycle(raw):
 INSTANCE_EVENT = {
     'create_start': 'compute.instance.create.start',
     'create_end': 'compute.instance.create.end',
+    'rebuild_start': 'compute.instance.rebuild.start',
+    'rebuild_end': 'compute.instance.rebuild.end',
     'resize_prep_start': 'compute.instance.resize.prep.start',
     'resize_prep_end': 'compute.instance.resize.prep.end',
     'resize_revert_start': 'compute.instance.resize.revert.start',
@@ -225,7 +227,8 @@ def _process_usage_for_new_launch(raw):
 
     (usage, new) = STACKDB.get_or_create_instance_usage(**values)
 
-    if raw.event == INSTANCE_EVENT['create_start']:
+    if raw.event in [INSTANCE_EVENT['create_start'],
+                     INSTANCE_EVENT['rebuild_start']]:
         usage.instance_type_id = payload['instance_type_id']
 
     STACKDB.save(usage)
@@ -240,6 +243,7 @@ def _process_usage_for_updates(raw):
                                                         request_id=request_id)
 
     if raw.event in [INSTANCE_EVENT['create_end'],
+                     INSTANCE_EVENT['rebuild_end'],
                      INSTANCE_EVENT['resize_finish_end'],
                      INSTANCE_EVENT['resize_revert_end']]:
         usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
@@ -304,9 +308,11 @@ def _process_exists(raw):
 
 USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['create_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['rebuild_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['resize_prep_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['resize_revert_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['create_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['rebuild_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_prep_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
