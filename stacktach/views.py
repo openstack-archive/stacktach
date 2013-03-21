@@ -218,12 +218,11 @@ INSTANCE_EVENT = {
 }
 
 
-def _process_usage_for_new_launch(raw):
-    notif = json.loads(raw.json)
-    payload = notif[1]['payload']
+def _process_usage_for_new_launch(raw, body):
+    payload = body['payload']
     values = {}
     values['instance'] = payload['instance_id']
-    values['request_id'] = notif[1]['_context_request_id']
+    values['request_id'] = body['_context_request_id']
 
     (usage, new) = STACKDB.get_or_create_instance_usage(**values)
 
@@ -234,11 +233,10 @@ def _process_usage_for_new_launch(raw):
     STACKDB.save(usage)
 
 
-def _process_usage_for_updates(raw):
-    notif = json.loads(raw.json)
-    payload = notif[1]['payload']
+def _process_usage_for_updates(raw, body):
+    payload = body['payload']
     instance_id = payload['instance_id']
-    request_id = notif[1]['_context_request_id']
+    request_id = body['_context_request_id']
     (usage, new) = STACKDB.get_or_create_instance_usage(instance=instance_id,
                                                         request_id=request_id)
 
@@ -256,9 +254,8 @@ def _process_usage_for_updates(raw):
     STACKDB.save(usage)
 
 
-def _process_delete(raw):
-    notif = json.loads(raw.json)
-    payload = notif[1]['payload']
+def _process_delete(raw, body):
+    payload = body['payload']
     instance_id = payload['instance_id']
     deleted_at = utils.str_time_to_unix(payload['deleted_at'])
     values = {
@@ -276,9 +273,8 @@ def _process_delete(raw):
     STACKDB.save(delete)
 
 
-def _process_exists(raw):
-    notif = json.loads(raw.json)
-    payload = notif[1]['payload']
+def _process_exists(raw, body):
+    payload = body['payload']
     instance_id = payload['instance_id']
     launched_at = utils.str_time_to_unix(payload['launched_at'])
     launched_range = (launched_at, launched_at+1)
@@ -287,7 +283,7 @@ def _process_exists(raw):
     delete = STACKDB.get_instance_delete(instance=instance_id,
                                          launched_at__range=launched_range)
     values = {}
-    values['message_id'] = notif[1]['message_id']
+    values['message_id'] = body['message_id']
     values['instance'] = instance_id
     values['launched_at'] = launched_at
     values['instance_type_id'] = payload['instance_type_id']
@@ -321,12 +317,12 @@ USAGE_PROCESS_MAPPING = {
 } 
 
 
-def aggregate_usage(raw):
+def aggregate_usage(raw, body):
     if not raw.instance:
         return
 
     if raw.event in USAGE_PROCESS_MAPPING:
-        USAGE_PROCESS_MAPPING[raw.event](raw)
+        USAGE_PROCESS_MAPPING[raw.event](raw, body)
 
 
 def process_raw_data(deployment, args, json_args):
@@ -353,7 +349,7 @@ def process_raw_data(deployment, args, json_args):
         STACKDB.save(record)
 
         aggregate_lifecycle(record)
-        aggregate_usage(record)
+        aggregate_usage(record, body)
     return record
 
 
