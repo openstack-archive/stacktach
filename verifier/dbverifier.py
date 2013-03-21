@@ -72,8 +72,10 @@ def _mark_exist_verified(exist):
     exist.save()
 
 
-def _mark_exists_failed(exist):
+def _mark_exist_failed(exist, reason=None):
     exist.status = models.InstanceExists.FAILED
+    if reason:
+        exist.fail_reason = reason
     exist.save()
 
 
@@ -114,12 +116,15 @@ def _verify_for_launch(exist):
                  .filter(instance=exist.instance).count() > 0:
             launches = _find_launch(exist.instance,
                                     dt.dt_from_decimal(exist.launched_at))
-            if launches.count() != 1:
-                query = {
-                    'instance': exist.instance,
-                    'launched_at': exist.launched_at
-                }
+            count = launches.count()
+            query = {
+                'instance': exist.instance,
+                'launched_at': exist.launched_at
+            }
+            if count > 1:
                 raise AmbiguousResults('InstanceUsage', query)
+            elif count == 0:
+                raise NotFound('InstanceUsage', query)
             launch = launches[0]
         else:
             raise NotFound('InstanceUsage', {'instance': exist.instance})
@@ -190,10 +195,10 @@ def _verify(exist):
 
         verified = True
         _mark_exist_verified(exist)
-    except VerificationException:
-        _mark_exists_failed(exist)
+    except VerificationException, e:
+        _mark_exist_failed(exist, reason=str(e))
     except Exception, e:
-        _mark_exists_failed(exist)
+        _mark_exist_failed(exist, reason=e.__class__.__name__)
         LOG.exception(e)
 
     return verified, exist
@@ -206,11 +211,21 @@ def verify_for_range(pool, when_max, callback=None):
     exists = _list_exists(received_max=when_max,
                           status=models.InstanceExists.PENDING)
     count = exists.count()
-    for exist in exists:
-        exist.status = models.InstanceExists.VERIFYING
-        exist.save()
-        result = pool.apply_async(_verify, args=(exist,), callback=callback)
-        results.append(result)
+    added = 0
+    update_interval = datetime.timedelta(seconds=30)
+    next_update = datetime.datetime.utcnow() + update_interval
+    LOG.info("Adding %s exists to queue." % count)
+    while added < count:
+        for exist in exists[0:1000]:
+            exist.status = models.InstanceExists.VERIFYING
+            exist.save()
+            result = pool.apply_async(_verify, args=(exist,),
+                                      callback=callback)
+            results.append(result)
+            added += 1
+            if datetime.datetime.utcnow() > next_update:
+                LOG.info("Added %s exists to queue." % added)
+                next_update = datetime.datetime.utcnow() + update_interval
 
     return count
 
@@ -236,9 +251,9 @@ def clean_results():
 
 
 def _send_notification(message, routing_key, connection, exchange):
-        with kombu.pools.producers[connection].acquire(block=True) as producer:
-            kombu.common.maybe_declare(exchange, producer.channel)
-            producer.publish(message, routing_key)
+    with kombu.pools.producers[connection].acquire(block=True) as producer:
+        kombu.common.maybe_declare(exchange, producer.channel)
+        producer.publish(message, routing_key)
 
 
 def send_verified_notification(exist, connection, exchange):
