@@ -124,7 +124,7 @@ class InstanceExists(models.Model):
     status = models.CharField(max_length=50, db_index=True,
                               choices=STATUS_CHOICES,
                               default=PENDING)
-    fail_reason = models.CharField(max_length=2000, null=True,
+    fail_reason = models.CharField(max_length=500, null=True,
                                    blank=True, db_index=True)
     raw = models.ForeignKey(RawData, related_name='+', null=True)
     usage = models.ForeignKey(InstanceUsage, related_name='+', null=True)
