@@ -1,4 +1,22 @@
-# Copyright 2012 - Rackspace Inc.
+# Copyright (c) 2012 - Rackspace Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
 
 import argparse
 import datetime
@@ -7,6 +25,7 @@ import logging
 import os
 import sys
 from time import sleep
+import uuid
 
 from django.db import transaction
 import kombu.common
@@ -256,11 +275,17 @@ def _send_notification(message, routing_key, connection, exchange):
         producer.publish(message, routing_key)
 
 
-def send_verified_notification(exist, connection, exchange):
+def send_verified_notification(exist, connection, exchange, routing_keys=None):
     body = exist.raw.json
     json_body = json.loads(body)
     json_body[1]['event_type'] = 'compute.instance.exists.verified.old'
-    _send_notification(json_body[1], json_body[0], connection, exchange)
+    json_body[1]['original_message_id'] = json_body[1]['message_id']
+    json_body[1]['message_id'] = str(uuid.uuid4())
+    if routing_keys is None:
+        _send_notification(json_body[1], json_body[0], connection, exchange)
+    else:
+        for key in routing_keys:
+            _send_notification(json_body[1], key, connection, exchange)
 
 
 def _create_exchange(name, type, exclusive=False, auto_delete=False,
@@ -303,12 +328,16 @@ def run(config):
         exchange = _create_exchange(config['rabbit']['exchange_name'],
                                     'topic',
                                     durable=config['rabbit']['durable_queue'])
+        routing_keys = None
+        if config['rabbit'].get('routing_keys') is not None:
+            routing_keys = config['rabbit']['routing_keys']
 
         with _create_connection(config) as conn:
             def callback(result):
                 (verified, exist) = result
                 if verified:
-                    send_verified_notification(exist, conn, exchange)
+                    send_verified_notification(exist, conn, exchange,
+                                               routing_keys=routing_keys)
 
             _run(config, pool, callback=callback)
     else:
@@ -337,12 +366,16 @@ def run_once(config):
         exchange = _create_exchange(config['rabbit']['exchange_name'],
                                     'topic',
                                     durable=config['rabbit']['durable_queue'])
+        routing_keys = None
+        if config['rabbit'].get('routing_keys') is not None:
+            routing_keys = config['rabbit']['routing_keys']
 
         with _create_connection(config) as conn:
             def callback(result):
                 (verified, exist) = result
                 if verified:
-                    send_verified_notification(exist, conn, exchange)
+                    send_verified_notification(exist, conn, exchange,
+                                               routing_keys=routing_keys)
 
             _run_once(config, pool, callback=callback)
     else:

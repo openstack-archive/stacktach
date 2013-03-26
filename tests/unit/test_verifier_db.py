@@ -1,9 +1,28 @@
-# Copyright 2012 - Rackspace Inc.
+# Copyright (c) 2012 - Rackspace Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
 
 import datetime
 import decimal
 import json
 import unittest
+import uuid
 
 import kombu.common
 import kombu.entity
@@ -459,12 +478,18 @@ class VerifierTestCase(unittest.TestCase):
         self.assertEqual(exist2.status, 'verifying')
         self.mox.VerifyAll()
 
-    def test_send_verified_notification(self):
+    def test_send_verified_notification_default_routing_key(self):
         connection = self.mox.CreateMockAnything()
         exchange = self.mox.CreateMockAnything()
         exist = self.mox.CreateMockAnything()
         exist.raw = self.mox.CreateMockAnything()
-        exist_dict = ['monitor.info', {'event_type': 'test', 'key': 'value'}]
+        exist_dict = [
+            'monitor.info',
+            {
+                'event_type': 'test',
+                'message_id': 'some_uuid'
+            }
+        ]
         exist_str = json.dumps(exist_dict)
         exist.raw.json = exist_str
         self.mox.StubOutWithMock(kombu.pools, 'producers')
@@ -475,13 +500,53 @@ class VerifierTestCase(unittest.TestCase):
         producer.acquire(block=True).AndReturn(producer)
         producer.__enter__().AndReturn(producer)
         kombu.common.maybe_declare(exchange, producer.channel)
+        self.mox.StubOutWithMock(uuid, 'uuid4')
+        uuid.uuid4().AndReturn('some_other_uuid')
         message = {'event_type': 'compute.instance.exists.verified.old',
-                   'key': 'value'}
+                   'message_id': 'some_other_uuid',
+                   'original_message_id': 'some_uuid'}
         producer.publish(message, exist_dict[0])
         producer.__exit__(None, None, None)
         self.mox.ReplayAll()
 
         dbverifier.send_verified_notification(exist, exchange, connection)
+        self.mox.VerifyAll()
+
+    def test_send_verified_notification_routing_keys(self):
+        connection = self.mox.CreateMockAnything()
+        exchange = self.mox.CreateMockAnything()
+        exist = self.mox.CreateMockAnything()
+        exist.raw = self.mox.CreateMockAnything()
+        exist_dict = [
+            'monitor.info',
+            {
+                'event_type': 'test',
+                'message_id': 'some_uuid'
+            }
+        ]
+        exist_str = json.dumps(exist_dict)
+        exist.raw.json = exist_str
+        self.mox.StubOutWithMock(uuid, 'uuid4')
+        uuid.uuid4().AndReturn('some_other_uuid')
+        self.mox.StubOutWithMock(kombu.pools, 'producers')
+        self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
+        routing_keys = ['notifications.info', 'monitor.info']
+        for key in routing_keys:
+            producer = self.mox.CreateMockAnything()
+            producer.channel = self.mox.CreateMockAnything()
+            kombu.pools.producers[connection].AndReturn(producer)
+            producer.acquire(block=True).AndReturn(producer)
+            producer.__enter__().AndReturn(producer)
+            kombu.common.maybe_declare(exchange, producer.channel)
+            message = {'event_type': 'compute.instance.exists.verified.old',
+                       'message_id': 'some_other_uuid',
+                       'original_message_id': 'some_uuid'}
+            producer.publish(message, key)
+            producer.__exit__(None, None, None)
+        self.mox.ReplayAll()
+
+        dbverifier.send_verified_notification(exist, exchange, connection,
+                                              routing_keys=routing_keys)
         self.mox.VerifyAll()
 
     def test_run_notifications(self):
@@ -508,6 +573,41 @@ class VerifierTestCase(unittest.TestCase):
         exchange = self.mox.CreateMockAnything()
         dbverifier._create_exchange('stacktach', 'topic', durable=False)\
                   .AndReturn(exchange)
+        self.mox.StubOutWithMock(dbverifier, '_create_connection')
+        conn = self.mox.CreateMockAnything()
+        dbverifier._create_connection(config).AndReturn(conn)
+        conn.__enter__().AndReturn(conn)
+        self.mox.StubOutWithMock(dbverifier, '_run')
+        dbverifier._run(config, pool, callback=mox.IgnoreArg())
+        conn.__exit__(None, None, None)
+        self.mox.ReplayAll()
+        dbverifier.run(config)
+        self.mox.VerifyAll()
+
+    def test_run_notifications_with_routing_keys(self):
+        config = {
+            "tick_time": 30,
+            "settle_time": 5,
+            "settle_units": "minutes",
+            "pool_size": 2,
+            "enable_notifications": True,
+            "rabbit": {
+                "durable_queue": False,
+                "host": "10.0.0.1",
+                "port": 5672,
+                "userid": "rabbit",
+                "password": "rabbit",
+                "virtual_host": "/",
+                "exchange_name": "stacktach",
+            }
+        }
+        self.mox.StubOutWithMock(multiprocessing, 'Pool')
+        pool = self.mox.CreateMockAnything()
+        multiprocessing.Pool(2).AndReturn(pool)
+        self.mox.StubOutWithMock(dbverifier, '_create_exchange')
+        exchange = self.mox.CreateMockAnything()
+        dbverifier._create_exchange('stacktach', 'topic', durable=False) \
+            .AndReturn(exchange)
         self.mox.StubOutWithMock(dbverifier, '_create_connection')
         conn = self.mox.CreateMockAnything()
         dbverifier._create_connection(config).AndReturn(conn)
