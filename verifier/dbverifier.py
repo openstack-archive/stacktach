@@ -243,7 +243,9 @@ def verify_for_range(pool, when_max, callback=None):
             results.append(result)
             added += 1
             if datetime.datetime.utcnow() > next_update:
-                LOG.info("Added %s exists to queue." % added)
+                values = ((added,) + clean_results())
+                msg = "N: %s, P: %s, S: %s, E: %s" % values
+                LOG.info(msg)
                 next_update = datetime.datetime.utcnow() + update_interval
 
     return count
