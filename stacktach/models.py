@@ -129,6 +129,7 @@ class InstanceExists(models.Model):
     raw = models.ForeignKey(RawData, related_name='+', null=True)
     usage = models.ForeignKey(InstanceUsage, related_name='+', null=True)
     delete = models.ForeignKey(InstanceDeletes, related_name='+', null=True)
+    send_status = models.IntegerField(null=True, default=0, db_index=True)
 
 
 class Timing(models.Model):

@@ -39,6 +39,8 @@ urlpatterns = patterns('',
     url(r'db/usage/exists/$', 'stacktach.dbapi.list_usage_exists'),
     url(r'db/usage/exists/(?P<exist_id>\d+)/$',
         'stacktach.dbapi.get_usage_exist'),
+    url(r'db/confirm/usage/exists/(?P<message_id>[\w\-]+)/$',
+        'stacktach.dbapi.exists_send_status'),
 
     url(r'^(?P<deployment_id>\d+)/$', 'stacktach.views.home', name='home'),
     url(r'^(?P<deployment_id>\d+)/details/(?P<column>\w+)/(?P<row_id>\d+)/$',

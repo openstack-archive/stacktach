@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import datetime
+import json
 import unittest
 
 from django.db.models import FieldDoesNotExist
@@ -29,11 +30,20 @@ from stacktach import models
 from stacktach import utils as stacktach_utils
 import utils
 from utils import INSTANCE_ID_1
+from utils import MESSAGE_ID_1
+from utils import MESSAGE_ID_2
 
 
 class DBAPITestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()
+        dne_exception = models.InstanceExists.DoesNotExist
+        mor_exception = models.InstanceExists.MultipleObjectsReturned
+        self.mox.StubOutWithMock(models, 'InstanceExists',
+                                 use_mock_anything=True)
+        models.InstanceExists.objects = self.mox.CreateMockAnything()
+        models.InstanceExists.DoesNotExist = dne_exception
+        models.InstanceExists.MultipleObjectsReturned = mor_exception
 
     def tearDown(self):
         self.mox.UnsetStubs()
@@ -327,4 +337,236 @@ class DBAPITestCase(unittest.TestCase):
         self.mox.ReplayAll()
         resp = dbapi.list_usage_exists(fake_request)
         self.assertEqual(resp.status_code, 400)
+        self.mox.VerifyAll()
+
+    def test_send_status(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        body_dict = {'send_status': 200}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        exists = self.mox.CreateMockAnything()
+        result = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(result)
+        result.get(message_id=MESSAGE_ID_1).AndReturn(exists)
+        exists.save()
+        self.mox.ReplayAll()
+
+        dbapi.exists_send_status(fake_request, MESSAGE_ID_1)
+
+        self.assertEqual(exists.send_status, 200)
+        self.mox.VerifyAll()
+
+    def test_send_status_not_found(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        body_dict = {'send_status': 200}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        result = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(result)
+        exception = models.InstanceExists.DoesNotExist()
+        result.get(message_id=MESSAGE_ID_1).AndRaise(exception)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, MESSAGE_ID_1)
+
+        self.assertEqual(resp.status_code, 404)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get("status"), 404)
+        msg = "Could not find Exists record with message_id = '%s'"
+        msg = msg % MESSAGE_ID_1
+        self.assertEqual(body.get("message"), msg)
+        self.mox.VerifyAll()
+
+    def test_send_status_multiple_results(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        body_dict = {'send_status': 200}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        result = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(result)
+        exception = models.InstanceExists.MultipleObjectsReturned()
+        result.get(message_id=MESSAGE_ID_1).AndRaise(exception)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, MESSAGE_ID_1)
+
+        self.assertEqual(resp.status_code, 500)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get("status"), 500)
+        msg = "Multiple Exists records with message_id = '%s'"
+        msg = msg % MESSAGE_ID_1
+        self.assertEqual(body.get("message"), msg)
+        self.mox.VerifyAll()
+
+    def test_send_status_wrong_method(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.body = None
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, MESSAGE_ID_1)
+        self.assertEqual(resp.status_code, 400)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get("status"), 400)
+        self.assertEqual(body.get("message"), "Invalid method")
+        self.mox.VerifyAll()
+
+    def test_send_status_no_body(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        fake_request.body = None
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, MESSAGE_ID_1)
+        self.assertEqual(resp.status_code, 400)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get("status"), 400)
+        self.assertEqual(body.get("message"), "Request body required")
+        self.mox.VerifyAll()
+
+    def test_send_status_bad_body(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        body_dict = {'bad': 'body'}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, MESSAGE_ID_1)
+        self.assertEqual(resp.status_code, 400)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get("status"), 400)
+        msg = "'send_status' missing from request body"
+        self.assertEqual(body.get("message"), msg)
+        self.mox.VerifyAll()
+
+    def test_send_status_batch(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        messages = {
+            MESSAGE_ID_1: 200,
+            MESSAGE_ID_2: 400
+        }
+        body_dict = {'messages': messages}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        results1 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results1)
+        exists1 = self.mox.CreateMockAnything()
+        results1.get(message_id=MESSAGE_ID_2).AndReturn(exists1)
+        exists1.save()
+        results2 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results2)
+        exists2 = self.mox.CreateMockAnything()
+        results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
+        exists2.save()
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 200)
+        exists1.send_status = 200
+        self.mox.VerifyAll()
+
+    def test_send_status_batch_not_found(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        messages = {
+            MESSAGE_ID_1: 200,
+        }
+        body_dict = {'messages': messages}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        results = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results)
+        exception = models.InstanceExists.DoesNotExist()
+        results.get(message_id=MESSAGE_ID_1).AndRaise(exception)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 404)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get("status"), 404)
+        msg = "Could not find Exists record with message_id = '%s'"
+        msg = msg % MESSAGE_ID_1
+        self.assertEqual(body.get("message"), msg)
+        self.mox.VerifyAll()
+
+    def test_send_status_batch_multiple_results(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        messages = {
+            MESSAGE_ID_1: 200,
+        }
+        body_dict = {'messages': messages}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        results = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results)
+        exception = models.InstanceExists.MultipleObjectsReturned()
+        results.get(message_id=MESSAGE_ID_1).AndRaise(exception)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 500)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get("status"), 500)
+        msg = "Multiple Exists records with message_id = '%s'"
+        msg = msg % MESSAGE_ID_1
+        self.assertEqual(body.get("message"), msg)
+        self.mox.VerifyAll()
+
+    def test_send_status_batch_wrong_method(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 400)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get('status'), 400)
+        self.assertEqual(body.get('message'), "Invalid method")
+        self.mox.VerifyAll()
+
+    def test_send_status_batch_no_body(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        fake_request.body = None
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 400)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get('status'), 400)
+        self.assertEqual(body.get('message'), "Request body required")
+        self.mox.VerifyAll()
+
+    def test_send_status_batch_empty_body(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        fake_request.body = ''
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 400)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get('status'), 400)
+        self.assertEqual(body.get('message'), "Request body required")
+        self.mox.VerifyAll()
+
+    def test_send_status_batch_bad_body(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        body_dict = {'bad': 'body'}
+        fake_request.body = json.dumps(body_dict)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 400)
+        body = json.loads(resp.content)
+        self.assertEqual(body.get('status'), 400)
+        msg = "'messages' missing from request body"
+        self.assertEqual(body.get('message'), msg)
         self.mox.VerifyAll()
