@@ -58,8 +58,9 @@ def add_past_usage(raws):
         if processed % 50 == 0:
             next_update = last_update + datetime.timedelta(seconds=30)
             if datetime.datetime.utcnow() > next_update:
-                (processed, count - processed, float(processed) / count)
-                print "%s processed, %s to go, %.2f percent done"
+                m = (processed, count - processed, float(processed) / count)
+                print "%s processed, %s to go, %.2f percent done" % m
+                last_update = datetime.datetime.utcnow()
     print "completed processing %s events" % count
 
 
