@@ -79,7 +79,7 @@ class InstanceUsage(models.Model):
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
-                                      decimal_places=6)
+                                      decimal_places=6, db_index=True)
     request_id =  models.CharField(max_length=50, null=True,
                                    blank=True, db_index=True)
     instance_type_id =  models.CharField(max_length=50,
@@ -92,9 +92,9 @@ class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
-                                      decimal_places=6)
+                                      decimal_places=6, db_index=True)
     deleted_at = models.DecimalField(null=True, max_digits=20,
-                                     decimal_places=6)
+                                     decimal_places=6, db_index=True)
     raw = models.ForeignKey(RawData, null=True)
 
 
@@ -112,13 +112,14 @@ class InstanceExists(models.Model):
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
-                                      decimal_places=6)
+                                      decimal_places=6, db_index=True)
     deleted_at = models.DecimalField(null=True, max_digits=20,
-                                     decimal_places=6)
+                                     decimal_places=6, db_index=True)
     audit_period_beginning = models.DecimalField(null=True, max_digits=20,
-                                                 decimal_places=6)
+                                                 decimal_places=6,
+                                                 db_index=True)
     audit_period_ending = models.DecimalField(null=True, max_digits=20,
-                                              decimal_places=6)
+                                              decimal_places=6, db_index=True)
     message_id = models.CharField(max_length=50, null=True,
                                   blank=True, db_index=True)
     instance_type_id = models.CharField(max_length=50,
