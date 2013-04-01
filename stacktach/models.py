@@ -115,6 +115,10 @@ class InstanceExists(models.Model):
                                       decimal_places=6)
     deleted_at = models.DecimalField(null=True, max_digits=20,
                                      decimal_places=6)
+    audit_period_beginning = models.DecimalField(null=True, max_digits=20,
+                                                 decimal_places=6)
+    audit_period_ending = models.DecimalField(null=True, max_digits=20,
+                                              decimal_places=6)
     message_id = models.CharField(max_length=50, null=True,
                                   blank=True, db_index=True)
     instance_type_id = models.CharField(max_length=50,
