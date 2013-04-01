@@ -25,6 +25,8 @@ sys.path.append("/stacktach")
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 
+OLD_LAUNCHES_QUERY = "select * from stacktach_instanceusage where launched_at is not null and launched_at < %s and instance not in (select distinct(instance) from stacktach_instancedeletes where deleted_at < %s)"
+
 
 def _get_new_launches(beginning, ending):
     filters = {
@@ -73,23 +75,23 @@ def _audit_launches_to_exists(launches, exists):
     return fails
 
 
-def _audit_exists_to_launches(exists, launches):
+def _audit_launches_to_deletes(deletes, exists):
     fails = []
-    for (instance, rows) in exists.items():
-        if instance in launches:
-            for exist in rows:
+    for (instance, delete_list) in deletes.items():
+        if instance in exists:
+            for delete in delete_list:
                 found = False
-                for launch in exists[instance]:
-                    if int(exist['launched_at']) == int(launch['launched_at']):
+                for exist in exists[instance]:
+                    if int(delete['deleted_at']) == int(exist['deleted_at']):
                     # HACK (apmelton): Truncate the decimal because we may not
                     #    have the milliseconds.
                         found = True
 
                 if not found:
-                    msg = "Couldn't find exists for launch (%s, %s)"
-                    fails.append(msg % (instance, exist['launched_at']))
+                    msg = "Couldn't find exists for delete (%s, %s)"
+                    fails.append(msg % (instance, delete['deleted_at']))
         else:
-            msg = "No launch for instance (%s)" % instance
+            msg = "No exists for instance (%s)" % instance
             fails.append(msg)
     return fails
 
@@ -105,12 +107,27 @@ def _audit_for_period(beginning, ending):
         else:
             launches_dict[instance] = [l, ]
 
+    old_launches = models.InstanceUsage.objects.raw(OLD_LAUNCHES_QUERY,
+                                                    [beginning, beginning])
+    old_launches_dict = {}
+    for launch in old_launches:
+        instance = launch.instance
+        l = {'id': launch.id, 'launched_at': launch.launched_at}
+        if instance not in launches_dict or \
+                launches_dict[instance] < launch.launched_at:
+            old_launches_dict[instance] = l
+
+    for instance, launch in old_launches_dict.items():
+        if instance in launches_dict:
+            launches_dict[instance].append(launch)
+        else:
+            launches_dict[instance] = [launch, ]
+
     deletes_dict = {}
     deletes = _get_deletes(beginning, ending)
     for delete in deletes:
         instance = delete.instance
         d = {'id': delete.id,
-             'launched_at': delete.launched_at,
              'deleted_at': delete.deleted_at}
         if instance in deletes_dict:
             deletes_dict[instance].append(d)
@@ -131,6 +148,10 @@ def _audit_for_period(beginning, ending):
 
     launch_to_exists_fails = _audit_launches_to_exists(launches_dict,
                                                        exists_dict)
+    delete_to_exists_fails = _audit_launches_to_deletes(deletes_dict,
+                                                        exists_dict)
+
+    return launch_to_exists_fails, delete_to_exists_fails
 
 
 def audit_for_period(beginning, ending):
