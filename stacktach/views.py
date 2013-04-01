@@ -286,6 +286,10 @@ def _process_exists(raw, body):
     values['message_id'] = body['message_id']
     values['instance'] = instance_id
     values['launched_at'] = launched_at
+    beginning = utils.str_time_to_unix(payload['audit_period_beginning'])
+    values['audit_period_beginning'] = beginning
+    ending = utils.str_time_to_unix(payload['audit_period_ending'])
+    values['audit_period_ending'] = ending
     values['instance_type_id'] = payload['instance_type_id']
     if usage:
         values['usage'] = usage

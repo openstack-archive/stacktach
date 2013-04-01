@@ -571,11 +571,16 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_process_exists(self):
-        launch_time = datetime.datetime.utcnow()-datetime.timedelta(hours=23)
-        launch_decimal = utils.decimal_utc(launch_time)
         current_time = datetime.datetime.utcnow()
+        launch_time = current_time - datetime.timedelta(hours=23)
+        launch_decimal = utils.decimal_utc(launch_time)
         current_decimal = utils.decimal_utc(current_time)
-        notif = utils.create_nova_notif(launched=str(launch_time))
+        audit_beginning = current_time - datetime.timedelta(hours=20)
+        audit_beginning_decimal = utils.decimal_utc(audit_beginning)
+        audit_ending_decimal = utils.decimal_utc(current_time)
+        notif = utils.create_nova_notif(launched=str(launch_time),
+                                        audit_period_beginning=str(audit_beginning),
+                                        audit_period_ending=str(current_time))
         json_str = json.dumps(notif)
         event = 'compute.instance.exists'
         raw = utils.create_raw(self.mox, current_decimal, event=event,
@@ -592,6 +597,8 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
             'message_id': MESSAGE_ID_1,
             'instance': INSTANCE_ID_1,
             'launched_at': launch_decimal,
+            'audit_period_beginning': audit_beginning_decimal,
+            'audit_period_ending': audit_ending_decimal,
             'instance_type_id': '1',
             'usage': usage,
             'raw': raw,
@@ -604,14 +611,19 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_process_exists_with_deleted_at(self):
-        launch_time = datetime.datetime.utcnow()-datetime.timedelta(hours=23)
-        launch_decimal = utils.decimal_utc(launch_time)
-        deleted_time = datetime.datetime.utcnow()-datetime.timedelta(hours=12)
-        deleted_decimal = utils.decimal_utc(deleted_time)
         current_time = datetime.datetime.utcnow()
+        launch_time = current_time - datetime.timedelta(hours=23)
+        launch_decimal = utils.decimal_utc(launch_time)
+        deleted_time = current_time - datetime.timedelta(hours=12)
+        deleted_decimal = utils.decimal_utc(deleted_time)
         current_decimal = utils.decimal_utc(current_time)
+        audit_beginning = current_time - datetime.timedelta(hours=20)
+        audit_beginning_decimal = utils.decimal_utc(audit_beginning)
+        audit_ending_decimal = utils.decimal_utc(current_time)
         notif = utils.create_nova_notif(launched=str(launch_time),
-                                        deleted=str(deleted_time))
+                                        deleted=str(deleted_time),
+                                        audit_period_beginning=str(audit_beginning),
+                                        audit_period_ending=str(current_time))
         json_str = json.dumps(notif)
         event = 'compute.instance.exists'
         raw = utils.create_raw(self.mox, current_decimal, event=event,
@@ -630,6 +642,8 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
             'instance': INSTANCE_ID_1,
             'launched_at': launch_decimal,
             'deleted_at': deleted_decimal,
+            'audit_period_beginning': audit_beginning_decimal,
+            'audit_period_ending': audit_ending_decimal,
             'instance_type_id': '1',
             'usage': usage,
             'delete': delete,

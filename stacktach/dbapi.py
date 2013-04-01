@@ -22,10 +22,12 @@ import decimal
 import functools
 import json
 
+from django.db import transaction
 from django.db.models import FieldDoesNotExist
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
 from django.http import HttpResponseBadRequest
+from django.http import HttpResponseNotFound
 from django.http import HttpResponseServerError
 from django.shortcuts import get_object_or_404
 
@@ -35,9 +37,9 @@ from stacktach import utils
 
 
 class APIException(Exception):
-    def __init__(self):
+    def __init__(self, message="Internal Server Error"):
         self.status = 500
-        self.message = "Internal Server Error"
+        self.message = message
 
     def to_dict(self):
         return {'message': self.message,
@@ -50,7 +52,15 @@ class BadRequestException(APIException):
         self.message = message
 
 
+class NotFoundException(APIException):
+    def __init__(self, message="Not Found"):
+        self.status = 404
+        self.message = message
+
+
 def rsp(data):
+    if data is None:
+        return HttpResponse(content_type="application/json")
     return HttpResponse(json.dumps(data), content_type="application/json")
 
 
@@ -60,6 +70,9 @@ def api_call(func):
     def handled(*args, **kwargs):
         try:
             return rsp(func(*args, **kwargs))
+        except NotFoundException, e:
+            return HttpResponseNotFound(json.dumps(e.to_dict()),
+                                        content_type="application/json")
         except BadRequestException, e:
             return HttpResponseBadRequest(json.dumps(e.to_dict()),
                                           content_type="application/json")
@@ -127,6 +140,65 @@ def list_usage_exists(request):
 def get_usage_exist(request, exist_id):
     return {'exist': _get_model_by_id(models.InstanceExists, exist_id,
                                       _exists_extra_values)}
+
+
+@api_call
+def exists_send_status(request, message_id):
+    if request.method != 'PUT':
+        raise BadRequestException(message="Invalid method")
+
+    if request.body is None or request.body == '':
+        raise BadRequestException(message="Request body required")
+
+    if message_id == 'batch':
+        _exists_send_status_batch(request)
+    else:
+        body = json.loads(request.body)
+        if body.get('send_status') is not None:
+            send_status = body['send_status']
+            try:
+                exist = models.InstanceExists.objects\
+                                             .select_for_update()\
+                                             .get(message_id=message_id)
+                exist.send_status = send_status
+                exist.save()
+            except models.InstanceExists.DoesNotExist:
+                msg = "Could not find Exists record with message_id = '%s'"
+                msg = msg % message_id
+                raise NotFoundException(message=msg)
+            except models.InstanceExists.MultipleObjectsReturned:
+                msg = "Multiple Exists records with message_id = '%s'"
+                msg = msg % message_id
+                raise APIException(message=msg)
+        else:
+            msg = "'send_status' missing from request body"
+            raise BadRequestException(message=msg)
+
+
+def _exists_send_status_batch(request):
+
+    body = json.loads(request.body)
+    if body.get('messages') is not None:
+        messages = body['messages']
+        with transaction.commit_on_success():
+            for msg_id, status in messages.items():
+                try:
+                    exist = models.InstanceExists.objects\
+                                                 .select_for_update()\
+                                                 .get(message_id=msg_id)
+                    exist.send_status = status
+                    exist.save()
+                except models.InstanceExists.DoesNotExist:
+                    msg = "Could not find Exists record with message_id = '%s'"
+                    msg = msg % msg_id
+                    raise NotFoundException(message=msg)
+                except models.InstanceExists.MultipleObjectsReturned:
+                    msg = "Multiple Exists records with message_id = '%s'"
+                    msg = msg % msg_id
+                    raise APIException(message=msg)
+    else:
+        msg = "'messages' missing from request body"
+        raise BadRequestException(message=msg)
 
 
 def _get_model_by_id(klass, model_id, extra_values_func=None):

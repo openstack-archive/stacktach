@@ -43,8 +43,9 @@ def decimal_utc(t = datetime.datetime.utcnow()):
 
 
 def create_nova_notif(request_id=None, instance=INSTANCE_ID_1, type_id='1',
-                      launched=None, deleted = None, new_type_id=None,
-                      message_id=MESSAGE_ID_1):
+                      launched=None, deleted=None, new_type_id=None,
+                      message_id=MESSAGE_ID_1, audit_period_beginning=None,
+                      audit_period_ending=None):
     notif = ['', {
         'message_id': message_id,
         'payload': {
@@ -61,6 +62,10 @@ def create_nova_notif(request_id=None, instance=INSTANCE_ID_1, type_id='1',
         notif[1]['payload']['deleted_at'] = deleted
     if new_type_id:
         notif[1]['payload']['new_instance_type_id'] = new_type_id
+    if audit_period_beginning:
+        notif[1]['payload']['audit_period_beginning'] = audit_period_beginning
+    if audit_period_ending:
+        notif[1]['payload']['audit_period_ending'] = audit_period_ending
 
     return notif
 

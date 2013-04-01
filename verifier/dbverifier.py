@@ -182,11 +182,11 @@ def _verify_for_delete(exist):
             # Thus, we need to check if we have a delete for this instance.
             # We need to be careful though, since we could be verifying an
             # exist event that we got before the delete. So, we restrict the
-            # search to only deletes before the time this exist was sent.
+            # search to only deletes before this exist's audit period ended.
             # If we find any, we fail validation
-            deletes = _find_delete(exist.instance,
-                                   dt.dt_from_decimal(exist.launched_at),
-                                   dt.dt_from_decimal(exist.raw.when))
+            launched_at = dt.dt_from_decimal(exist.launched_at)
+            deleted_at_max = dt.dt_from_decimal(exist.audit_period_ending)
+            deletes = _find_delete(exist.instance, launched_at, deleted_at_max)
             if deletes.count() > 0:
                 reason = 'Found InstanceDeletes for non-delete exist'
                 raise VerificationException(reason)
