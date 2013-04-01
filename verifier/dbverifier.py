@@ -1,10 +1,36 @@
+# Copyright (c) 2012 - Rackspace Inc.
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+# IN THE SOFTWARE.
+
 import argparse
 import datetime
+import json
 import logging
 import os
 import sys
 from time import sleep
+import uuid
 
+from django.db import transaction
+import kombu.common
+import kombu.entity
+import kombu.pools
 import multiprocessing
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -65,8 +91,10 @@ def _mark_exist_verified(exist):
     exist.save()
 
 
-def _mark_exists_failed(exist):
+def _mark_exist_failed(exist, reason=None):
     exist.status = models.InstanceExists.FAILED
+    if reason:
+        exist.fail_reason = reason
     exist.save()
 
 
@@ -107,12 +135,15 @@ def _verify_for_launch(exist):
                  .filter(instance=exist.instance).count() > 0:
             launches = _find_launch(exist.instance,
                                     dt.dt_from_decimal(exist.launched_at))
-            if launches.count() != 1:
-                query = {
-                    'instance': exist.instance,
-                    'launched_at': exist.launched_at
-                }
+            count = launches.count()
+            query = {
+                'instance': exist.instance,
+                'launched_at': exist.launched_at
+            }
+            if count > 1:
                 raise AmbiguousResults('InstanceUsage', query)
+            elif count == 0:
+                raise NotFound('InstanceUsage', query)
             launch = launches[0]
         else:
             raise NotFound('InstanceUsage', {'instance': exist.instance})
@@ -173,6 +204,7 @@ def _verify_for_delete(exist):
 
 
 def _verify(exist):
+    verified = False
     try:
         if not exist.launched_at:
             raise VerificationException("Exists without a launched_at")
@@ -180,26 +212,41 @@ def _verify(exist):
         _verify_for_launch(exist)
         _verify_for_delete(exist)
 
+        verified = True
         _mark_exist_verified(exist)
-    except VerificationException:
-        _mark_exists_failed(exist)
+    except VerificationException, e:
+        _mark_exist_failed(exist, reason=str(e))
     except Exception, e:
-        _mark_exists_failed(exist)
+        _mark_exist_failed(exist, reason=e.__class__.__name__)
         LOG.exception(e)
+
+    return verified, exist
 
 
 results = []
 
 
-def verify_for_range(pool, when_max):
+def verify_for_range(pool, when_max, callback=None):
     exists = _list_exists(received_max=when_max,
                           status=models.InstanceExists.PENDING)
     count = exists.count()
-    for exist in exists:
-        exist.status = models.InstanceExists.VERIFYING
-        exist.save()
-        result = pool.apply_async(_verify, args=(exist,))
-        results.append(result)
+    added = 0
+    update_interval = datetime.timedelta(seconds=30)
+    next_update = datetime.datetime.utcnow() + update_interval
+    LOG.info("Adding %s exists to queue." % count)
+    while added < count:
+        for exist in exists[0:1000]:
+            exist.status = models.InstanceExists.VERIFYING
+            exist.save()
+            result = pool.apply_async(_verify, args=(exist,),
+                                      callback=callback)
+            results.append(result)
+            added += 1
+            if datetime.datetime.utcnow() > next_update:
+                values = ((added,) + clean_results())
+                msg = "N: %s, P: %s, S: %s, E: %s" % values
+                LOG.info(msg)
+                next_update = datetime.datetime.utcnow() + update_interval
 
     return count
 
@@ -224,37 +271,117 @@ def clean_results():
     return len(results), successful, errored
 
 
-def run(config):
-    pool = multiprocessing.Pool(config['pool_size'])
+def _send_notification(message, routing_key, connection, exchange):
+    with kombu.pools.producers[connection].acquire(block=True) as producer:
+        kombu.common.maybe_declare(exchange, producer.channel)
+        producer.publish(message, routing_key)
 
+
+def send_verified_notification(exist, connection, exchange, routing_keys=None):
+    body = exist.raw.json
+    json_body = json.loads(body)
+    json_body[1]['event_type'] = 'compute.instance.exists.verified.old'
+    json_body[1]['original_message_id'] = json_body[1]['message_id']
+    json_body[1]['message_id'] = str(uuid.uuid4())
+    if routing_keys is None:
+        _send_notification(json_body[1], json_body[0], connection, exchange)
+    else:
+        for key in routing_keys:
+            _send_notification(json_body[1], key, connection, exchange)
+
+
+def _create_exchange(name, type, exclusive=False, auto_delete=False,
+                     durable=True):
+    return kombu.entity.Exchange(name, type=type, exclusive=auto_delete,
+                                 auto_delete=exclusive, durable=durable)
+
+
+def _create_connection(config):
+    rabbit = config['rabbit']
+    conn_params = dict(hostname=rabbit['host'],
+                       port=rabbit['port'],
+                       userid=rabbit['userid'],
+                       password=rabbit['password'],
+                       transport="librabbitmq",
+                       virtual_host=rabbit['virtual_host'])
+    return kombu.connection.BrokerConnection(**conn_params)
+
+
+def _run(config, pool, callback=None):
     tick_time = config['tick_time']
     settle_units = config['settle_units']
     settle_time = config['settle_time']
     while True:
-        now = datetime.datetime.utcnow()
-        kwargs = {settle_units: settle_time}
-        when_max = now - datetime.timedelta(**kwargs)
-        new = verify_for_range(pool, when_max)
+        with transaction.commit_on_success():
+            now = datetime.datetime.utcnow()
+            kwargs = {settle_units: settle_time}
+            when_max = now - datetime.timedelta(**kwargs)
+            new = verify_for_range(pool, when_max, callback=callback)
 
-        LOG.info("N: %s, %s" % (new, "P: %s, S: %s, E: %s" % clean_results()))
+            msg = "N: %s, P: %s, S: %s, E: %s" % ((new,) + clean_results())
+            LOG.info(msg)
         sleep(tick_time)
 
 
-def run_once(config):
+def run(config):
     pool = multiprocessing.Pool(config['pool_size'])
 
+    if config['enable_notifications']:
+        exchange = _create_exchange(config['rabbit']['exchange_name'],
+                                    'topic',
+                                    durable=config['rabbit']['durable_queue'])
+        routing_keys = None
+        if config['rabbit'].get('routing_keys') is not None:
+            routing_keys = config['rabbit']['routing_keys']
+
+        with _create_connection(config) as conn:
+            def callback(result):
+                (verified, exist) = result
+                if verified:
+                    send_verified_notification(exist, conn, exchange,
+                                               routing_keys=routing_keys)
+
+            _run(config, pool, callback=callback)
+    else:
+        _run(config, pool)
+
+
+def _run_once(config, pool, callback=None):
     tick_time = config['tick_time']
     settle_units = config['settle_units']
     settle_time = config['settle_time']
     now = datetime.datetime.utcnow()
     kwargs = {settle_units: settle_time}
     when_max = now - datetime.timedelta(**kwargs)
-    new = verify_for_range(pool, when_max)
+    new = verify_for_range(pool, when_max, callback=callback)
 
     LOG.info("Verifying %s exist events" % new)
     while len(results) > 0:
         LOG.info("P: %s, F: %s, E: %s" % clean_results())
         sleep(tick_time)
+
+
+def run_once(config):
+    pool = multiprocessing.Pool(config['pool_size'])
+
+    if config['enable_notifications']:
+        exchange = _create_exchange(config['rabbit']['exchange_name'],
+                                    'topic',
+                                    durable=config['rabbit']['durable_queue'])
+        routing_keys = None
+        if config['rabbit'].get('routing_keys') is not None:
+            routing_keys = config['rabbit']['routing_keys']
+
+        with _create_connection(config) as conn:
+            def callback(result):
+                (verified, exist) = result
+                if verified:
+                    send_verified_notification(exist, conn, exchange,
+                                               routing_keys=routing_keys)
+
+            _run_once(config, pool, callback=callback)
+    else:
+        _run_once(config, pool)
 
 
 if __name__ == '__main__':

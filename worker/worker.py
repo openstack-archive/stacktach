@@ -17,13 +17,20 @@
 # to set TENANT_ID and URL to point to your StackTach web server.
 
 import datetime
-import json
 import kombu
 import kombu.entity
 import kombu.mixins
 import logging
 import sys
 import time
+
+try:
+    import ujson as json
+except ImportError:
+    try:
+        import simplejson as json
+    except ImportError:
+        import json
 
 from pympler.process import ProcessMemoryInfo
 
