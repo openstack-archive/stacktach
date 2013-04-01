@@ -256,8 +256,7 @@ class VerifierTestCase(unittest.TestCase):
         exist.instance = INSTANCE_ID_1
         exist.launched_at = decimal.Decimal('1.1')
         exist.deleted_at = None
-        exist.raw = self.mox.CreateMockAnything()
-        exist.raw.when = decimal.Decimal('1.1')
+        exist.audit_period_ending = decimal.Decimal('1.1')
         filters = {
             'instance': INSTANCE_ID_1,
             'launched_at__gte': decimal.Decimal('1.0'),
@@ -279,13 +278,12 @@ class VerifierTestCase(unittest.TestCase):
         exist.instance = INSTANCE_ID_1
         exist.launched_at = decimal.Decimal('1.1')
         exist.deleted_at = None
-        exist.raw = self.mox.CreateMockAnything()
-        exist.raw.when = decimal.Decimal('1.1')
+        exist.audit_period_ending = decimal.Decimal('1.3')
         filters = {
             'instance': INSTANCE_ID_1,
             'launched_at__gte': decimal.Decimal('1.0'),
             'launched_at__lte': decimal.Decimal('1.999999'),
-            'deleted_at__lte': decimal.Decimal('1.1')
+            'deleted_at__lte': decimal.Decimal('1.3')
         }
         results = self.mox.CreateMockAnything()
         models.InstanceDeletes.objects.filter(**filters).AndReturn(results)
