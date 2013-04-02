@@ -5,8 +5,7 @@ import time
 
 import prettytable
 
-#sys.path.append("/stacktach")
-sys.path.append("..")
+sys.path.append("/stacktach")
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import image_type
@@ -27,7 +26,7 @@ if len(sys.argv) == 2:
         sys.exit(1)
 
 hours = 0
-length = 3
+length = 24
 
 start = datetime.datetime(year=yesterday.year, month=yesterday.month, 
                           day=yesterday.day) 
