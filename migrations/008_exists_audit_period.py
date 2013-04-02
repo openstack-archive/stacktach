@@ -19,7 +19,7 @@ from stacktach import models
 from stacktach import utils
 
 
-if __name__ != '__main':
+if __name__ != '__main__':
     sys.exit(1)
 
 
@@ -32,7 +32,7 @@ exists = models.InstanceExists.objects.all()
 
 count = exists.count()
 start = datetime.datetime.utcnow()
-print "%s records to populate"
+print "%s records to populate" % count
 
 update_interval = datetime.timedelta(seconds=30)
 next_update = start + update_interval
