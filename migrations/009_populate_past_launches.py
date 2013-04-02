@@ -18,8 +18,8 @@ if __name__ != '__main__':
 
 def add_past_exists(start, end):
     exists = models.InstanceExists.objects.select_related()\
-                                  .filter(raw__when__gte=start,
-                                          raw__when__lte=end)
+                                  .filter(audit_period_beginning=start,
+                                          audit_period_ending=end)
     i = 0
     for exist in exists:
         i += 1
