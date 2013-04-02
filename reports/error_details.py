@@ -5,7 +5,8 @@ import time
 
 import prettytable
 
-sys.path.append("/stacktach")
+#sys.path.append("/stacktach")
+sys.path.append("..")
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import image_type
@@ -62,53 +63,84 @@ for uuid_dict in updates:
                                          when__gt=dstart, when__lte=dend) \
                                  .values('request_id').distinct()
 
-
     for req_dict in reqs:
-        report = False
         req = req_dict['request_id']
-        raws = models.RawData.objects.filter(request_id=req)\
+        raws = list(models.RawData.objects.filter(request_id=req)\
                                      .exclude(event='compute.instance.exists')\
-                                     .order_by('when')
+                                     .values("id", "when", "routing_key", "old_state",
+                                             "state", "tenant", "event", "image_type",
+                                             "deployment")\
+                                     .order_by('when'))
 
         start = None
-        err = None
+        err_id = None
+        failure_type = None
 
-        operation = "aux"
+        operation = "n/a"
         platform = 0
         tenant = 0
-        cell = "unk"
+        cell = "n/a"
+        image_type_num = 0
+
+        _when = None
 
         for raw in raws:
-            if not start:
-                start = raw.when
-            if 'error' in raw.routing_key:
-                err = raw
-                report = True
+            _when = raw['when']
+            _routing_key = raw['routing_key']
+            _old_state = raw['old_state']
+            _state = raw['state']
+            _tenant = raw['tenant']
+            _event = raw['event']
+            _image_type = raw['image_type']
+            _name = raw['deployment']
+            _id = raw['id']
 
-            if raw.tenant:
-                if tenant > 0 and raw.tenant != tenant:
-                    print "Conflicting tenant ID", raw.tenant, tenant
-                tenant = raw.tenant
+            if not start:
+                start = _when
+
+            if 'error' in _routing_key:
+                err_id = _id
+                failure_type = 'http'
+
+            if _old_state != 'error' and _state == 'error':
+                failure_type = 'state'
+                err_id = _id
+
+            if _old_state == 'error' and \
+                            (not _state in ['deleted', 'error']):
+                failure_type = None
+                err_id = None
+
+            if _tenant:
+                if tenant > 0 and _tenant != tenant:
+                    print "Conflicting tenant ID", _tenant, tenant
+                tenant = _tenant
 
             for cmd in cmds:
-                if cmd in raw.event:
+                if cmd in _event:
                     operation = cmd
-                    cell = raw.deployment.name
+                    cell = _name
                     break
 
-            if raw.image_type > 0:
-                platform = raw.image_type
+            if _image_type:
+                image_type_num |= _image_type
 
         if not start:
             continue
 
-        end = raw.when
+        image = "?"
+        if image_type.isset(image_type_num, image_type.BASE_IMAGE):
+            image = "base"
+        if image_type.isset(image_type_num, image_type.SNAPSHOT_IMAGE):
+            image = "snap"
+
+        end = _when
         diff = end - start
 
         if diff > 3600:
-            report = True
+            failure_type = ">60"
 
-        key = (operation, platform, cell)
+        key = (operation, image_type_num, cell)
 
         # Track durations for all attempts, good and bad ...
         duration_min, duration_max, duration_count, duration_total = \
@@ -120,31 +152,35 @@ for uuid_dict in updates:
         durations[key] = (duration_min, duration_max, duration_count,
                           duration_total)
 
-        if not report:
+        if not failure_type:
             successes[key] = successes.get(key, 0) + 1
         else:
+            err = models.RawData.objects.get(id=err_id)
+            print
             print "------", uuid, "----------"
             print "    Req:", req
             print "    Duration: %.2f minutes" % (diff / 60)
             print "    Operation:", operation
-            print "    Platform:", image_type.readable(platform)
-            cause = "> %d min" % (expiry / 60)
+            print "    Platform:", image_type.readable(image_type_num)
             failures[key] = failures.get(key, 0) + 1
             tenant_issues[tenant] = tenant_issues.get(tenant, 0) + 1
 
             if err:
                 queue, body = json.loads(err.json)
                 payload = body['payload']
-                print "Error. EventID: %s, Tenant %s, Service %s, Host %s, "\
-                      "Deployment %s, Event %s, When %s"\
-                    % (err.id, err.tenant, err.service, err.host, 
-                       err.deployment.name, 
-                       err.event, dt.dt_from_decimal(err.when))
+                
+                print "    Event ID:", err.id
+                print "    Tenant:", err.tenant
+                print "    Service:", err.service
+                print "    Host:", err.host
+                print "    Deployment:", err.deployment.name
+                print "    Event:", err.event
+                print "    When:", dt.dt_from_decimal(err.when)
                 exc = payload.get('exception')
                 if exc:
                     # group the messages ...
                     exc_str = str(exc)
-                    print exc_str
+                    print "    Exception:", exc_str
                     error_messages[exc_str] = \
                                         error_messages.get(exc_str, 0) + 1
                     
@@ -152,8 +188,19 @@ for uuid_dict in updates:
                     code = exc.get('kwargs', {}).get('code')
                     if code:
                         codes[code] = codes.get(code, 0) + 1
-                        cause = code
-            cause_key = (key, cause)
+                        failure_type = code
+                print "    Failure Type:", failure_type
+
+                print
+                print "Details:"
+                raws = models.RawData.objects.filter(request_id=req)\
+                                     .exclude(event='compute.instance.exists')\
+                                     .order_by('when')
+
+                for raw in raws:
+                    print "H: %s E:%s, S:(%s->%s) T:(%s->%s)" % (raw.host, raw.event, 
+                                raw.old_state, raw.state, raw.old_task, raw.task)
+            cause_key = (key, failure_type)
             causes[cause_key] = causes.get(cause_key, 0) + 1
 
 
@@ -164,8 +211,6 @@ def dump_breakdown(totals, label):
     print label
     p.sortby = 'Count'
     print p
-
-
 
 
 def dump_summary(info, label):
