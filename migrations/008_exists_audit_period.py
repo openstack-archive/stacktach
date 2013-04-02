@@ -27,8 +27,11 @@ def print_update(total, completed, errored):
     to_go = total - (completed + errored)
     print "%s populated, %s to go, %s errored" % (completed, to_go, errored)
 
-
-exists = models.InstanceExists.objects.all()
+filters = {
+    'audit_period_beginning__exact': None,
+    'audit_period_ending__exact': None
+}
+exists = models.InstanceExists.objects.filter(**filters)
 
 count = exists.count()
 start = datetime.datetime.utcnow()
