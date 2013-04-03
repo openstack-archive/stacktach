@@ -18,6 +18,9 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+import argparse
+import datetime
+import json
 import sys
 
 sys.path.append("/stacktach")
@@ -25,7 +28,11 @@ sys.path.append("/stacktach")
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 
-OLD_LAUNCHES_QUERY = "select * from stacktach_instanceusage where launched_at is not null and launched_at < %s and instance not in (select distinct(instance) from stacktach_instancedeletes where deleted_at < %s)"
+OLD_LAUNCHES_QUERY = "select * from stacktach_instanceusage " \
+                     "where launched_at is not null and " \
+                     "launched_at < %s and instance not in " \
+                     "(select distinct(instance) " \
+                     "from stacktach_instancedeletes where deleted_at < %s)"
 
 
 def _get_new_launches(beginning, ending):
@@ -49,7 +56,6 @@ def _get_exists(beginning, ending):
         'audit_period_beginning': beginning,
         'audit_period_ending__gte': beginning,
         'audit_period_ending__lte': ending,
-        'status': 'verified',
     }
     return models.InstanceExists.objects.filter(**filters)
 
@@ -68,35 +74,83 @@ def _audit_launches_to_exists(launches, exists):
 
                 if not found:
                     msg = "Couldn't find exists for launch (%s, %s)"
-                    fails.append(msg % (instance, launch1['launched_at']))
+                    msg = msg % (instance, launch1['launched_at'])
+                    fails.append([launch1['id'], msg])
         else:
             msg = "No exists for instance (%s)" % instance
-            fails.append(msg)
+            fails.append(['-', msg])
     return fails
 
 
-def _audit_launches_to_deletes(deletes, exists):
-    fails = []
-    for (instance, delete_list) in deletes.items():
-        if instance in exists:
-            for delete in delete_list:
-                found = False
-                for exist in exists[instance]:
-                    if int(delete['deleted_at']) == int(exist['deleted_at']):
-                    # HACK (apmelton): Truncate the decimal because we may not
-                    #    have the milliseconds.
-                        found = True
+def _status_queries(exists_query):
+    verified = exists_query.filter(status=models.InstanceExists.VERIFIED)
+    fail = exists_query.filter(status=models.InstanceExists.FAILED)
+    pending = exists_query.filter(status=models.InstanceExists.PENDING)
+    verifying = exists_query.filter(status=models.InstanceExists.VERIFYING)
 
-                if not found:
-                    msg = "Couldn't find exists for delete (%s, %s)"
-                    fails.append(msg % (instance, delete['deleted_at']))
-        else:
-            msg = "No exists for instance (%s)" % instance
-            fails.append(msg)
-    return fails
+    return verified, fail, pending, verifying
 
 
-def _audit_for_period(beginning, ending):
+def _send_status_queries(exists_query):
+    unsent = exists_query.filter(send_status=0)
+    success = exists_query.filter(send_status__gte=200,
+                                  send_status__lt=300)
+    redirect = exists_query.filter(send_status__gte=300,
+                                   send_status__lt=400)
+    client_error = exists_query.filter(send_status__gte=400,
+                                       send_status__lt=500)
+    server_error = exists_query.filter(send_status__gte=500,
+                                       send_status__lt=600)
+    return success, unsent, redirect, client_error, server_error
+
+
+def _audit_for_exists(exists_query):
+    (verified, fail, pending, verifying) = _status_queries(exists_query)
+
+    (success, unsent, redirect,
+     client_error, server_error) = _send_status_queries(verified)
+
+    report = {
+        'count': exists_query.count(),
+        'verified': verified.count(),
+        'failed': fail.count(),
+        'pending': pending.count(),
+        'verifying': verifying.count(),
+        'send_status': {
+            'success': success.count(),
+            'unsent': unsent.count(),
+            'redirect': redirect.count(),
+            'client_error': client_error.count(),
+            'server_error': server_error.count(),
+        }
+    }
+
+    return report
+
+
+def _verifier_audit_for_period(beginning, ending):
+    report = {}
+
+    filters = {
+        'audit_period_beginning': beginning,
+        'audit_period_ending': ending,
+    }
+    periodic_exists = models.InstanceExists.objects.filter(**filters)
+
+    report['periodic'] = _audit_for_exists(periodic_exists)
+
+    filters = {
+        'audit_period_beginning': beginning,
+        'audit_period_ending__lt': ending,
+    }
+    instant_exists = models.InstanceExists.objects.filter(**filters)
+
+    report['instantaneous'] = _audit_for_exists(instant_exists)
+
+    return report
+
+
+def _launch_audit_for_period(beginning, ending):
     launches_dict = {}
     new_launches = _get_new_launches(beginning, ending)
     for launch in new_launches:
@@ -113,8 +167,9 @@ def _audit_for_period(beginning, ending):
     for launch in old_launches:
         instance = launch.instance
         l = {'id': launch.id, 'launched_at': launch.launched_at}
-        if instance not in launches_dict or \
-                launches_dict[instance] < launch.launched_at:
+        if instance not in old_launches_dict or \
+                (old_launches_dict[instance]['launched_at'] <
+                 launch.launched_at):
             old_launches_dict[instance] = l
 
     for instance, launch in old_launches_dict.items():
@@ -122,17 +177,6 @@ def _audit_for_period(beginning, ending):
             launches_dict[instance].append(launch)
         else:
             launches_dict[instance] = [launch, ]
-
-    deletes_dict = {}
-    deletes = _get_deletes(beginning, ending)
-    for delete in deletes:
-        instance = delete.instance
-        d = {'id': delete.id,
-             'deleted_at': delete.deleted_at}
-        if instance in deletes_dict:
-            deletes_dict[instance].append(d)
-        else:
-            deletes_dict[instance] = [d, ]
 
     exists_dict = {}
     exists = _get_exists(beginning, ending)
@@ -148,13 +192,111 @@ def _audit_for_period(beginning, ending):
 
     launch_to_exists_fails = _audit_launches_to_exists(launches_dict,
                                                        exists_dict)
-    delete_to_exists_fails = _audit_launches_to_deletes(deletes_dict,
-                                                        exists_dict)
 
-    return launch_to_exists_fails, delete_to_exists_fails
+    return launch_to_exists_fails, new_launches.count(), len(old_launches_dict)
 
 
 def audit_for_period(beginning, ending):
     beginning_decimal = dt.dt_to_decimal(beginning)
     ending_decimal = dt.dt_to_decimal(ending)
-    _audit_for_period(beginning_decimal, ending_decimal)
+
+    verifier_report = _verifier_audit_for_period(beginning_decimal,
+                                                 ending_decimal)
+    detail, new_count, old_count = _launch_audit_for_period(beginning_decimal,
+                                                            ending_decimal)
+
+    summary = {
+        'verifier': verifier_report,
+        'launch_fails': {
+            'total_failures': len(detail),
+            'new_launches': new_count,
+            'old_launches': old_count
+        }
+    }
+
+    details = {
+        'launch_fails': detail
+    }
+
+    return summary, details
+
+
+def get_previous_period(time, period_length):
+    if period_length == 'day':
+        last_period = time - datetime.timedelta(days=1)
+        start = datetime.datetime(year=last_period.year,
+                                  month=last_period.month,
+                                  day=last_period.day)
+        end = datetime.datetime(year=time.year,
+                                month=time.month,
+                                day=time.day)
+        return start, end
+    elif period_length == 'hour':
+        last_period = time - datetime.timedelta(hours=1)
+        start = datetime.datetime(year=last_period.year,
+                                  month=last_period.month,
+                                  day=last_period.day,
+                                  hour=last_period.hour)
+        end = datetime.datetime(year=time.year,
+                                month=time.month,
+                                day=time.day,
+                                hour=time.hour)
+        return start, end
+
+
+def store_results(start, end, summary, details):
+    values = {
+        'json': make_json_report(summary, details),
+        'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
+        'period_start': start,
+        'period_end': end,
+        'version': 1,
+        'name': 'nova usage audit'
+    }
+
+    report = models.JsonReport(**values)
+    report.save()
+
+
+def make_json_report(summary, details):
+    report = [{'summary': summary},
+              ['Launch ID', 'Error Description']]
+    report.extend(details['launch_fails'])
+    return json.dumps(report)
+
+
+def valid_datetime(d):
+    try:
+        t = datetime.datetime.strptime(d, "%Y-%m-%d %H:%M:%S")
+        return t
+    except Exception, e:
+        raise argparse.ArgumentTypeError(
+            "'%s' is not in YYYY-MM-DD HH:MM:SS format." % d)
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser('StackTach Nova Usage Audit Report')
+    parser.add_argument('--period_length',
+                        choices=['hour', 'day'], default='day')
+    parser.add_argument('--utcdatetime',
+                        help="Override the end time used to generate report.",
+                        type=valid_datetime, default=None)
+    parser.add_argument('--store',
+                        help="If set to true, report will be stored. "
+                             "Otherwise, it will just be printed",
+                        type=bool, default=False)
+    args = parser.parse_args()
+
+    if args.utcdatetime is not None:
+        time = args.utcdatetime
+    else:
+        time = datetime.datetime.utcnow()
+
+    start, end = get_previous_period(time, args.period_length)
+
+    summary, details = audit_for_period(start, end)
+
+    if not args.store:
+        print make_json_report(summary, details)
+    else:
+        store_results(start, end, summary, details)
