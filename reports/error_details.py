@@ -157,7 +157,6 @@ for uuid_dict in updates:
         if not failure_type:
             successes[key] = successes.get(key, 0) + 1
         else:
-            err = models.RawData.objects.get(id=err_id)
             report.append('')
             report.append("------ %s ----------" % uuid)
             report.append("Req: %s" % req)
@@ -167,7 +166,8 @@ for uuid_dict in updates:
             failures[key] = failures.get(key, 0) + 1
             tenant_issues[tenant] = tenant_issues.get(tenant, 0) + 1
 
-            if err:
+            if err_id:
+                err = models.RawData.objects.get(id=err_id)
                 queue, body = json.loads(err.json)
                 payload = body['payload']
                 
