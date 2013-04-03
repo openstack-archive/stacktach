@@ -113,7 +113,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
             end = raw.when
             diff = end - start
 
-            if diff > 3600:
+            if diff > 3600 and failure_type == None:
                 failure_type = '> 60'
 
             key = (operation, image)

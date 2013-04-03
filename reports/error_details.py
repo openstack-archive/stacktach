@@ -143,7 +143,7 @@ for uuid_dict in updates:
         _end = _when
         diff = _end - _start
 
-        if diff > 3600:
+        if diff > 3600 and failure_type == None:
             failure_type = ">60"
 
         key = (operation, image_type_num, cell)
