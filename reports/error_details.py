@@ -32,7 +32,9 @@ start = datetime.datetime(year=yesterday.year, month=yesterday.month,
                           day=yesterday.day) 
 end = start + datetime.timedelta(hours=length-1, minutes=59, seconds=59)
 
-report = [{'raw_text':True}]  # Tell Stacky not to format results.
+instance_map = {}  # { uuid : [request_id, request_id, ...] }
+metadata = {'raw_text': True, 'instances': instance_map}
+report = [metadata]  # Tell Stacky not to format results.
 report.append("Generating report for %s to %s" % (start, end))
 
 dstart = dt.dt_to_decimal(start)
@@ -67,8 +69,10 @@ for uuid_dict in updates:
                                          when__gt=dstart, when__lte=dend) \
                                  .values('request_id').distinct()
 
+    req_list = []
     for req_dict in reqs:
         req = req_dict['request_id']
+
         raws = list(models.RawData.objects.filter(request_id=req)\
                                      .exclude(event='compute.instance.exists')\
                                      .values("id", "when", "routing_key", "old_state",
@@ -157,6 +161,9 @@ for uuid_dict in updates:
         if not failure_type:
             successes[key] = successes.get(key, 0) + 1
         else:
+            req_list.append(req)
+            instance_map[uuid] = req_list
+
             report.append('')
             report.append("------ %s ----------" % uuid)
             report.append("Req: %s" % req)
