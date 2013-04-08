@@ -36,6 +36,10 @@ from stacktach import models
 from stacktach import utils
 
 
+DEFAULT_LIMIT = 50
+HARD_LIMIT = 1000
+
+
 class APIException(Exception):
     def __init__(self, message="Internal Server Error"):
         self.status = 500
@@ -269,16 +273,15 @@ def get_db_objects(klass, request, default_order_by, direction='asc',
         order_by = '-%s' % order_by
 
     offset = request.GET.get('offset')
-    limit = request.GET.get('limit')
+    limit = request.GET.get('limit', DEFAULT_LIMIT)
+    if limit > HARD_LIMIT:
+        limit = HARD_LIMIT
     if offset:
         start = int(offset)
     else:
         start = None
         offset = 0
-    if limit:
-        end = int(offset) + int(limit)
-    else:
-        end = None
+    end = int(offset) + int(limit)
     return objects.order_by(order_by)[start:end]
 
 
