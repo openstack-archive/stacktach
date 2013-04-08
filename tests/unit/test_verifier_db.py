@@ -427,7 +427,7 @@ class VerifierTestCase(unittest.TestCase):
         models.InstanceExists.PENDING = 'pending'
         models.InstanceExists.VERIFYING = 'verifying'
         filters = {
-            'raw__when__lte': dt.dt_to_decimal(when_max),
+            'audit_period_ending__lte': dt.dt_to_decimal(when_max),
             'status': 'pending'
         }
         results.filter(**filters).AndReturn(results)
@@ -456,7 +456,7 @@ class VerifierTestCase(unittest.TestCase):
         models.InstanceExists.PENDING = 'pending'
         models.InstanceExists.VERIFYING = 'verifying'
         filters = {
-            'raw__when__lte': dt.dt_to_decimal(when_max),
+            'audit_period_ending__lte': dt.dt_to_decimal(when_max),
             'status': 'pending'
         }
         results.filter(**filters).AndReturn(results)
