@@ -54,12 +54,10 @@ handler.setFormatter(formatter)
 LOG.addHandler(handler)
 
 
-def _list_exists(received_max=None, received_min=None, status=None):
+def _list_exists(ending_max=None, status=None):
     params = {}
-    if received_max:
-        params['raw__when__lte'] = dt.dt_to_decimal(received_max)
-    if received_min:
-        params['raw__when__gt'] = dt.dt_to_decimal(received_min)
+    if ending_max:
+        params['audit_period_ending__lte'] = dt.dt_to_decimal(ending_max)
     if status:
         params['status'] = status
     return models.InstanceExists.objects.select_related()\
@@ -226,8 +224,8 @@ def _verify(exist):
 results = []
 
 
-def verify_for_range(pool, when_max, callback=None):
-    exists = _list_exists(received_max=when_max,
+def verify_for_range(pool, ending_max, callback=None):
+    exists = _list_exists(ending_max=ending_max,
                           status=models.InstanceExists.PENDING)
     count = exists.count()
     added = 0
@@ -315,8 +313,8 @@ def _run(config, pool, callback=None):
         with transaction.commit_on_success():
             now = datetime.datetime.utcnow()
             kwargs = {settle_units: settle_time}
-            when_max = now - datetime.timedelta(**kwargs)
-            new = verify_for_range(pool, when_max, callback=callback)
+            ending_max = now - datetime.timedelta(**kwargs)
+            new = verify_for_range(pool, ending_max, callback=callback)
 
             msg = "N: %s, P: %s, S: %s, E: %s" % ((new,) + clean_results())
             LOG.info(msg)
@@ -352,8 +350,8 @@ def _run_once(config, pool, callback=None):
     settle_time = config['settle_time']
     now = datetime.datetime.utcnow()
     kwargs = {settle_units: settle_time}
-    when_max = now - datetime.timedelta(**kwargs)
-    new = verify_for_range(pool, when_max, callback=callback)
+    ending_max = now - datetime.timedelta(**kwargs)
+    new = verify_for_range(pool, ending_max, callback=callback)
 
     LOG.info("Verifying %s exist events" % new)
     while len(results) > 0:
