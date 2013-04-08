@@ -140,7 +140,8 @@ class DBAPITestCase(unittest.TestCase):
         result = self.mox.CreateMockAnything()
         fake_model.objects.all().AndReturn(result)
         result.order_by('id').AndReturn(result)
-        result.__getitem__(slice(None, None, None)).AndReturn(result)
+        s = slice(None, dbapi.DEFAULT_LIMIT, None)
+        result.__getitem__(s).AndReturn(result)
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
@@ -160,7 +161,8 @@ class DBAPITestCase(unittest.TestCase):
         result = self.mox.CreateMockAnything()
         fake_model.objects.all().AndReturn(result)
         result.order_by('-id').AndReturn(result)
-        result.__getitem__(slice(None, None, None)).AndReturn(result)
+        s = slice(None, dbapi.DEFAULT_LIMIT, None)
+        result.__getitem__(s).AndReturn(result)
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
@@ -188,6 +190,27 @@ class DBAPITestCase(unittest.TestCase):
 
         self.mox.VerifyAll()
 
+    def test_get_db_objects_hard_limit(self):
+        fake_model = self.make_fake_model()
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'limit': dbapi.HARD_LIMIT + 1}
+        self.mox.StubOutWithMock(dbapi, '_get_filter_args')
+        dbapi._get_filter_args(fake_model, fake_request,
+                               custom_filters=None).AndReturn({})
+        self.mox.StubOutWithMock(dbapi, '_check_has_field')
+        dbapi._check_has_field(fake_model, 'id')
+        result = self.mox.CreateMockAnything()
+        fake_model.objects.all().AndReturn(result)
+        result.order_by('id').AndReturn(result)
+        s = slice(None, dbapi.HARD_LIMIT, None)
+        result.__getitem__(s).AndReturn(result)
+        self.mox.ReplayAll()
+
+        query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
+        self.assertEquals(query_result, result)
+
+        self.mox.VerifyAll()
+
     def test_get_db_objects_offset(self):
         fake_model = self.make_fake_model()
         fake_request = self.mox.CreateMockAnything()
@@ -200,7 +223,7 @@ class DBAPITestCase(unittest.TestCase):
         result = self.mox.CreateMockAnything()
         fake_model.objects.all().AndReturn(result)
         result.order_by('id').AndReturn(result)
-        result.__getitem__(slice(1, None, None)).AndReturn(result)
+        result.__getslice__(1, dbapi.DEFAULT_LIMIT + 1).AndReturn(result)
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
@@ -241,7 +264,8 @@ class DBAPITestCase(unittest.TestCase):
         result = self.mox.CreateMockAnything()
         fake_model.objects.filter(**filters).AndReturn(result)
         result.order_by('id').AndReturn(result)
-        result.__getitem__(slice(None, None, None)).AndReturn(result)
+        s = slice(None, dbapi.DEFAULT_LIMIT, None)
+        result.__getitem__(s).AndReturn(result)
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
@@ -266,7 +290,8 @@ class DBAPITestCase(unittest.TestCase):
         all_filters.update(custom_filters['raw'])
         fake_model.objects.filter(**all_filters).AndReturn(result)
         result.order_by('id').AndReturn(result)
-        result.__getitem__(slice(None, None, None)).AndReturn(result)
+        s = slice(None, dbapi.DEFAULT_LIMIT, None)
+        result.__getitem__(s).AndReturn(result)
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id',
