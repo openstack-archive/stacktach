@@ -252,7 +252,7 @@ def _get_filter_args(klass, request, custom_filters=None):
     return filter_args
 
 
-def get_db_objects(klass, request, default_order_by, direction='asc',
+def get_db_objects(klass, request, default_order_by, direction='desc',
                    custom_filters=None):
     filter_args = _get_filter_args(klass, request,
                                    custom_filters=custom_filters)
@@ -271,6 +271,8 @@ def get_db_objects(klass, request, default_order_by, direction='asc',
     direction = request.GET.get('direction', direction)
     if direction == 'desc':
         order_by = '-%s' % order_by
+    else:
+        order_by = '%s' % order_by
 
     offset = request.GET.get('offset')
     limit = request.GET.get('limit', DEFAULT_LIMIT)
