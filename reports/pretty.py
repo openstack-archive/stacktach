@@ -14,7 +14,7 @@ from stacktach import models
 
 
 def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
-                store=False, region=None):
+                store=False, region=None, too_long=1800):
     if not yesterday:
         yesterday = datetime.datetime.utcnow().date() - \
                     datetime.timedelta(days=1)
@@ -27,6 +27,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
     dend = dt.dt_to_decimal(rend)
 
     codes = {}
+    too_long_col = '> %d' % (too_long / 60)
 
     cells = []
     regions = []
@@ -113,8 +114,8 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
             end = raw.when
             diff = end - start
 
-            if diff > 3600 and failure_type == None:
-                failure_type = '> 60'
+            if diff > too_long and failure_type == None:
+                failure_type = too_long_col
 
             key = (operation, image)
 
@@ -148,7 +149,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                'cells': cells}
     report.append(details)
 
-    failure_types = ["4xx", "5xx", "> 60", "state"]
+    failure_types = ["4xx", "5xx", too_long_col, "state"]
     cols = ["Operation", "Image", "Min", "Max", "Med", "%d%%" % percentile,
             "Requests"]
     for failure_type in failure_types:
@@ -249,6 +250,9 @@ if __name__ == '__main__':
     parser.add_argument('--percentile',
             help='Percentile for timings. Default: 97', default=97,
             type=int)
+    parser.add_argument('--too_long',
+            help='Seconds for an operation to fail. Default: 1800 (30min)', default=1800,
+            type=int)
     parser.add_argument('--store',
             help='Store report in database. Default: False',
             default=False, action="store_true")
@@ -265,6 +269,7 @@ if __name__ == '__main__':
     start_hour = args.start_hour
     store_report = args.store
     region = args.region
+    too_long = args.too_long
 
     if (not yesterday) and days_back > 0:
         yesterday = datetime.datetime.utcnow().date() - \
@@ -276,7 +281,8 @@ if __name__ == '__main__':
         start_hour = yesterday.hour
 
     start, end, raw_report = make_report(yesterday, start_hour, hours,
-                                         percentile, store_report, region)
+                                         percentile, store_report, region,
+                                         too_long)
     details = raw_report[0]
     pct = details['pct']
 
@@ -289,7 +295,7 @@ if __name__ == '__main__':
                   'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
                   'period_start': start,
                   'period_end': end,
-                  'version': 3,
+                  'version': 4,
                   'name': 'summary for region: %s' % region_name}
         report = models.JsonReport(**values)
         report.save()
