@@ -24,14 +24,12 @@ def add_past_deletes(start, end):
     i = 0
     for exist in exists:
         i += 1
-        print i
         if models.InstanceDeletes.objects\
                  .filter(instance=exist.instance).count() == 0:
             # No deletes found for an instance that was deleted.
             values = {'instance': exist.instance,
                       'launched_at': exist.launched_at,
-                      'deleted_at': exist.deleted_at,
-                      'request_id': 'req-fake-delete'}
+                      'deleted_at': exist.deleted_at}
             print values
             models.InstanceDeletes(**values).save()
 
