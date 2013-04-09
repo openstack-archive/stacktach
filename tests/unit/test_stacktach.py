@@ -439,6 +439,45 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         self.assertEquals(usage.instance_type_id, '1')
         self.mox.VerifyAll()
 
+    def test_process_usage_for_new_launch_resize_no_launched_at_in_db(self):
+        now = datetime.datetime.utcnow()
+        when = utils.decimal_utc(now)
+        notif = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                        launched=str(now))
+        json_str = json.dumps(notif)
+        event = 'compute.instance.resize.prep.start'
+        raw = utils.create_raw(self.mox, when, event=event, json_str=json_str)
+        usage = self.mox.CreateMockAnything()
+        usage.launched_at = None
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+             .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+        views._process_usage_for_new_launch(raw, notif[1])
+        self.assertEqual(usage.launched_at, when)
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_new_launch_resize_launched_at_in_db(self):
+        now = datetime.datetime.utcnow()
+        when = utils.decimal_utc(now)
+        notif = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                        launched=str(now))
+        json_str = json.dumps(notif)
+        event = 'compute.instance.resize.prep.start'
+        raw = utils.create_raw(self.mox, when, event=event, json_str=json_str)
+        usage = self.mox.CreateMockAnything()
+        orig_launched_at = utils.decimal_utc(now - datetime.timedelta(days=1))
+        usage.launched_at = orig_launched_at
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+            .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+        views._process_usage_for_new_launch(raw, notif[1])
+        self.assertEqual(usage.launched_at, orig_launched_at)
+        self.mox.VerifyAll()
+
     def test_process_usage_for_updates_create_end(self):
         when_time = datetime.datetime.utcnow()
         when_str = str(when_time)

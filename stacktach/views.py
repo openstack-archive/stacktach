@@ -230,6 +230,16 @@ def _process_usage_for_new_launch(raw, body):
                      INSTANCE_EVENT['rebuild_start']]:
         usage.instance_type_id = payload['instance_type_id']
 
+    if raw.event in [INSTANCE_EVENT['rebuild_start'],
+                     INSTANCE_EVENT['resize_prep_start'],
+                     INSTANCE_EVENT['resize_revert_start']] and\
+            usage.launched_at is None:
+        # Grab the launched_at so if this action spans the audit period,
+        #     we will have a launch record corresponding to the exists.
+        #     We don't want to override a launched_at if it is already set
+        #     though, because we may have already received the end event
+        usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
+
     STACKDB.save(usage)
 
 
