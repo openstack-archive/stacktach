@@ -463,6 +463,7 @@ def search(request, deployment_id):
     column = request.POST.get('field', None)
     value = request.POST.get('value', None)
     updates = request.POST.get('updates', True)
+    count = request.POST.get('count', 20)
     if updates and updates == 'true':
         updates = True
     elif updates and updates == 'false':
@@ -475,7 +476,7 @@ def search(request, deployment_id):
         rows = rows.filter(**{column: value})
         if not updates:
             rows = rows.exclude(event='compute.instance.update')
-        rows = rows.order_by('-when')[:22]
+        rows = rows.order_by('-when')[:int(count)]
         _post_process_raw_data(rows)
     c['rows'] = rows
     c['allow_expansion'] = True
