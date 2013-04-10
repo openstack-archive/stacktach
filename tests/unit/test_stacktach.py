@@ -629,9 +629,6 @@ class StacktackUsageParsingTestCase(unittest.TestCase):
         views.STACKDB.get_instance_usage(instance=INSTANCE_ID_1,
                                          launched_at__range=launched_range)\
                      .AndReturn(usage)
-        views.STACKDB.get_instance_delete(instance=INSTANCE_ID_1,
-                                          launched_at__range=launched_range)\
-             .AndReturn(None)
         exists_values = {
             'message_id': MESSAGE_ID_1,
             'instance': INSTANCE_ID_1,
