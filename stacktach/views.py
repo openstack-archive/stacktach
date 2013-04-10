@@ -462,13 +462,20 @@ def search(request, deployment_id):
     c = _default_context(request, deployment_id)
     column = request.POST.get('field', None)
     value = request.POST.get('value', None)
+    updates = request.POST.get('updates', True)
+    if updates and updates == 'true':
+        updates = True
+    elif updates and updates == 'false':
+        updates = False
     rows = None
     if column != None and value != None:
         rows = models.RawData.objects.select_related()
-        if deployment_id:
-            row = rows.filter(deployment=deployment_id)
-        rows = rows.filter(**{column:value}). \
-               order_by('-when')[:22]
+        if deployment_id and int(deployment_id) != 0:
+            rows = rows.filter(deployment=deployment_id)
+        rows = rows.filter(**{column: value})
+        if not updates:
+            rows = rows.exclude(event='compute.instance.update')
+        rows = rows.order_by('-when')[:22]
         _post_process_raw_data(rows)
     c['rows'] = rows
     c['allow_expansion'] = True

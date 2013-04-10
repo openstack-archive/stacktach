@@ -17,7 +17,8 @@ function search_form(deployment_id)
 {
     var field = $("#field").val();
     var value = $("#query").val();
-    var data = {'field':field, 'value':value};
+    var updates = $("#updates").is(":checked")
+    var data = {'field':field, 'value':value, 'updates':updates};
     $("#detail").load('/' + deployment_id + '/search/', data);
     return false;
 };
@@ -54,6 +55,7 @@ function search_form(deployment_id)
            <option selected='true'>instance
         </select>
         <input type='text' id='query' size='60' value=''/>
+        Include Updates: <input type='checkbox' id="updates" checked />
         <input type='submit' value='Search' onclick='return search_form({{deployment_id}});'/>
         </form>
         </div>
