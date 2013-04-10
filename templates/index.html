@@ -61,10 +61,10 @@ function search_form(deployment_id)
         <input type='text' id='query' size='60' value=''/>
         Include Updates: <input type='checkbox' id="updates" checked />
         <select id='count'>
-            <option>10
-            <option selected>20
-            <option>50
+            <option selected>25
             <option>100
+            <option>250
+            <option>All
         </select>
         <input type='submit' value='Search' onclick='return search_form({{deployment_id}});'/>
         </form>

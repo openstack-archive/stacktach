@@ -476,7 +476,9 @@ def search(request, deployment_id):
         rows = rows.filter(**{column: value})
         if not updates:
             rows = rows.exclude(event='compute.instance.update')
-        rows = rows.order_by('-when')[:int(count)]
+        rows = rows.order_by('-when')
+        if count != 'All':
+            rows = rows[:int(count)]
         _post_process_raw_data(rows)
     c['rows'] = rows
     c['allow_expansion'] = True
