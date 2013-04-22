@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import datetime
+import decimal
 import json
 import unittest
 
@@ -308,6 +309,102 @@ class StackyServerTestCase(unittest.TestCase):
         models.Timing.objects.select_related().AndReturn(results)
         results.filter(name='test.event').AndReturn(results)
         results.exclude(mox.IgnoreArg()).AndReturn(results)
+        results.order_by('diff').AndReturn(results)
+        timing1 = self.mox.CreateMockAnything()
+        timing1.lifecycle = self.mox.CreateMockAnything()
+        timing1.lifecycle.instance = INSTANCE_ID_1
+        timing1.diff = 10
+        timing2 = self.mox.CreateMockAnything()
+        timing2.lifecycle = self.mox.CreateMockAnything()
+        timing2.lifecycle.instance = INSTANCE_ID_2
+        timing2.diff = 20
+        results.__iter__().AndReturn([timing1, timing2].__iter__())
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_timings(fake_request)
+
+        self.assertEqual(resp.status_code, 200)
+        json_resp = json.loads(resp.content)
+        self.assertEqual(len(json_resp), 3)
+        header = ["test.event", "Time"]
+        self.assertEqual(json_resp[0], header)
+        self.assertEqual(json_resp[1], [INSTANCE_ID_1, '0d 00:00:10'])
+        self.assertEqual(json_resp[2], [INSTANCE_ID_2, '0d 00:00:20'])
+        self.mox.VerifyAll()
+
+    def test_do_timings_end_when_min(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'name': 'test.event', 'end_when_min': '1.1'}
+        results = self.mox.CreateMockAnything()
+        models.Timing.objects.select_related().AndReturn(results)
+        results.filter(name='test.event').AndReturn(results)
+        results.exclude(mox.IgnoreArg()).AndReturn(results)
+        results.filter(end_when__gte=decimal.Decimal('1.1')).AndReturn(results)
+        results.order_by('diff').AndReturn(results)
+        timing1 = self.mox.CreateMockAnything()
+        timing1.lifecycle = self.mox.CreateMockAnything()
+        timing1.lifecycle.instance = INSTANCE_ID_1
+        timing1.diff = 10
+        timing2 = self.mox.CreateMockAnything()
+        timing2.lifecycle = self.mox.CreateMockAnything()
+        timing2.lifecycle.instance = INSTANCE_ID_2
+        timing2.diff = 20
+        results.__iter__().AndReturn([timing1, timing2].__iter__())
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_timings(fake_request)
+
+        self.assertEqual(resp.status_code, 200)
+        json_resp = json.loads(resp.content)
+        self.assertEqual(len(json_resp), 3)
+        header = ["test.event", "Time"]
+        self.assertEqual(json_resp[0], header)
+        self.assertEqual(json_resp[1], [INSTANCE_ID_1, '0d 00:00:10'])
+        self.assertEqual(json_resp[2], [INSTANCE_ID_2, '0d 00:00:20'])
+        self.mox.VerifyAll()
+
+    def test_do_timings_end_when_max(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'name': 'test.event', 'end_when_max': '1.1'}
+        results = self.mox.CreateMockAnything()
+        models.Timing.objects.select_related().AndReturn(results)
+        results.filter(name='test.event').AndReturn(results)
+        results.exclude(mox.IgnoreArg()).AndReturn(results)
+        results.filter(end_when__lte=decimal.Decimal('1.1')).AndReturn(results)
+        results.order_by('diff').AndReturn(results)
+        timing1 = self.mox.CreateMockAnything()
+        timing1.lifecycle = self.mox.CreateMockAnything()
+        timing1.lifecycle.instance = INSTANCE_ID_1
+        timing1.diff = 10
+        timing2 = self.mox.CreateMockAnything()
+        timing2.lifecycle = self.mox.CreateMockAnything()
+        timing2.lifecycle.instance = INSTANCE_ID_2
+        timing2.diff = 20
+        results.__iter__().AndReturn([timing1, timing2].__iter__())
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_timings(fake_request)
+
+        self.assertEqual(resp.status_code, 200)
+        json_resp = json.loads(resp.content)
+        self.assertEqual(len(json_resp), 3)
+        header = ["test.event", "Time"]
+        self.assertEqual(json_resp[0], header)
+        self.assertEqual(json_resp[1], [INSTANCE_ID_1, '0d 00:00:10'])
+        self.assertEqual(json_resp[2], [INSTANCE_ID_2, '0d 00:00:20'])
+        self.mox.VerifyAll()
+
+    def test_do_timings_end_when_max_when_min(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'name': 'test.event',
+                            'end_when_min': '1.1',
+                            'end_when_max': '2.1'}
+        results = self.mox.CreateMockAnything()
+        models.Timing.objects.select_related().AndReturn(results)
+        results.filter(name='test.event').AndReturn(results)
+        results.exclude(mox.IgnoreArg()).AndReturn(results)
+        results.filter(end_when__gte=decimal.Decimal('1.1')).AndReturn(results)
+        results.filter(end_when__lte=decimal.Decimal('2.1')).AndReturn(results)
         results.order_by('diff').AndReturn(results)
         timing1 = self.mox.CreateMockAnything()
         timing1.lifecycle = self.mox.CreateMockAnything()

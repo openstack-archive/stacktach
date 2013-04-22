@@ -135,9 +135,16 @@ def do_timings_uuid(request):
 def do_timings(request):
     name = request.GET['name']
     results = [[name, "Time"]]
-    timings = models.Timing.objects.select_related().filter(name=name)\
-                           .exclude(Q(start_raw=None) | Q(end_raw=None))\
-                           .order_by('diff')
+    timings_query = models.Timing.objects.select_related()\
+                                 .filter(name=name)\
+                                 .exclude(Q(start_raw=None) | Q(end_raw=None))
+    if request.GET.get('end_when_min') is not None:
+        min_when = decimal.Decimal(request.GET['end_when_min'])
+        timings_query = timings_query.filter(end_when__gte=min_when)
+    if request.GET.get('end_when_max') is not None:
+        max_when = decimal.Decimal(request.GET['end_when_max'])
+        timings_query = timings_query.filter(end_when__lte=max_when)
+    timings = timings_query.order_by('diff')
 
     for t in timings:
         results.append([t.lifecycle.instance, sec_to_time(t.diff)])
