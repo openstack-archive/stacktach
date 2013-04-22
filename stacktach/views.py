@@ -290,8 +290,6 @@ def _process_exists(raw, body):
     launched_range = (launched_at, launched_at+1)
     usage = STACKDB.get_instance_usage(instance=instance_id,
                                        launched_at__range=launched_range)
-    delete = STACKDB.get_instance_delete(instance=instance_id,
-                                         launched_at__range=launched_range)
     values = {}
     values['message_id'] = body['message_id']
     values['instance'] = instance_id
@@ -303,14 +301,19 @@ def _process_exists(raw, body):
     values['instance_type_id'] = payload['instance_type_id']
     if usage:
         values['usage'] = usage
-    if delete:
-        values['delete'] = delete
     values['raw'] = raw
 
     deleted_at = payload.get('deleted_at')
     if deleted_at and deleted_at != '':
+        # We only want to pre-populate the 'delete' if we know this is in fact
+        #     an exist event for a deleted instance. Otherwise, there is a
+        #     chance we may populate it for a previous period's exist.
+        delete = STACKDB.get_instance_delete(instance=instance_id,
+                                             launched_at__range=launched_range)
         deleted_at = utils.str_time_to_unix(deleted_at)
         values['deleted_at'] = deleted_at
+        if delete:
+            values['delete'] = delete
 
     exists = STACKDB.create_instance_exists(**values)
     STACKDB.save(exists)
