@@ -23,6 +23,7 @@ import json
 import unittest
 
 from django.db.models import FieldDoesNotExist
+from django.db import transaction
 import mox
 
 from stacktach import dbapi
@@ -499,6 +500,10 @@ class DBAPITestCase(unittest.TestCase):
         body_dict = {'messages': messages}
         body = json.dumps(body_dict)
         fake_request.body = body
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
         results1 = self.mox.CreateMockAnything()
         models.InstanceExists.objects.select_for_update().AndReturn(results1)
         exists1 = self.mox.CreateMockAnything()
@@ -509,6 +514,7 @@ class DBAPITestCase(unittest.TestCase):
         exists2 = self.mox.CreateMockAnything()
         results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
         exists2.save()
+        trans_obj.__exit__(None, None, None)
         self.mox.ReplayAll()
 
         resp = dbapi.exists_send_status(fake_request, 'batch')
@@ -525,10 +531,17 @@ class DBAPITestCase(unittest.TestCase):
         body_dict = {'messages': messages}
         body = json.dumps(body_dict)
         fake_request.body = body
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
         results = self.mox.CreateMockAnything()
         models.InstanceExists.objects.select_for_update().AndReturn(results)
         exception = models.InstanceExists.DoesNotExist()
         results.get(message_id=MESSAGE_ID_1).AndRaise(exception)
+        trans_obj.__exit__(dbapi.NotFoundException().__class__,
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
         self.mox.ReplayAll()
 
         resp = dbapi.exists_send_status(fake_request, 'batch')
@@ -549,10 +562,17 @@ class DBAPITestCase(unittest.TestCase):
         body_dict = {'messages': messages}
         body = json.dumps(body_dict)
         fake_request.body = body
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
         results = self.mox.CreateMockAnything()
         models.InstanceExists.objects.select_for_update().AndReturn(results)
         exception = models.InstanceExists.MultipleObjectsReturned()
         results.get(message_id=MESSAGE_ID_1).AndRaise(exception)
+        trans_obj.__exit__(dbapi.APIException().__class__,
+                           mox.IgnoreArg(),
+                           mox.IgnoreArg())
         self.mox.ReplayAll()
 
         resp = dbapi.exists_send_status(fake_request, 'batch')
