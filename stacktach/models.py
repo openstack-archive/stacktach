@@ -99,6 +99,23 @@ class InstanceDeletes(models.Model):
     raw = models.ForeignKey(RawData, null=True)
 
 
+class InstanceReconcile(models.Model):
+    row_created = models.DateTimeField(auto_now_add=True)
+    row_updated = models.DateTimeField(auto_now=True)
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    launched_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6, db_index=True)
+    deleted_at = models.DecimalField(null=True, max_digits=20,
+                                     decimal_places=6, db_index=True)
+    instance_type_id = models.CharField(max_length=50,
+                                        null=True,
+                                        blank=True,
+                                        db_index=True)
+    source = models.CharField(max_length=150, null=True,
+                              blank=True, db_index=True)
+
+
 class InstanceExists(models.Model):
     PENDING = 'pending'
     VERIFYING = 'verifying'
