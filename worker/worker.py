@@ -164,11 +164,13 @@ def run(deployment_config):
                                             queue_arguments)
                     consumer.run()
                 except Exception as e:
+                    LOG.error("!!!!Exception!!!!")
                     LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
                                     (name, e))
                     time.sleep(5)
             LOG.debug("Completed processing on '%s'" % name)
         except:
+            LOG.error("!!!!Exception!!!!")
             e = sys.exc_info()[0]
             msg = "Uncaught exception: deployment=%s, exception=%s. Retrying in 5s"
             LOG.exception(msg % (name, e))
