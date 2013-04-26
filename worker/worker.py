@@ -89,6 +89,7 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         raw = views.process_raw_data(self.deployment, args, asJson)
         if raw:
             self.processed += 1
+            message.ack()
 
         self._check_memory()
 
@@ -125,7 +126,6 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
             self._process(message)
         except Exception, e:
             LOG.exception("Problem %s" % e)
-        message.ack()
 
 
 def continue_running():
