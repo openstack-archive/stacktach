@@ -2,11 +2,11 @@ import datetime
 import json
 import sys
 import time
+import os
 
 import prettytable
 
-sys.path.append("/stacktach")
-
+sys.path.append(os.path.expanduser(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach')))
 from stacktach import datetime_to_decimal as dt
 from stacktach import image_type
 from stacktach import models
@@ -28,14 +28,14 @@ if len(sys.argv) == 2:
 hours = 0
 length = 24
 
-start = datetime.datetime(year=yesterday.year, month=yesterday.month, 
-                          day=yesterday.day) 
+start = datetime.datetime(year=yesterday.year, month=yesterday.month, day=yesterday.day)
 end = start + datetime.timedelta(hours=length-1, minutes=59, seconds=59)
 
 instance_map = {}  # { uuid : [request_id, request_id, ...] }
 metadata = {'raw_text': True, 'instances': instance_map}
-report = [metadata]  # Tell Stacky not to format results.
-report.append("Generating report for %s to %s" % (start, end))
+report = [metadata]
+
+#report.append("Generating report for %s to %s" % (start, end))
 
 dstart = dt.dt_to_decimal(start)
 dend = dt.dt_to_decimal(end)
@@ -161,15 +161,13 @@ for uuid_dict in updates:
         if not failure_type:
             successes[key] = successes.get(key, 0) + 1
         else:
+            failed_request = {}
             req_list.append(req)
             instance_map[uuid] = req_list
-
-            report.append('')
-            report.append("------ %s ----------" % uuid)
-            report.append("Req: %s" % req)
-            report.append("Duration: %.2f minutes" % (diff / 60))
-            report.append("Operation: %s" % operation)
-            report.append("Platform: %s" % image_type.readable(image_type_num))
+            failed_request['req'] = req
+            failed_request['duration'] = "%.2f minutes" % (diff/60)
+            failed_request['operation'] = operation
+            failed_request['platform'] = image_type.readable(image_type_num)
             failures[key] = failures.get(key, 0) + 1
             tenant_issues[tenant] = tenant_issues.get(tenant, 0) + 1
 
@@ -177,145 +175,49 @@ for uuid_dict in updates:
                 err = models.RawData.objects.get(id=err_id)
                 queue, body = json.loads(err.json)
                 payload = body['payload']
-                
-                report.append("Event ID: %s" % err.id)
-                report.append("Tenant: %s" % err.tenant)
-                report.append("Service: %s" % err.service)
-                report.append("Host: %s" % err.host)
-                report.append("Deployment: %s" % err.deployment.name)
-                report.append("Event: %s" % err.event)
-                report.append("When: %s" % dt.dt_from_decimal(err.when))
+
+                #Add error information to failed request report
+                failed_request['event_id'] = err.id
+                failed_request['tenant'] = err.tenant
+                failed_request['service'] = err.service
+                failed_request['host'] = err.host
+                failed_request['deployment'] = err.deployment.name
+                failed_request['event'] = err.event
+                failed_request['when'] = str(dt.dt_from_decimal(err.when))
+
                 exc = payload.get('exception')
                 if exc:
                     # group the messages ...
+                    failed_request['exception'] = exc
+
                     exc_str = str(exc)
-                    report.append("Exception: %s" % exc_str)
-                    error_messages[exc_str] = \
-                                        error_messages.get(exc_str, 0) + 1
-                    
+                    error_messages[exc_str] = error_messages.get(exc_str, 0) + 1
+
                     # extract the code, if any ...
                     code = exc.get('kwargs', {}).get('code')
                     if code:
                         codes[code] = codes.get(code, 0) + 1
                         failure_type = code
-                report.append("Failure Type: %s" % failure_type)
-
-                report.append('')
-                report.append("Details:")
+                failed_request['failure_type'] = failure_type
                 raws = models.RawData.objects.filter(request_id=req)\
                                      .exclude(event='compute.instance.exists')\
                                      .order_by('when')
+                failed_request['details'] = []
 
                 for raw in raws:
-                    report.append("H: %s E:%s, S:(%s->%s) T:(%s->%s)" % 
-                                    (raw.host, raw.event, 
-                                     raw.old_state, raw.state, raw.old_task,
-                                     raw.task))
-                report.append('---------------------------------------')
+                    failure_detail = {}
+                    failure_detail['host'] = raw.host
+                    failure_detail['event'] = raw.event
+                    failure_detail['old_state'] = raw.old_state
+                    failure_detail['state'] = raw.state
+                    failure_detail['old_task'] = raw.old_task
+                    failure_detail['task'] = raw.task
+                    failed_request['details'].append(failure_detail)
+
+                report.append(failed_request)
+
             cause_key = (key, failure_type)
             causes[cause_key] = causes.get(cause_key, 0) + 1
-
-
-def dump_breakdown(totals, label):
-    p = prettytable.PrettyTable(["Category", "Count"])
-    for k, v in totals.iteritems():
-        p.add_row([k, v])
-    report.append(label)
-    p.sortby = 'Count'
-    report.append(p.get_string())
-
-
-def dump_summary(info, label):
-    report.append("-- %s by operation by cell by platform --" % (label,))
-    p = prettytable.PrettyTable(["Operation", "Cell", "Platform", "Count",
-                                 "Min", "Max", "Avg"])
-    for c in ["Count", "Min", "Max", "Avg"]:
-        p.align[c] = 'r'
-
-    total = 0
-    op_totals = {}
-    cell_totals = {}
-    platform_totals = {}
-    for key, count in info.iteritems():
-        operation, platform, cell = key
-        readable = image_type.readable(platform)
-        text = "n/a"
-        if readable:
-            text = ", ".join(readable)
-
-        _min, _max, _count, _total = durations[key]
-        _avg = float(_total) / float(_count)
-        _fmin = dt.sec_to_str(_min)
-        _fmax = dt.sec_to_str(_max)
-        _favg = dt.sec_to_str(_avg * 100.0)
-
-        op_totals[operation] = op_totals.get(operation, 0) + count
-        cell_totals[cell] = cell_totals.get(cell, 0) + count
-        platform_totals[text] = platform_totals.get(text, 0) + count
-
-        p.add_row([operation, cell, text, count, _fmin, _fmax, _favg])
-        total += count
-    p.sortby = 'Count'
-    report.append(p.get_string())
-
-    dump_breakdown(op_totals, "Total %s by Operation" % label)
-    dump_breakdown(cell_totals, "Total %s by Cell" % label)
-    dump_breakdown(platform_totals, "Total %s by Platform" % label)
-
-    report.append('')
-    return total
-
-
-good = dump_summary(successes, "Success")
-bad = dump_summary(failures, "Failures")
-report.append(""" 
-SUMMARY
-
-=====================================================
-Total Success: %d Total Failure: %d
-
-""" % (good, bad))
-
-p = prettytable.PrettyTable(["Tenant", "Count"])
-for tenant, count in tenant_issues.iteritems():
-    p.add_row([tenant, count])
-p.sortby = 'Count'
-report.append("""
--- Errors by Tenant --
-%s""" % p.get_string())
-
-p = prettytable.PrettyTable(["Return Code", "Count"])
-for k, v in codes.iteritems():
-    p.add_row([k, v])
-p.sortby = 'Count'
-report.append("""
--- Return code counts --
-%s""" % p.get_string())
-
-p = prettytable.PrettyTable(["Cause", "Operation", "Cell", "Platform", "Count"])
-for cause_key, count in causes.iteritems():
-    key, cause = cause_key
-    operation, platform, cell = key
-    readable = image_type.readable(platform)
-    text = "n/a"
-    if readable:
-        text = ", ".join(readable)
-    p.add_row([cause, operation, cell, text, count])
-p.sortby = 'Count'
-report.append("""
--- Cause breakdown --
-%s""" % p.get_string())
-
-p = prettytable.PrettyTable(["Count", "Message"])
-for k, v in error_messages.iteritems():
-    p.add_row([v, k[:80]])
-p.sortby = 'Count'
-report.append("""
--- Error Message Counts --
-%s""" % p.get_string())
-
-for r in report[1:]:
-    print r
 
 values = {'json': json.dumps(report),
           'created': dt.dt_to_decimal(datetime.datetime.utcnow()),

@@ -72,8 +72,9 @@ def sec_to_time(diff):
 
 
 def rsp(data, status=200):
-    return HttpResponse(json.dumps(data), content_type="application/json",
-                        status=status)
+    if isinstance(data, list) or isinstance(data, dict):
+        return HttpResponse(json.dumps(data), content_type="application/json", status=status)
+    return HttpResponse(data, content_type="application/json", status=status)
 
 
 def error_response(status, type, message):

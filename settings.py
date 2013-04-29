@@ -10,7 +10,7 @@ try:
     db_username = STACKTACH_DB_USERNAME
     db_password = STACKTACH_DB_PASSWORD
     db_port = STACKTACH_DB_PORT
-    install_dir = STACKTACH_INSTALL_DIR
+    install_dir = os.path.expanduser(STACKTACH_INSTALL_DIR)
 except ImportError:
     db_engine = os.environ.get('STACKTACH_DB_ENGINE',
                                'django.db.backends.mysql')
@@ -19,7 +19,7 @@ except ImportError:
     db_username = os.environ['STACKTACH_DB_USERNAME']
     db_password = os.environ['STACKTACH_DB_PASSWORD']
     db_port = os.environ.get('STACKTACH_DB_PORT', "")
-    install_dir = os.environ['STACKTACH_INSTALL_DIR']
+    install_dir = os.path.expanduser(os.environ['STACKTACH_INSTALL_DIR'])
 
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
@@ -123,14 +123,12 @@ MIDDLEWARE_CLASSES = (
 )
 
 ROOT_URLCONF = 'stacktach.urls'
-
 TEMPLATE_DIRS = (
     # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
     # Always use forward slashes, even on Windows.
     # Don't forget to use absolute paths, not relative paths.
     install_dir + "templates"
 )
-
 INSTALLED_APPS = (
     'django.contrib.auth',
     'django.contrib.contenttypes',
