@@ -19,7 +19,7 @@ except ImportError:
     db_username = os.environ['STACKTACH_DB_USERNAME']
     db_password = os.environ['STACKTACH_DB_PASSWORD']
     db_port = os.environ.get('STACKTACH_DB_PORT', "")
-    install_dir = os.path.expanduser(os.environ['STACKTACH_INSTALL_DIR'])
+    install_dir = os.environ['STACKTACH_INSTALL_DIR']
 
 DEBUG = False
 TEMPLATE_DEBUG = DEBUG
