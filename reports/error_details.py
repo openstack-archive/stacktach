@@ -6,7 +6,7 @@ import os
 
 import prettytable
 
-sys.path.append(os.path.expanduser(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach')))
+sys.path.append(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach'))
 from stacktach import datetime_to_decimal as dt
 from stacktach import image_type
 from stacktach import models

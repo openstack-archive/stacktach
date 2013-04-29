@@ -24,7 +24,7 @@ import json
 import sys
 from os import environ
 
-sys.path.append(environ.get('STACKTACH_INSTALL_DIR', '/stacktach')
+sys.path.append(environ.get('STACKTACH_INSTALL_DIR', '/stacktach'))
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
