@@ -4,8 +4,6 @@ import sys
 import time
 import os
 
-import prettytable
-
 sys.path.append(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach'))
 from stacktach import datetime_to_decimal as dt
 from stacktach import image_type
@@ -28,12 +26,13 @@ if len(sys.argv) == 2:
 hours = 0
 length = 24
 
-start = datetime.datetime(year=yesterday.year, month=yesterday.month, day=yesterday.day)
+start = datetime.datetime(year=yesterday.year, month=yesterday.month,
+                          day=yesterday.day)
 end = start + datetime.timedelta(hours=length-1, minutes=59, seconds=59)
 
 instance_map = {}  # { uuid : [request_id, request_id, ...] }
-metadata = {'format': 'json', 'instances': instance_map}
-report = [metadata]
+metadata = {'report_format': 'json', 'instances': instance_map}
+report = [metadata]  # Tell Stacky to format as JSON
 
 dstart = dt.dt_to_decimal(start)
 dend = dt.dt_to_decimal(end)
@@ -64,7 +63,7 @@ for uuid_dict in updates:
 
     # All the unique Request ID's for this instance during that timespan.
     reqs = models.RawData.objects.filter(instance=uuid,
-                                         when__gt=dstart, when__lte=dend) \
+                                         when__gt=dstart, when__lte=dend)\
                                  .values('request_id').distinct()
 
     req_list = []
@@ -141,7 +140,7 @@ for uuid_dict in updates:
         _end = _when
         diff = _end - _start
 
-        if diff > 3600 and failure_type == None:
+        if diff > 3600 and failure_type is None:
             failure_type = ">60"
 
         key = (operation, image_type_num, cell)
@@ -189,7 +188,8 @@ for uuid_dict in updates:
                     failed_request['exception'] = exc
 
                     exc_str = str(exc)
-                    error_messages[exc_str] = error_messages.get(exc_str, 0) + 1
+                    error_messages[exc_str] = \
+                        error_messages.get(exc_str, 0) + 1
 
                     # extract the code, if any ...
                     code = exc.get('kwargs', {}).get('code')
