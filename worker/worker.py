@@ -44,6 +44,7 @@ handler = logging.handlers.TimedRotatingFileHandler('worker.log',
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 LOG.addHandler(handler)
+LOG.handlers[0].doRollover()
 
 
 class NovaConsumer(kombu.mixins.ConsumerMixin):
