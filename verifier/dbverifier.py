@@ -52,6 +52,7 @@ handler = logging.handlers.TimedRotatingFileHandler('verifier.log',
 formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
 LOG.addHandler(handler)
+LOG.handlers[0].doRollover()
 
 
 def _list_exists(ending_max=None, status=None):
