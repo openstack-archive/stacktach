@@ -71,7 +71,7 @@ def sec_to_time(diff):
     return "%dd %02d:%02d:%02d%s" % (days, hours, minutes, seconds, usec)
 
 
-def rsp(data, content_type="application/json", status=200):
+def rsp(data, status=200, content_type="application/json"):
     return HttpResponse(data, content_type=content_type, status=status)
 
 
@@ -399,7 +399,7 @@ def do_list_usage_exists(request):
                         exist.instance_type_id, exist.message_id,
                         exist.status])
 
-    return rsp(json.dumps(results), content_type="application/json")
+    return rsp(json.dumps(results))
 
 
 def do_jsonreports(request):
