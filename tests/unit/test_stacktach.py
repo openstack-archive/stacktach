@@ -742,4 +742,3 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         self.mox.ReplayAll()
         views._process_exists(raw, notif[1])
         self.mox.VerifyAll()
-
