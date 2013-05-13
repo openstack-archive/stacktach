@@ -32,10 +32,10 @@ import multiprocessing
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
-import utils
 from utils import INSTANCE_ID_1
-from utils import INSTANCE_ID_2
-from utils import REQUEST_ID_1
+from utils import TENANT_ID_1
+from utils import TENANT_ID_2
+from utils import INSTANCE_TYPE_ID_1
 
 from verifier import dbverifier
 from verifier import AmbiguousResults
@@ -75,14 +75,18 @@ class VerifierTestCase(unittest.TestCase):
 
     def test_verify_for_launch(self):
         exist = self.mox.CreateMockAnything()
-        exist.usage = self.mox.CreateMockAnything()
         exist.launched_at = decimal.Decimal('1.1')
-        exist.instance_type_id = 2
+        exist.instance_type_id = INSTANCE_TYPE_ID_1
+        exist.tenant = TENANT_ID_1
+
+        exist.usage = self.mox.CreateMockAnything()
         exist.usage.launched_at = decimal.Decimal('1.1')
-        exist.usage.instance_type_id = 2
+        exist.usage.instance_type_id = INSTANCE_TYPE_ID_1
+        exist.usage.tenant = TENANT_ID_1
         self.mox.ReplayAll()
 
         dbverifier._verify_for_launch(exist)
+
         self.mox.VerifyAll()
 
     def test_verify_for_launch_launched_at_in_range(self):
@@ -134,6 +138,24 @@ class VerifierTestCase(unittest.TestCase):
             self.assertEqual(fm.field_name, 'instance_type_id')
             self.assertEqual(fm.expected, 2)
             self.assertEqual(fm.actual, 3)
+
+        self.mox.VerifyAll()
+
+    def test_verify_for_launch_tenant_id_mismatch(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = TENANT_ID_1
+
+        exist.usage = self.mox.CreateMockAnything()
+        exist.usage.tenant = TENANT_ID_2
+        self.mox.ReplayAll()
+
+        with self.assertRaises(FieldMismatch) as cm:
+            dbverifier._verify_for_launch(exist)
+        exception = cm.exception
+
+        self.assertEqual(exception.field_name, 'tenant')
+        self.assertEqual(exception.expected, TENANT_ID_1)
+        self.assertEqual(exception.actual, TENANT_ID_2)
 
         self.mox.VerifyAll()
 

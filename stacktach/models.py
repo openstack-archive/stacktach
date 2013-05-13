@@ -86,7 +86,8 @@ class InstanceUsage(models.Model):
                                          null=True,
                                          blank=True,
                                          db_index=True)
-
+    tenant = models.CharField(max_length=50, null=True, blank=True,
+                              db_index=True)
 
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
@@ -135,6 +136,8 @@ class InstanceExists(models.Model):
     usage = models.ForeignKey(InstanceUsage, related_name='+', null=True)
     delete = models.ForeignKey(InstanceDeletes, related_name='+', null=True)
     send_status = models.IntegerField(null=True, default=0, db_index=True)
+    tenant = models.CharField(max_length=50, null=True, blank=True,
+                              db_index=True)
 
 
 class Timing(models.Model):

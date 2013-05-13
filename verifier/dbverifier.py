@@ -126,6 +126,21 @@ def _verify_date_field(d1, d2, same_second=False):
     return False
 
 
+def _verify_field_mismatch(exists, launch):
+    if not _verify_date_field(launch.launched_at, exists.launched_at,
+                              same_second=True):
+        raise FieldMismatch('launched_at', exists.launched_at,
+                            launch.launched_at)
+
+    if launch.instance_type_id != exists.instance_type_id:
+        raise FieldMismatch('instance_type_id', exists.instance_type_id,
+                            launch.instance_type_id)
+
+    if launch.tenant != exists.tenant:
+        raise FieldMismatch('tenant', exists.tenant,
+                            launch.tenant)
+
+
 def _verify_for_launch(exist):
     if exist.usage:
         launch = exist.usage
@@ -147,14 +162,7 @@ def _verify_for_launch(exist):
         else:
             raise NotFound('InstanceUsage', {'instance': exist.instance})
 
-    if not _verify_date_field(launch.launched_at, exist.launched_at,
-                              same_second=True):
-        raise FieldMismatch('launched_at', exist.launched_at,
-                            launch.launched_at)
-
-    if launch.instance_type_id != exist.instance_type_id:
-        raise FieldMismatch('instance_type_id', exist.instance_type_id,
-                            launch.instance_type_id)
+    _verify_field_mismatch(exist, launch)
 
 
 def _verify_for_delete(exist):
