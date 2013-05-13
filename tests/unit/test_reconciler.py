@@ -51,7 +51,6 @@ config = {
 
     },
     'region_mapping_loc': '/etc/stacktach/region_mapping.json',
-    'flavor_mapping_loc': '/etc/stacktach/flavor_mapping.json',
 }
 
 region_mapping = {
@@ -220,7 +219,7 @@ class ReconcilerTestCase(unittest.TestCase):
 
         launch = self.mox.CreateMockAnything()
         launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(1).AndReturn(launch)
+        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
         self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
         self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
 
@@ -228,6 +227,7 @@ class ReconcilerTestCase(unittest.TestCase):
         nova = self._mocked_nova_client()
         self.reconciler._get_nova('RegionOne').AndReturn(nova)
         server = self.mox.CreateMockAnything()
+        server.status = 'DELETED'
         server._info = {
             'OS-INST-USG:terminated_at': str(deleted_at_dt),
         }
@@ -241,6 +241,32 @@ class ReconcilerTestCase(unittest.TestCase):
         self.assertTrue(result)
         self.mox.VerifyAll()
 
+    def test_missing_exists_for_instance_non_deleted_status(self):
+        now = datetime.datetime.utcnow()
+        beginning_dt = now - datetime.timedelta(days=1)
+        beginning_dec = utils.decimal_utc(beginning_dt)
+
+        launch = self.mox.CreateMockAnything()
+        launch.instance = INSTANCE_ID_1
+        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
+        self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
+        self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
+
+        self.mox.StubOutWithMock(self.reconciler, '_get_nova')
+        nova = self._mocked_nova_client()
+        self.reconciler._get_nova('RegionOne').AndReturn(nova)
+        server = self.mox.CreateMockAnything()
+        server.status = 'ACTIVE'
+        server._info = {
+            'OS-INST-USG:terminated_at': None,
+        }
+        nova.servers.get(INSTANCE_ID_1).AndReturn(server)
+
+        self.mox.ReplayAll()
+        result = self.reconciler.missing_exists_for_instance(1, beginning_dec)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
     def test_missing_exists_for_instance_deleted_too_soon(self):
         now = datetime.datetime.utcnow()
         deleted_at_dt = now - datetime.timedelta(hours=4)
@@ -249,7 +275,7 @@ class ReconcilerTestCase(unittest.TestCase):
 
         launch = self.mox.CreateMockAnything()
         launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(1).AndReturn(launch)
+        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
         self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
         self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
 
@@ -276,7 +302,7 @@ class ReconcilerTestCase(unittest.TestCase):
 
         launch = self.mox.CreateMockAnything()
         launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(1).AndReturn(launch)
+        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
         self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
         self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
 
@@ -301,7 +327,7 @@ class ReconcilerTestCase(unittest.TestCase):
 
         launch = self.mox.CreateMockAnything()
         launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(1).AndReturn(launch)
+        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
         self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
         self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
 

@@ -94,12 +94,13 @@ class Reconciler(object):
     def missing_exists_for_instance(self, launched_id,
                                     period_beginning):
         reconciled = False
-        launch = models.InstanceUsage.objects.get(launched_id)
+        launch = models.InstanceUsage.objects.get(id=launched_id)
         region = self._region_for_launch(launch)
         nova = self._get_nova(region)
         try:
             server = nova.servers.get(launch.instance)
-            if TERMINATED_AT_KEY in server._info:
+            if (server.status == 'DELETED' and
+                    TERMINATED_AT_KEY in server._info):
                 # Check to see if instance has been deleted
                 terminated_at = server._info[TERMINATED_AT_KEY]
                 terminated_at = utils.str_time_to_unix(terminated_at)
