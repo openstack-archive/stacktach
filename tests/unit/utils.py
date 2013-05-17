@@ -19,16 +19,19 @@
 # IN THE SOFTWARE.
 
 import datetime
-import os
-import sys
-import unittest
 
 TENANT_ID_1 = 'testtenantid1'
+TENANT_ID_2 = 'testtenantid2'
 
 from stacktach import datetime_to_decimal as dt
 
 INSTANCE_ID_1 = "08f685d9-6352-4dbc-8271-96cc54bf14cd"
 INSTANCE_ID_2 = "515adf96-41d3-b86d-5467-e584edc61dab"
+
+INSTANCE_TYPE_ID_1 = "12345"
+INSTANCE_TYPE_ID_2 = '54321'
+
+DUMMY_TIME = datetime.datetime.utcnow()
 
 MESSAGE_ID_1 = "7f28f81b-29a2-43f2-9ba1-ccb3e53ab6c8"
 MESSAGE_ID_2 = "4d596126-0f04-4329-865f-7b9a7bd69bcf"
@@ -45,7 +48,7 @@ def decimal_utc(t = datetime.datetime.utcnow()):
 def create_nova_notif(request_id=None, instance=INSTANCE_ID_1, type_id='1',
                       launched=None, deleted=None, new_type_id=None,
                       message_id=MESSAGE_ID_1, audit_period_beginning=None,
-                      audit_period_ending=None):
+                      audit_period_ending=None, tenant_id = None):
     notif = ['', {
         'message_id': message_id,
         'payload': {
@@ -66,6 +69,8 @@ def create_nova_notif(request_id=None, instance=INSTANCE_ID_1, type_id='1',
         notif[1]['payload']['audit_period_beginning'] = audit_period_beginning
     if audit_period_ending:
         notif[1]['payload']['audit_period_ending'] = audit_period_ending
+    if tenant_id:
+        notif[1]['payload']['tenant_id'] = tenant_id
 
     return notif
 

@@ -240,6 +240,7 @@ def _process_usage_for_new_launch(raw, body):
         #     though, because we may have already received the end event
         usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
 
+    usage.tenant = payload['tenant_id']
     STACKDB.save(usage)
 
 
@@ -261,6 +262,7 @@ def _process_usage_for_updates(raw, body):
     elif raw.event == INSTANCE_EVENT['resize_prep_end']:
         usage.instance_type_id = payload['new_instance_type_id']
 
+    usage.tenant = payload['tenant_id']
     STACKDB.save(usage)
 
 
@@ -302,6 +304,7 @@ def _process_exists(raw, body):
     if usage:
         values['usage'] = usage
     values['raw'] = raw
+    values['tenant'] = payload['tenant_id']
 
     deleted_at = payload.get('deleted_at')
     if deleted_at and deleted_at != '':
