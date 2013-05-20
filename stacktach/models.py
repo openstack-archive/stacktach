@@ -120,11 +120,13 @@ class InstanceExists(models.Model):
     PENDING = 'pending'
     VERIFYING = 'verifying'
     VERIFIED = 'verified'
+    RECONCILED = 'reconciled'
     FAILED = 'failed'
     STATUS_CHOICES = [
         (PENDING, 'Pending Verification'),
         (VERIFYING, 'Currently Being Verified'),
         (VERIFIED, 'Passed Verification'),
+        (RECONCILED, 'Passed Verification After Reconciliation'),
         (FAILED, 'Failed Verification'),
     ]
     instance = models.CharField(max_length=50, null=True,

@@ -69,6 +69,15 @@ def _find_launch(instance, launched):
     return models.InstanceUsage.objects.filter(**params)
 
 
+def _find_reconcile(instance, launched):
+    start = launched - datetime.timedelta(microseconds=launched.microsecond)
+    end = start + datetime.timedelta(microseconds=999999)
+    params = {'instance': instance,
+              'launched_at__gte': dt.dt_to_decimal(start),
+              'launched_at__lte': dt.dt_to_decimal(end)}
+    return models.InstanceReconcile.objects.filter(**params)
+
+
 def _find_delete(instance, launched, deleted_max=None):
     start = launched - datetime.timedelta(microseconds=launched.microsecond)
     end = start + datetime.timedelta(microseconds=999999)
@@ -80,8 +89,16 @@ def _find_delete(instance, launched, deleted_max=None):
     return models.InstanceDeletes.objects.filter(**params)
 
 
-def _mark_exist_verified(exist):
-    exist.status = models.InstanceExists.VERIFIED
+def _mark_exist_verified(exist,
+                         reconciled=False,
+                         reason=None):
+    if not reconciled:
+        exist.status = models.InstanceExists.VERIFIED
+    else:
+        exist.status = models.InstanceExists.RECONCILED
+        if reason is not None:
+            exist.fail_reason = reason
+
     exist.save()
 
 
@@ -136,10 +153,11 @@ def _verify_field_mismatch(exists, launch):
                             launch.tenant)
 
 
-def _verify_for_launch(exist):
-    if exist.usage:
+def _verify_for_launch(exist, launch=None, launch_type="InstanceUsage"):
+
+    if not launch and exist.usage:
         launch = exist.usage
-    else:
+    elif not launch:
         if models.InstanceUsage.objects\
                  .filter(instance=exist.instance).count() > 0:
             launches = _find_launch(exist.instance,
@@ -150,23 +168,22 @@ def _verify_for_launch(exist):
                 'launched_at': exist.launched_at
             }
             if count > 1:
-                raise AmbiguousResults('InstanceUsage', query)
+                raise AmbiguousResults(launch_type, query)
             elif count == 0:
-                raise NotFound('InstanceUsage', query)
+                raise NotFound(launch_type, query)
             launch = launches[0]
         else:
-            raise NotFound('InstanceUsage', {'instance': exist.instance})
+            raise NotFound(launch_type, {'instance': exist.instance})
 
     _verify_field_mismatch(exist, launch)
 
 
-def _verify_for_delete(exist):
+def _verify_for_delete(exist, delete=None, delete_type="InstanceDelete"):
 
-    delete = None
-    if exist.delete:
+    if not delete and exist.delete:
         # We know we have a delete and we have it's id
         delete = exist.delete
-    else:
+    elif not delete:
         if exist.deleted_at:
             # We received this exists before the delete, go find it
             deletes = _find_delete(exist.instance,
@@ -178,7 +195,7 @@ def _verify_for_delete(exist):
                     'instance': exist.instance,
                     'launched_at': exist.launched_at
                 }
-                raise NotFound('InstanceDelete', query)
+                raise NotFound(delete_type, query)
         else:
             # We don't know if this is supposed to have a delete or not.
             # Thus, we need to check if we have a delete for this instance.
@@ -190,7 +207,7 @@ def _verify_for_delete(exist):
             deleted_at_max = dt.dt_from_decimal(exist.audit_period_ending)
             deletes = _find_delete(exist.instance, launched_at, deleted_at_max)
             if deletes.count() > 0:
-                reason = 'Found InstanceDeletes for non-delete exist'
+                reason = 'Found %ss for non-delete exist' % delete_type
                 raise VerificationException(reason)
 
     if delete:
@@ -205,6 +222,35 @@ def _verify_for_delete(exist):
                                 delete.deleted_at)
 
 
+def _verify_with_reconciled_data(exist, ex):
+    if not exist.launched_at:
+        raise VerificationException("Exists without a launched_at")
+
+    query = models.InstanceReconcile.objects.filter(instance=exist.instance)
+    if query.count() > 0:
+        recs = _find_reconcile(exist.instance,
+                               dt.dt_from_decimal(exist.launched_at))
+        search_query = {'instance': exist.instance,
+                        'launched_at': exist.launched_at}
+        count = recs.count()
+        if count > 1:
+            raise AmbiguousResults('InstanceReconcile', search_query)
+        elif count == 0:
+            raise NotFound('InstanceReconcile', search_query)
+        reconcile = recs[0]
+    else:
+        raise NotFound('InstanceReconcile', {'instance': exist.instance})
+
+    _verify_for_launch(exist, launch=reconcile,
+                       launch_type="InstanceReconcile")
+    _verify_for_delete(exist, delete=reconcile,
+                       delete_type="InstanceReconcile")
+
+
+def _attempt_reconciliation(exists, ex):
+    pass
+
+
 def _verify(exist):
     verified = False
     try:
@@ -216,8 +262,41 @@ def _verify(exist):
 
         verified = True
         _mark_exist_verified(exist)
-    except VerificationException, e:
-        _mark_exist_failed(exist, reason=str(e))
+    except VerificationException, orig_e:
+        # Something is wrong with the InstanceUsage record
+        try:
+            # Attempt to verify against reconciled data
+            _verify_with_reconciled_data(exist, orig_e)
+            verified = True
+            _mark_exist_verified(exist)
+        except NotFound, rec_e:
+            # No reconciled data available, so let's try to reconcile
+            if _attempt_reconciliation(exist, rec_e):
+                # We were able to reconcile the data, but we still need
+                # to record why it originally failed
+                verified = True
+                _mark_exist_verified(exist,
+                                     reconciled=True,
+                                     reason=str(orig_e))
+            else:
+                # Couldn't reconcile the data, just mark it failed
+                _mark_exist_failed(exist, reason=str(orig_e))
+        except VerificationException, rec_e:
+            # Reconciled data was available, but it's wrong as well
+            # Let's try to reconcile again
+            if _attempt_reconciliation(exist, rec_e):
+                # We were able to reconcile the data, but we still need
+                # to record why it failed again
+                verified = True
+                _mark_exist_verified(exist,
+                                     reconciled=True,
+                                     reason=str(rec_e))
+            else:
+                # Couldn't reconcile the data, just mark it failed
+                _mark_exist_failed(exist, reason=str(rec_e))
+        except Exception, rec_e:
+            _mark_exist_failed(exist, reason=rec_e.__class__.__name__)
+            LOG.exception(rec_e)
     except Exception, e:
         _mark_exist_failed(exist, reason=e.__class__.__name__)
         LOG.exception(e)
