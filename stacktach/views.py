@@ -367,11 +367,11 @@ def process_raw_data(deployment, args, json_args):
         values['json'] = json_args
         record = STACKDB.create_rawdata(**values)
         STACKDB.save(record)
-
-        aggregate_lifecycle(record)
-        aggregate_usage(record, body)
     return record
 
+def post_process(raw, body):
+    aggregate_lifecycle(raw)
+    aggregate_usage(raw, body)
 
 def _post_process_raw_data(rows, highlight=None):
     for row in rows:
