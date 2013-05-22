@@ -92,9 +92,7 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         if raw:
             self.processed += 1
             message.ack()
-
-        views.aggregate_lifecycle(raw)
-        views.aggregate_usage(raw, args[1])
+            views.post_process(raw, args[1])
 
         self._check_memory()
 
