@@ -89,6 +89,7 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
 
         # save raw and ack the message
         raw = views.process_raw_data(self.deployment, args, asJson)
+
         if raw:
             self.processed += 1
             message.ack()
@@ -128,7 +129,10 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         try:
             self._process(message)
         except Exception, e:
-            LOG.exception("Problem %s" % e)
+            LOG.debug("Problem: %s\nFailed message body:\n%s" %
+                      (e, json.loads(str(message.body)))
+                      )
+            raise
 
 
 def continue_running():
@@ -137,8 +141,7 @@ def continue_running():
 def exit_or_sleep(exit=False):
     if exit:
         sys.exit(1)
-    else:
-        time.sleep(5)
+    time.sleep(5)
 
 def run(deployment_config):
     name = deployment_config['name']
