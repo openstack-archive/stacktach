@@ -136,7 +136,7 @@ def continue_running():
 
 def exit_or_sleep(exit=False):
     if exit_on_exception:
-        sys.exit(1q)
+        sys.exit(1)
     else:
         time.sleep(5)
 
