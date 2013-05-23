@@ -141,8 +141,7 @@ def continue_running():
 def exit_or_sleep(exit=False):
     if exit:
         sys.exit(1)
-    else:
-        time.sleep(5)
+    time.sleep(5)
 
 def run(deployment_config):
     name = deployment_config['name']
