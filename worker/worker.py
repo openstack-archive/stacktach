@@ -135,7 +135,7 @@ def continue_running():
     return True
 
 def exit_or_sleep(exit=False):
-    if exit_on_exception:
+    if exit:
         sys.exit(1)
     else:
         time.sleep(5)
@@ -149,6 +149,7 @@ def run(deployment_config):
     virtual_host = deployment_config.get('rabbit_virtual_host', '/')
     durable = deployment_config.get('durable_queue', True)
     queue_arguments = deployment_config.get('queue_arguments', {})
+    exit_on_exception = deployment_config.get('exit_on_exception', False)
 
     deployment, new = db.get_or_create_deployment(name)
 
@@ -175,11 +176,11 @@ def run(deployment_config):
                     LOG.error("!!!!Exception!!!!")
                     LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
                                     (name, e))
-                    exit_or_sleep(deployment_config['exit_on_exception'])
+                    exit_or_sleep(exit_on_exception)
             LOG.debug("Completed processing on '%s'" % name)
         except:
             LOG.error("!!!!Exception!!!!")
             e = sys.exc_info()[0]
             msg = "Uncaught exception: deployment=%s, exception=%s. Retrying in 5s"
             LOG.exception(msg % (name, e))
-            exit_or_sleep(deployment_config['exit_on_exception'])
+            exit_or_sleep(exit_on_exception)
