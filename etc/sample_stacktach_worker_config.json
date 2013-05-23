@@ -6,7 +6,8 @@
         "rabbit_port": 5672,
         "rabbit_userid": "rabbit",
         "rabbit_password": "rabbit",
-        "rabbit_virtual_host": "/"
+        "rabbit_virtual_host": "/",
+        "exit_on_exception": true
     },
     {
         "name": "east_coast.prod.cell1",
@@ -15,6 +16,7 @@
         "rabbit_port": 5672,
         "rabbit_userid": "rabbit",
         "rabbit_password": "rabbit",
-        "rabbit_virtual_host": "/"
+        "rabbit_virtual_host": "/",
+        "exit_on_exception": false
     }]
 }

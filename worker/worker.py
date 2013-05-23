@@ -134,6 +134,11 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
 def continue_running():
     return True
 
+def exit_or_sleep(exit=False):
+    if exit_on_exception:
+        sys.exit(1q)
+    else:
+        time.sleep(5)
 
 def run(deployment_config):
     name = deployment_config['name']
@@ -170,11 +175,11 @@ def run(deployment_config):
                     LOG.error("!!!!Exception!!!!")
                     LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
                                     (name, e))
-                    time.sleep(5)
+                    exit_or_sleep(deployment_config['exit_on_exception'])
             LOG.debug("Completed processing on '%s'" % name)
         except:
             LOG.error("!!!!Exception!!!!")
             e = sys.exc_info()[0]
             msg = "Uncaught exception: deployment=%s, exception=%s. Retrying in 5s"
             LOG.exception(msg % (name, e))
-            time.sleep(5)
+            exit_or_sleep(deployment_config['exit_on_exception'])
