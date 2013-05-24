@@ -246,6 +246,11 @@ def _process_usage_for_new_launch(raw, body):
 
 def _process_usage_for_updates(raw, body):
     payload = body['payload']
+
+    if raw.event == INSTANCE_EVENT['create_end']:
+        if 'message' in payload and payload['message'] != 'Success':
+            return
+
     instance_id = payload['instance_id']
     request_id = body['_context_request_id']
     (usage, new) = STACKDB.get_or_create_instance_usage(instance=instance_id,
@@ -369,9 +374,11 @@ def process_raw_data(deployment, args, json_args):
         STACKDB.save(record)
     return record
 
+
 def post_process(raw, body):
     aggregate_lifecycle(raw)
     aggregate_usage(raw, body)
+
 
 def _post_process_raw_data(rows, highlight=None):
     for row in rows:

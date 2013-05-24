@@ -186,10 +186,6 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         raw = self.mox.CreateMockAnything()
         views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
         views.STACKDB.save(raw)
-        self.mox.StubOutWithMock(views, "aggregate_lifecycle")
-        views.aggregate_lifecycle(raw)
-        self.mox.StubOutWithMock(views, "aggregate_usage")
-        views.aggregate_usage(raw, dict)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
@@ -215,10 +211,6 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         raw = self.mox.CreateMockAnything()
         views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
         views.STACKDB.save(raw)
-        self.mox.StubOutWithMock(views, "aggregate_lifecycle")
-        views.aggregate_lifecycle(raw)
-        self.mox.StubOutWithMock(views, "aggregate_usage")
-        views.aggregate_usage(raw, dict)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
@@ -513,6 +505,36 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEqual(usage.tenant, TENANT_ID_1)
+
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_updates_create_end_success_message(self):
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        notification[1]['payload']['message'] = "Success"
+        event = 'compute.instance.create.end'
+        raw, usage = self._setup_process_usage_mocks(event, notification)
+
+        views._process_usage_for_updates(raw, notification[1])
+
+        self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_updates_create_end_error_message(self):
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        notification[1]['payload']['message'] = "Error"
+        event = 'compute.instance.create.end'
+        when_time = DUMMY_TIME
+        when_decimal = utils.decimal_utc(when_time)
+        json_str = json.dumps(notification)
+        raw = utils.create_raw(self.mox, when_decimal, event=event,
+                               json_str=json_str)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_updates(raw, notification[1])
 
         self.mox.VerifyAll()
 
