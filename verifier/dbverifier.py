@@ -38,12 +38,7 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
-from stacktach import models
-from stacktach import datetime_to_decimal as dt
-from verifier import AmbiguousResults
-from verifier import FieldMismatch
-from verifier import NotFound
-from verifier import VerificationException
+from stacktach import logging as stacklog
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -53,7 +48,14 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 LOG.addHandler(handler)
 LOG.handlers[0].doRollover()
+stacklog.set_logger(LOG)
 
+from stacktach import models
+from stacktach import datetime_to_decimal as dt
+from verifier import AmbiguousResults
+from verifier import FieldMismatch
+from verifier import NotFound
+from verifier import VerificationException
 
 def _list_exists(ending_max=None, status=None):
     params = {}
