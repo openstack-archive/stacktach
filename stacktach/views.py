@@ -9,12 +9,21 @@ from django.shortcuts import render_to_response
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import db as stackdb
-from stacktach import models
 from stacktach import image_type
+from stacktach import models
+from stacktach import logging as stacklog
 from stacktach import utils
 
 
 STACKDB = stackdb
+
+
+def log_warn(msg):
+    global LOG
+    if LOG is None:
+        LOG = stacklog.get_logger()
+    if LOG is not None:
+        LOG.warn(msg)
 
 
 def _extract_states(payload):
@@ -278,53 +287,58 @@ def _process_delete(raw, body):
     values = {
         'instance': instance_id,
         'deleted_at': deleted_at,
-        'raw': raw
     }
+    delete = STACKDB.get_or_create_instance_delete(**values)
+    delete.raw = raw
 
     launched_at = payload.get('launched_at')
     if launched_at and launched_at != '':
         launched_at = utils.str_time_to_unix(launched_at)
-        values['launched_at'] = launched_at
+        delete.launched_at = launched_at
 
-    delete = STACKDB.create_instance_delete(**values)
     STACKDB.save(delete)
 
 
 def _process_exists(raw, body):
     payload = body['payload']
     instance_id = payload['instance_id']
-    launched_at = utils.str_time_to_unix(payload['launched_at'])
-    launched_range = (launched_at, launched_at+1)
-    usage = STACKDB.get_instance_usage(instance=instance_id,
-                                       launched_at__range=launched_range)
-    values = {}
-    values['message_id'] = body['message_id']
-    values['instance'] = instance_id
-    values['launched_at'] = launched_at
-    beginning = utils.str_time_to_unix(payload['audit_period_beginning'])
-    values['audit_period_beginning'] = beginning
-    ending = utils.str_time_to_unix(payload['audit_period_ending'])
-    values['audit_period_ending'] = ending
-    values['instance_type_id'] = payload['instance_type_id']
-    if usage:
-        values['usage'] = usage
-    values['raw'] = raw
-    values['tenant'] = payload['tenant_id']
+    launched_at_str = payload.get('launched_at')
+    if launched_at_str is not None and launched_at_str != '':
+        launched_at = utils.str_time_to_unix(payload['launched_at'])
+        launched_range = (launched_at, launched_at+1)
+        usage = STACKDB.get_instance_usage(instance=instance_id,
+                                           launched_at__range=launched_range)
+        values = {}
+        values['message_id'] = body['message_id']
+        values['instance'] = instance_id
+        values['launched_at'] = launched_at
+        beginning = utils.str_time_to_unix(payload['audit_period_beginning'])
+        values['audit_period_beginning'] = beginning
+        ending = utils.str_time_to_unix(payload['audit_period_ending'])
+        values['audit_period_ending'] = ending
+        values['instance_type_id'] = payload['instance_type_id']
+        if usage:
+            values['usage'] = usage
+        values['raw'] = raw
+        values['tenant'] = payload['tenant_id']
 
-    deleted_at = payload.get('deleted_at')
-    if deleted_at and deleted_at != '':
-        # We only want to pre-populate the 'delete' if we know this is in fact
-        #     an exist event for a deleted instance. Otherwise, there is a
-        #     chance we may populate it for a previous period's exist.
-        delete = STACKDB.get_instance_delete(instance=instance_id,
-                                             launched_at__range=launched_range)
-        deleted_at = utils.str_time_to_unix(deleted_at)
-        values['deleted_at'] = deleted_at
-        if delete:
-            values['delete'] = delete
+        deleted_at = payload.get('deleted_at')
+        if deleted_at and deleted_at != '':
+            # We only want to pre-populate the 'delete' if we know this is in
+            #     fact an exist event for a deleted instance. Otherwise, there
+            #     is a chance we may populate it for a previous period's exist.
+            filter = {'instance': instance_id,
+                      'launched_at__range': launched_range}
+            delete = STACKDB.get_instance_delete(**filter)
+            deleted_at = utils.str_time_to_unix(deleted_at)
+            values['deleted_at'] = deleted_at
+            if delete:
+                values['delete'] = delete
 
-    exists = STACKDB.create_instance_exists(**values)
-    STACKDB.save(exists)
+        exists = STACKDB.create_instance_exists(**values)
+        STACKDB.save(exists)
+    else:
+        stacklog.warn("Ignoring exists without launched_at. RawData(%s)" % raw.id)
 
 
 USAGE_PROCESS_MAPPING = {

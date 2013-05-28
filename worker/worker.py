@@ -34,8 +34,7 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
-from stacktach import db, views
-
+from stacktach import logging as stacklog
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -45,6 +44,10 @@ formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(messag
 handler.setFormatter(formatter)
 LOG.addHandler(handler)
 LOG.handlers[0].doRollover()
+stacklog.set_logger(LOG)
+
+from stacktach import db
+from stacktach import views
 
 
 class NovaConsumer(kombu.mixins.ConsumerMixin):

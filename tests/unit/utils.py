@@ -90,6 +90,7 @@ def create_raw(mox, when, event, instance=INSTANCE_ID_1,
     raw.json = json_str
     return raw
 
+
 def create_lifecycle(mox, instance, last_state, last_task_state, last_raw):
     lifecycle = mox.CreateMockAnything()
     lifecycle.instance = instance
@@ -97,6 +98,7 @@ def create_lifecycle(mox, instance, last_state, last_task_state, last_raw):
     lifecycle.last_task_state = last_task_state
     lifecycle.last_raw = last_raw
     return lifecycle
+
 
 def create_timing(mox, name, lifecycle, start_raw=None, start_when=None,
                   end_raw=None, end_when=None, diff=None):
@@ -109,6 +111,7 @@ def create_timing(mox, name, lifecycle, start_raw=None, start_when=None,
     timing.end_when = end_when
     timing.diff = diff
     return timing
+
 
 def create_tracker(mox, request_id, lifecycle, start, last_timing=None,
                    duration=str(0.0)):
