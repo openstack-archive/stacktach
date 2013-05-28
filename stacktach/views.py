@@ -11,7 +11,7 @@ from stacktach import datetime_to_decimal as dt
 from stacktach import db as stackdb
 from stacktach import image_type
 from stacktach import models
-from stacktach import logging as stacklog
+from stacktach import stacklog
 from stacktach import utils
 
 
