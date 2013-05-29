@@ -288,7 +288,7 @@ def _process_delete(raw, body):
         'instance': instance_id,
         'deleted_at': deleted_at,
     }
-    delete = STACKDB.get_or_create_instance_delete(**values)
+    (delete, new) = STACKDB.get_or_create_instance_delete(**values)
     delete.raw = raw
 
     launched_at = payload.get('launched_at')
