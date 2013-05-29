@@ -1,4 +1,4 @@
-from stacktach import logging as stacklog
+from stacktach import stacklog
 from stacktach import models
 
 

@@ -32,7 +32,7 @@ from utils import TENANT_ID_1
 from utils import INSTANCE_TYPE_ID_1
 from utils import DUMMY_TIME
 from utils import INSTANCE_TYPE_ID_2
-from stacktach import logging as stacklog
+from stacktach import stacklog
 from stacktach import views
 
 
@@ -409,14 +409,19 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         self.mox = mox.Mox()
         views.STACKDB = self.mox.CreateMockAnything()
         self.log = self.mox.CreateMockAnything()
-        stacklog.set_logger(self.log)
+        self.mox.StubOutWithMock(stacklog, 'get_logger')
 
     def tearDown(self):
         self.mox.UnsetStubs()
-        stacklog.set_logger(None)
+
+    def setup_mock_log(self, name=None):
+        if name is None:
+            stacklog.get_logger(name=mox.IgnoreArg()).AndReturn(self.log)
+        else:
+            stacklog.get_logger(name=name).AndReturn(self.log)
 
     def test_process_usage_for_new_launch_create_start(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1 }
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
         event = 'compute.instance.create.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -684,7 +689,8 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         raw = utils.create_raw(self.mox, current_decimal, event=event,
                                json_str=json_str)
         raw.id = 1
-        self.log.warn('Exists without launched_at. RawData(1)')
+        self.setup_mock_log()
+        self.log.warn('Ignoring exists without launched_at. RawData(1)')
         self.mox.ReplayAll()
         views._process_exists(raw, notif[1])
         self.mox.VerifyAll()

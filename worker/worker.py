@@ -20,7 +20,6 @@ import datetime
 import kombu
 import kombu.entity
 import kombu.mixins
-import logging
 import sys
 import time
 
@@ -34,20 +33,12 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
-from stacktach import logging as stacklog
-
-LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
-handler = logging.handlers.TimedRotatingFileHandler('worker.log',
-                                           when='h', interval=6, backupCount=4)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-LOG.addHandler(handler)
-LOG.handlers[0].doRollover()
-stacklog.set_logger(LOG)
-
 from stacktach import db
+from stacktach import stacklog
 from stacktach import views
+
+stacklog.set_default_logger_name('worker')
+LOG = stacklog.get_logger()
 
 
 class NovaConsumer(kombu.mixins.ConsumerMixin):
@@ -141,10 +132,12 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
 def continue_running():
     return True
 
+
 def exit_or_sleep(exit=False):
     if exit:
         sys.exit(1)
     time.sleep(5)
+
 
 def run(deployment_config):
     name = deployment_config['name']

@@ -1,4 +1,4 @@
-# Copyright (c) 2012 - Rackspace Inc.
+# Copyright (c) 2013 - Rackspace Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -24,15 +24,15 @@ import unittest
 import mox
 
 from stacktach import db
-from stacktach import logging as stacklog
+from stacktach import stacklog
 from stacktach import models
 
 
-class DBAPITestCase(unittest.TestCase):
+class StacktachDBTestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.log = self.mox.CreateMockAnything()
-        stacklog.set_logger(self.log)
+        self.mox.StubOutWithMock(stacklog, 'get_logger')
         self.mox.StubOutWithMock(models, 'RawData', use_mock_anything=True)
         models.RawData.objects = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(models, 'Deployment', use_mock_anything=True)
@@ -58,7 +58,12 @@ class DBAPITestCase(unittest.TestCase):
 
     def tearDown(self):
         self.mox.UnsetStubs()
-        stacklog.set_logger(None)
+
+    def setup_mock_log(self, name=None):
+        if name is None:
+            stacklog.get_logger(name=mox.IgnoreArg()).AndReturn(self.log)
+        else:
+            stacklog.get_logger(name=name).AndReturn(self.log)
 
     def test_safe_get(self):
         Model = self.mox.CreateMockAnything()
@@ -82,6 +87,8 @@ class DBAPITestCase(unittest.TestCase):
         results = self.mox.CreateMockAnything()
         Model.objects.filter(**filters).AndReturn(results)
         results.count().AndReturn(0)
+        log = self.mox.CreateMockAnything()
+        self.setup_mock_log()
         self.log.warn('No records found for Model get.')
         self.mox.ReplayAll()
         returned = db._safe_get(Model, **filters)
@@ -96,6 +103,7 @@ class DBAPITestCase(unittest.TestCase):
         results = self.mox.CreateMockAnything()
         Model.objects.filter(**filters).AndReturn(results)
         results.count().AndReturn(2)
+        self.setup_mock_log()
         self.log.warn('Multiple records found for Model get.')
         object = self.mox.CreateMockAnything()
         results[0].AndReturn(object)

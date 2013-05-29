@@ -39,7 +39,7 @@ class NovaConsumerTestCase(unittest.TestCase):
 
     def test_get_consumers(self):
         created_queues = []
-        created_callbacks =  []
+        created_callbacks = []
         created_consumers = []
         def Consumer(queues=None, callbacks=None):
             created_queues.extend(queues)
