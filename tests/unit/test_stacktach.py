@@ -605,7 +605,7 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         delete.deleted_at = delete_decimal
         views.STACKDB.get_or_create_instance_delete(instance=INSTANCE_ID_1,
                                                     deleted_at=delete_decimal)\
-                     .AndReturn(delete)
+                     .AndReturn((delete, True))
         views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
@@ -629,7 +629,7 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         delete.deleted_at = delete_decimal
         views.STACKDB.get_or_create_instance_delete(instance=INSTANCE_ID_1,
                                                     deleted_at=delete_decimal)\
-                     .AndReturn(delete)
+                     .AndReturn((delete, True))
         views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
