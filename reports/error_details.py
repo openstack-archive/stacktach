@@ -317,12 +317,6 @@ if __name__ == '__main__':
                 cause_key = (key, failure_type)
                 causes[cause_key] = causes.get(cause_key, 0) + 1
 
-    # print exception counts in report metadata
-    print json.dumps(report[0]['exception_counts'], indent=4)
-
-    # print event counts in report metadata
-    print json.dumps(report[0]['event_counts'], indent=4)
-
     # Assign values to store in DB
     values = {'json': json.dumps(report),
               'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
