@@ -324,11 +324,11 @@ if __name__ == '__main__':
     print json.dumps(report[0]['event_counts'], indent=4)
 
     # Assign values to store in DB
-    # values = {'json': json.dumps(report),
-    #           'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
-    #           'period_start': start,
-    #           'period_end': end,
-    #           'version': 1,
-    #           'name': 'Error detail report'}
-    # json_report = models.JsonReport(**values)
-    # json_report.save()
+    values = {'json': json.dumps(report),
+              'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
+              'period_start': start,
+              'period_end': end,
+              'version': 1,
+              'name': 'Error detail report'}
+    json_report = models.JsonReport(**values)
+    json_report.save()
