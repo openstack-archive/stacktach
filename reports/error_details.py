@@ -16,15 +16,15 @@ if __name__ != '__main__':
 
 # To mask unique identifiers for categorizing notifications
 def mask_msg(text):
-    masking_regex = {
-        'REQ_ID': r"req-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}",
-        'UUID': r"[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}",
-        'LG_NUM': r"\b\d{3}\d+\b",
-        'HOST_ADDRESS': r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"
-    }
+    masking_regex = (
+        (1, 'REQ_ID', r"req-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
+        (2, 'UUID', r"[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
+        (3, 'HOST_ADDRESS', r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"),
+        (4, 'LG_NUM', r"\b\d{3}\d+\b")
+    )
     masked = str(text)
-    for mask, regex in masking_regex.iteritems():
-        masked = re.sub(regex, "$%s" % str(mask), masked)
+    for config in masking_regex:
+        masked = re.sub(config[2], "$%s" % str(config[1]), masked)
     return masked
 
 
@@ -126,7 +126,6 @@ if __name__ == '__main__':
     dend = dt.dt_to_decimal(end)
 
     codes = {}
-
     deployments = {}
     for deploy in models.Deployment.objects.all():
         deployments[deploy.id] = deploy.name
