@@ -14,13 +14,22 @@ from stacktach import models
 if __name__ != '__main__':
     sys.exit(1)
 
+
 # To mask unique identifiers for categorizing notifications
 def mask_msg(text):
     masking_regex = (
-        (1, 'REQ_ID', r"req-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
-        (2, 'UUID', r"[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"),
-        (3, 'HOST_ADDRESS', r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"),
-        (4, 'LG_NUM', r"\b\d{3}\d+\b")
+        (1, 'REQ_ID',
+         r"req-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
+         ),
+        (2, 'UUID',
+         r"[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
+         ),
+        (3, 'HOST_ADDRESS',
+         r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b"
+         ),
+        (4, 'LG_NUM',
+         r"\b\d{3}\d+\b"
+         )
     )
     masked = str(text)
     for config in masking_regex:
@@ -30,12 +39,10 @@ def mask_msg(text):
 
 # Assemble message from exception object
 def build_exc_msg(exc=None, separator=", "):
+
     """
-    If you get queasy with bad code smells, you might want to glaze over this
-    function. Exception objects don't appear to be standardized yet. So,
-    white-list the things we know we want about the exceptions we're counting
-    and ignore the rest.
-        -TMaddox
+    White-list exception components we're aware of, and leave a catch all;
+    because of freeform exception objects from notifications.
     """
 
     if exc is None:
