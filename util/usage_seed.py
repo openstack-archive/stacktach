@@ -121,15 +121,18 @@ def get_active_instances(period_length):
     session = api.get_session()
     computes = novadb.service_get_all_by_topic(context, 'compute')
     active_instances = []
+    yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     for compute in computes:
-        query = session.query(novamodels.Instance)
+        if compute.updated_at > yesterday:
+            query = session.query(novamodels.Instance)
 
-        query = query.filter(api.or_(novamodels.Instance.terminated_at == None,
-                                     novamodels.Instance.terminated_at > start))
-        query = query.filter_by(host=compute.host)
+            active_filter = api.or_(novamodels.Instance.terminated_at == None,
+                                    novamodels.Instance.terminated_at > start)
+            query = query.filter(active_filter)
+            query = query.filter_by(host=compute.host)
 
-        for instance in query.all():
-            active_instances.append(instance)
+            for instance in query.all():
+                active_instances.append(instance)
     return active_instances
 
 
