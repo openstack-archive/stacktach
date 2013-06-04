@@ -166,6 +166,9 @@ def seed(period_length):
     in_flight_usages = []
     deletes = []
 
+
+    start, end = get_previous_period(datetime.datetime.utcnow(), period_length)
+
     context = RequestContext(1, 1, is_admin=True)
 
     print "Selecting all active instances"
@@ -178,21 +181,30 @@ def seed(period_length):
         task_state = instance['task_state']
 
         if vm_state == 'building':
-            building_usages.append(_usage_for_instance(instance))
-            if instance['deleted'] != 0:
-                # Just in case...
+            if instance['deleted'] != 0 and instance['deleted_at'] >= start:
+                building_usages.append(_usage_for_instance(instance))
                 deletes.append(_delete_for_instance(instance))
+            elif instance['deleted'] == 0:
+                building_usages.append(_usage_for_instance(instance))
         else:
             if task_state in in_flight_tasks:
-                in_flight_usages.append(_usage_for_instance(instance,
-                                                            task=task_state))
-                if instance['deleted'] != 0:
+                if (instance['deleted'] != 0 and
+                        instance['deleted_at'] >= start):
                     # Just in case...
                     deletes.append(_delete_for_instance(instance))
+                    in_flight_usages.append(_usage_for_instance(instance,
+                                            task=task_state))
+                elif instance['deleted'] == 0:
+                    in_flight_usages.append(_usage_for_instance(instance,
+                                            task=task_state))
             else:
-                usages.append(_usage_for_instance(instance))
-                if instance['deleted'] != 0:
+                if (instance['deleted'] != 0 and
+                        instance['deleted_at'] >= start):
                     deletes.append(_delete_for_instance(instance))
+                    usages.append(_usage_for_instance(instance))
+                elif instance['deleted'] == 0:
+                    usages.append(_usage_for_instance(instance))
+
     print "Populated active instances, processing building"
     for usage in building_usages:
         action = get_action_for_instance(context, usage['instance'], 'create')
