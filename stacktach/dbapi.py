@@ -148,7 +148,7 @@ def get_usage_exist(request, exist_id):
 
 @api_call
 def exists_send_status(request, message_id):
-    if request.method != 'PUT':
+    if request.method not in ['PUT', 'POST']:
         raise BadRequestException(message="Invalid method")
 
     if request.body is None or request.body == '':
