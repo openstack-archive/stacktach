@@ -106,7 +106,7 @@ def _usage_for_instance(instance, task=None):
 def _delete_for_instance(instance):
     delete = {
         'instance': instance['uuid'],
-        'deleted_at': dt.dt_to_decimal(instance.get('deleted_at')),
+        'deleted_at': dt.dt_to_decimal(instance.get('terminated_at')),
     }
 
     launched_at = instance.get('launched_at')
