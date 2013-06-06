@@ -189,6 +189,7 @@ def seed(period_length):
         else:
             if task_state in in_flight_tasks:
                 if (instance['deleted'] != 0 and
+                        instance['deleted_at'] is not None and
                         instance['deleted_at'] >= start):
                     # Just in case...
                     deletes.append(_delete_for_instance(instance))
@@ -199,6 +200,7 @@ def seed(period_length):
                                             task=task_state))
             else:
                 if (instance['deleted'] != 0 and
+                        instance['deleted_at'] is not None and
                         instance['deleted_at'] >= start):
                     deletes.append(_delete_for_instance(instance))
                     usages.append(_usage_for_instance(instance))
