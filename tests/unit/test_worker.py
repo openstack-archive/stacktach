@@ -39,7 +39,7 @@ class NovaConsumerTestCase(unittest.TestCase):
 
     def test_get_consumers(self):
         created_queues = []
-        created_callbacks =  []
+        created_callbacks = []
         created_consumers = []
         def Consumer(queues=None, callbacks=None):
             created_queues.extend(queues)
@@ -127,6 +127,8 @@ class NovaConsumerTestCase(unittest.TestCase):
         views.process_raw_data(deployment, args, json.dumps(args))\
              .AndReturn(raw)
         message.ack()
+        self.mox.StubOutWithMock(views, 'post_process')
+        views.post_process(raw, body_dict)
         self.mox.StubOutWithMock(consumer, '_check_memory',
                                  use_mock_anything=True)
         consumer._check_memory()

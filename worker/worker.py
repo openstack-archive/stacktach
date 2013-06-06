@@ -20,7 +20,6 @@ import datetime
 import kombu
 import kombu.entity
 import kombu.mixins
-import logging
 import sys
 import time
 
@@ -34,17 +33,12 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
-from stacktach import db, views
+from stacktach import db
+from stacktach import stacklog
+from stacktach import views
 
-
-LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
-handler = logging.handlers.TimedRotatingFileHandler('worker.log',
-                                           when='h', interval=6, backupCount=4)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-LOG.addHandler(handler)
-LOG.handlers[0].doRollover()
+stacklog.set_default_logger_name('worker')
+LOG = stacklog.get_logger()
 
 
 class NovaConsumer(kombu.mixins.ConsumerMixin):
@@ -87,10 +81,13 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         args = (routing_key, json.loads(body))
         asJson = json.dumps(args)
 
+        # save raw and ack the message
         raw = views.process_raw_data(self.deployment, args, asJson)
+
         if raw:
             self.processed += 1
             message.ack()
+            views.post_process(raw, args[1])
 
         self._check_memory()
 
@@ -126,11 +123,20 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
         try:
             self._process(message)
         except Exception, e:
-            LOG.exception("Problem %s" % e)
+            LOG.debug("Problem: %s\nFailed message body:\n%s" %
+                      (e, json.loads(str(message.body)))
+                      )
+            raise
 
 
 def continue_running():
     return True
+
+
+def exit_or_sleep(exit=False):
+    if exit:
+        sys.exit(1)
+    time.sleep(5)
 
 
 def run(deployment_config):
@@ -142,6 +148,7 @@ def run(deployment_config):
     virtual_host = deployment_config.get('rabbit_virtual_host', '/')
     durable = deployment_config.get('durable_queue', True)
     queue_arguments = deployment_config.get('queue_arguments', {})
+    exit_on_exception = deployment_config.get('exit_on_exception', False)
 
     deployment, new = db.get_or_create_deployment(name)
 
@@ -168,11 +175,11 @@ def run(deployment_config):
                     LOG.error("!!!!Exception!!!!")
                     LOG.exception("name=%s, exception=%s. Reconnecting in 5s" %
                                     (name, e))
-                    time.sleep(5)
+                    exit_or_sleep(exit_on_exception)
             LOG.debug("Completed processing on '%s'" % name)
         except:
             LOG.error("!!!!Exception!!!!")
             e = sys.exc_info()[0]
             msg = "Uncaught exception: deployment=%s, exception=%s. Retrying in 5s"
             LOG.exception(msg % (name, e))
-            time.sleep(5)
+            exit_or_sleep(exit_on_exception)

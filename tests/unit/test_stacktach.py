@@ -32,6 +32,7 @@ from utils import TENANT_ID_1
 from utils import INSTANCE_TYPE_ID_1
 from utils import DUMMY_TIME
 from utils import INSTANCE_TYPE_ID_2
+from stacktach import stacklog
 from stacktach import views
 
 
@@ -186,10 +187,6 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         raw = self.mox.CreateMockAnything()
         views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
         views.STACKDB.save(raw)
-        self.mox.StubOutWithMock(views, "aggregate_lifecycle")
-        views.aggregate_lifecycle(raw)
-        self.mox.StubOutWithMock(views, "aggregate_usage")
-        views.aggregate_usage(raw, dict)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
@@ -215,10 +212,6 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         raw = self.mox.CreateMockAnything()
         views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
         views.STACKDB.save(raw)
-        self.mox.StubOutWithMock(views, "aggregate_lifecycle")
-        views.aggregate_lifecycle(raw)
-        self.mox.StubOutWithMock(views, "aggregate_usage")
-        views.aggregate_usage(raw, dict)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
@@ -388,7 +381,6 @@ class StacktachLifecycleTestCase(unittest.TestCase):
 
         self.mox.VerifyAll()
 
-
     def test_aggregate_lifecycle_update(self):
         event = 'compute.instance.update'
         when = datetime.datetime.utcnow()
@@ -416,12 +408,20 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()
         views.STACKDB = self.mox.CreateMockAnything()
+        self.log = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(stacklog, 'get_logger')
 
     def tearDown(self):
         self.mox.UnsetStubs()
 
+    def setup_mock_log(self, name=None):
+        if name is None:
+            stacklog.get_logger(name=mox.IgnoreArg()).AndReturn(self.log)
+        else:
+            stacklog.get_logger(name=name).AndReturn(self.log)
+
     def test_process_usage_for_new_launch_create_start(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1 }
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
         event = 'compute.instance.create.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -516,6 +516,36 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.mox.VerifyAll()
 
+    def test_process_usage_for_updates_create_end_success_message(self):
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        notification[1]['payload']['message'] = "Success"
+        event = 'compute.instance.create.end'
+        raw, usage = self._setup_process_usage_mocks(event, notification)
+
+        views._process_usage_for_updates(raw, notification[1])
+
+        self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_updates_create_end_error_message(self):
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        notification[1]['payload']['message'] = "Error"
+        event = 'compute.instance.create.end'
+        when_time = DUMMY_TIME
+        when_decimal = utils.decimal_utc(when_time)
+        json_str = json.dumps(notification)
+        raw = utils.create_raw(self.mox, when_decimal, event=event,
+                               json_str=json_str)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_updates(raw, notification[1])
+
+        self.mox.VerifyAll()
+
     def test_process_usage_for_updates_revert_end(self):
         kwargs = {'launched': str(DUMMY_TIME), 'type_id': INSTANCE_TYPE_ID_1, 'tenant_id': TENANT_ID_1}
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
@@ -573,11 +603,9 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         delete.instance = INSTANCE_ID_1
         delete.launched_at = launch_decimal
         delete.deleted_at = delete_decimal
-        views.STACKDB.create_instance_delete(instance=INSTANCE_ID_1,
-                                             launched_at=launch_decimal,
-                                             deleted_at=delete_decimal,
-                                             raw=raw)\
-                     .AndReturn(delete)
+        views.STACKDB.get_or_create_instance_delete(instance=INSTANCE_ID_1,
+                                                    deleted_at=delete_decimal)\
+                     .AndReturn((delete, True))
         views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
@@ -599,10 +627,9 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         delete = self.mox.CreateMockAnything()
         delete.instance = INSTANCE_ID_1
         delete.deleted_at = delete_decimal
-        views.STACKDB.create_instance_delete(instance=INSTANCE_ID_1,
-                                             deleted_at=delete_decimal,
-                                             raw=raw) \
-            .AndReturn(delete)
+        views.STACKDB.get_or_create_instance_delete(instance=INSTANCE_ID_1,
+                                                    deleted_at=delete_decimal)\
+                     .AndReturn((delete, True))
         views.STACKDB.save(delete)
         self.mox.ReplayAll()
 
@@ -650,6 +677,24 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         views._process_exists(raw, notif[1])
         self.mox.VerifyAll()
 
+    def test_process_exists_no_launched_at(self):
+        current_time = datetime.datetime.utcnow()
+        current_decimal = utils.decimal_utc(current_time)
+        audit_beginning = current_time - datetime.timedelta(hours=20)
+        notif = utils.create_nova_notif(audit_period_beginning=str(audit_beginning),
+                                        audit_period_ending=str(current_time),
+                                        tenant_id=TENANT_ID_1)
+        json_str = json.dumps(notif)
+        event = 'compute.instance.exists'
+        raw = utils.create_raw(self.mox, current_decimal, event=event,
+                               json_str=json_str)
+        raw.id = 1
+        self.setup_mock_log()
+        self.log.warn('Ignoring exists without launched_at. RawData(1)')
+        self.mox.ReplayAll()
+        views._process_exists(raw, notif[1])
+        self.mox.VerifyAll()
+
     def test_process_exists_with_deleted_at(self):
         current_time = datetime.datetime.utcnow()
         launch_time = current_time - datetime.timedelta(hours=23)
@@ -664,7 +709,7 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
                                         deleted=str(deleted_time),
                                         audit_period_beginning=str(audit_beginning),
                                         audit_period_ending=str(current_time),
-                                        tenant_id= TENANT_ID_1)
+                                        tenant_id=TENANT_ID_1)
         json_str = json.dumps(notif)
         event = 'compute.instance.exists'
         raw = utils.create_raw(self.mox, current_decimal, event=event,

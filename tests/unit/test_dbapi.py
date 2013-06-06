@@ -404,6 +404,24 @@ class DBAPITestCase(unittest.TestCase):
         self.assertEqual(exists.send_status, 200)
         self.mox.VerifyAll()
 
+    def test_send_status_accepts_post(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'POST'
+        body_dict = {'send_status': 200}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        exists = self.mox.CreateMockAnything()
+        result = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(result)
+        result.get(message_id=MESSAGE_ID_1).AndReturn(exists)
+        exists.save()
+        self.mox.ReplayAll()
+
+        dbapi.exists_send_status(fake_request, MESSAGE_ID_1)
+
+        self.assertEqual(exists.send_status, 200)
+        self.mox.VerifyAll()
+
     def test_send_status_not_found(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'PUT'
@@ -493,6 +511,33 @@ class DBAPITestCase(unittest.TestCase):
     def test_send_status_batch(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'PUT'
+        messages = {
+            MESSAGE_ID_1: 200,
+            MESSAGE_ID_2: 400
+        }
+        body_dict = {'messages': messages}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
+        results1 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results1)
+        exists1 = self.mox.CreateMockAnything()
+        results1.get(message_id=MESSAGE_ID_2).AndReturn(exists1)
+        exists1.save()
+        results2 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results2)
+        exists2 = self.mox.CreateMockAnything()
+        results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
+        exists2.save()
+        trans_obj.__exit__(None, None, None)
+        self.mox.ReplayAll()
+
+    def test_send_status_batch_accepts_post(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'POST'
         messages = {
             MESSAGE_ID_1: 200,
             MESSAGE_ID_2: 400

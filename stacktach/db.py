@@ -1,4 +1,19 @@
-import models
+from stacktach import stacklog
+from stacktach import models
+
+
+def _safe_get(Model, **kwargs):
+    object = None
+    query = Model.objects.filter(**kwargs)
+    count = query.count()
+    if count > 1:
+        stacklog.warn('Multiple records found for %s get.' % Model.__name__)
+        object = query[0]
+    elif count < 1:
+        stacklog.warn('No records found for %s get.' % Model.__name__)
+    else:
+        object = query[0]
+    return object
 
 
 def get_or_create_deployment(name):
@@ -41,13 +56,12 @@ def get_or_create_instance_usage(**kwargs):
     return models.InstanceUsage.objects.get_or_create(**kwargs)
 
 
+def get_or_create_instance_delete(**kwargs):
+    return models.InstanceDeletes.objects.get_or_create(**kwargs)
+
+
 def get_instance_usage(**kwargs):
-    usage = None
-    try:
-        usage = models.InstanceUsage.objects.get(**kwargs)
-    except models.InstanceUsage.DoesNotExist:
-        pass
-    return usage
+    return _safe_get(models.InstanceUsage, **kwargs)
 
 
 def create_instance_delete(**kwargs):
@@ -55,12 +69,7 @@ def create_instance_delete(**kwargs):
 
 
 def get_instance_delete(**kwargs):
-    delete = None
-    try:
-        delete = models.InstanceDeletes.objects.get(**kwargs)
-    except models.InstanceDeletes.DoesNotExist:
-        pass
-    return delete
+    return _safe_get(models.InstanceDeletes, **kwargs)
 
 
 def create_instance_exists(**kwargs):

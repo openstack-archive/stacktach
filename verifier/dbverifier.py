@@ -21,7 +21,6 @@
 import argparse
 import datetime
 import json
-import logging
 import os
 import sys
 from time import sleep
@@ -38,21 +37,17 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
+from stacktach import stacklog
+
+stacklog.set_default_logger_name('verifier')
+LOG = stacklog.get_logger()
+
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
 from verifier import AmbiguousResults
 from verifier import FieldMismatch
 from verifier import NotFound
 from verifier import VerificationException
-
-LOG = logging.getLogger(__name__)
-LOG.setLevel(logging.DEBUG)
-handler = logging.handlers.TimedRotatingFileHandler('verifier.log',
-                                        when='h', interval=6, backupCount=4)
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-LOG.addHandler(handler)
-LOG.handlers[0].doRollover()
 
 
 def _list_exists(ending_max=None, status=None):
