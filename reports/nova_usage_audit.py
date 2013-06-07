@@ -76,10 +76,10 @@ def _audit_launches_to_exists(launches, exists):
                 if not found:
                     msg = "Couldn't find exists for launch (%s, %s)"
                     msg = msg % (instance, launch1['launched_at'])
-                    fails.append([launch1['id'], msg])
+                    fails.append(['Launch', launch1['id'], msg])
         else:
             msg = "No exists for instance (%s)" % instance
-            fails.append(['-', msg])
+            fails.append(['Launch', '-', msg])
     return fails
 
 
@@ -130,7 +130,7 @@ def _audit_for_exists(exists_query):
 
 
 def _verifier_audit_for_period(beginning, ending):
-    report = {}
+    summary = {}
 
     filters = {
         'audit_period_beginning': beginning,
@@ -138,7 +138,7 @@ def _verifier_audit_for_period(beginning, ending):
     }
     periodic_exists = models.InstanceExists.objects.filter(**filters)
 
-    report['periodic'] = _audit_for_exists(periodic_exists)
+    summary['periodic'] = _audit_for_exists(periodic_exists)
 
     filters = {
         'audit_period_beginning': beginning,
@@ -146,9 +146,18 @@ def _verifier_audit_for_period(beginning, ending):
     }
     instant_exists = models.InstanceExists.objects.filter(**filters)
 
-    report['instantaneous'] = _audit_for_exists(instant_exists)
+    summary['instantaneous'] = _audit_for_exists(instant_exists)
 
-    return report
+    filters = {
+        'audit_period_beginning': beginning,
+        'audit_period_ending__lte': ending,
+        'status': models.InstanceExists.FAILED
+    }
+    failed = models.InstanceExists.objects.filter(**filters)
+    detail = []
+    for exist in failed:
+        detail.append(['Exist', exist.id, exist.fail_reason])
+    return summary, detail
 
 
 def _launch_audit_for_period(beginning, ending):
@@ -201,13 +210,14 @@ def audit_for_period(beginning, ending):
     beginning_decimal = dt.dt_to_decimal(beginning)
     ending_decimal = dt.dt_to_decimal(ending)
 
-    verifier_report = _verifier_audit_for_period(beginning_decimal,
+    (verify_summary,
+     verify_detail) = _verifier_audit_for_period(beginning_decimal,
                                                  ending_decimal)
     detail, new_count, old_count = _launch_audit_for_period(beginning_decimal,
                                                             ending_decimal)
 
     summary = {
-        'verifier': verifier_report,
+        'verifier': verify_summary,
         'launch_fails': {
             'total_failures': len(detail),
             'new_launches': new_count,
@@ -216,7 +226,8 @@ def audit_for_period(beginning, ending):
     }
 
     details = {
-        'launch_fails': detail
+        'exist_fails': verify_detail,
+        'launch_fails': detail,
     }
 
     return summary, details
@@ -251,7 +262,7 @@ def store_results(start, end, summary, details):
         'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
         'period_start': start,
         'period_end': end,
-        'version': 1,
+        'version': 2,
         'name': 'nova usage audit'
     }
 
@@ -261,7 +272,8 @@ def store_results(start, end, summary, details):
 
 def make_json_report(summary, details):
     report = [{'summary': summary},
-              ['Launch ID', 'Error Description']]
+              ['Object', 'ID', 'Error Description']]
+    report.extend(details['exist_fails'])
     report.extend(details['launch_fails'])
     return json.dumps(report)
 
