@@ -20,7 +20,7 @@
 
 """
     Usage: python usage_seed.py [period_length] [sql_connection]
-    python usage_seed hour mysql://user:password@nova-db.example.com/nova?charset=utf8
+    python usage_seed.py hour mysql://user:password@nova-db.example.com/nova?charset=utf8
 
     The idea behind usage seeding is to take the current state of all
     active instances on active compute hosts and insert that data into
@@ -49,7 +49,7 @@ if __name__ == '__main__':
 from nova.compute import task_states
 from nova.context import RequestContext
 from nova.db import api as novadb
-from nova.db.sqlalchemy import api
+from nova.db.sqlalchemy import api as sqlapi
 from nova.db.sqlalchemy import models as novamodels
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -115,20 +115,25 @@ def _delete_for_instance(instance):
     return delete
 
 
-def get_active_instances(period_length):
+def get_computes():
     context = RequestContext('1', '1', is_admin=True)
+    return sqlapi.model_query(context, novamodels.Service,
+                              read_deleted='no')\
+                 .filter_by(topic='compute').all()
+
+
+def get_active_instances(period_length):
     start, end = get_previous_period(datetime.datetime.utcnow(), period_length)
-    session = api.get_session()
-    computes = novadb.service_get_all_by_topic(context, 'compute')
+    session = sqlapi.get_session()
+    computes = get_computes()
     active_instances = []
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     for compute in computes:
         if compute.updated_at > yesterday:
             query = session.query(novamodels.Instance)
-
-            active_filter = api.or_(novamodels.Instance.terminated_at == None,
-                                    novamodels.Instance.terminated_at > start)
-            query = query.filter(active_filter)
+            active_filter = (novamodels.Instance.terminated_at == None,
+                             novamodels.Instance.terminated_at > start)
+            query = query.filter(sqlapi.or_(*active_filter))
             query = query.filter_by(host=compute.host)
 
             for instance in query.all():
