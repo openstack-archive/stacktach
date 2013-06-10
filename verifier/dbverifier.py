@@ -135,6 +135,22 @@ def _verify_field_mismatch(exists, launch):
         raise FieldMismatch('tenant', exists.tenant,
                             launch.tenant)
 
+    if launch.rax_options != exists.rax_options:
+        raise FieldMismatch('rax_options', exists.rax_options,
+                            launch.rax_options)
+
+    if launch.os_architecture != exists.os_architecture:
+        raise FieldMismatch('os_architecture', exists.os_architecture,
+                            launch.os_architecture)
+
+    if launch.os_version != exists.os_version:
+        raise FieldMismatch('os_version', exists.os_version,
+                            launch.os_version)
+
+    if launch.os_distro != exists.os_distro:
+        raise FieldMismatch('os_distro', exists.os_distro,
+                            launch.os_distro)
+
 
 def _verify_for_launch(exist):
     if exist.usage:
