@@ -33,7 +33,7 @@ def _make_logger(name):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
     handler = logging.handlers.TimedRotatingFileHandler('%s.log' % name,
-                                            when='h', interval=6, backupCount=4)
+                                            when='midnight', interval=1, backupCount=3)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     log.addHandler(handler)
