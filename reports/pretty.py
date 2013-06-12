@@ -77,6 +77,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
             failure_type = None
 
             operation = "aux"
+            os_type = "other"
             image_type_num = 0
 
             for raw in raws:
@@ -99,6 +100,15 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                         operation = cmd
                         break
 
+                # Brace yourself. We are now painfully digging into the
+                # notification to get the os_type attribute
+                if os_type == "other" and raw.json:
+                    notification = json.loads(raw.json)
+                    if notification[1]:
+                        os_type = notification[1].get('payload', {})\
+                            .get('image_meta', {})\
+                            .get('os_type', "other")
+
                 if raw.image_type:
                     image_type_num |= raw.image_type
 
@@ -117,7 +127,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
             if diff > too_long and failure_type == None:
                 failure_type = too_long_col
 
-            key = (operation, image)
+            key = (operation, image, os_type)
 
             # Track durations for all attempts, good and bad ...
             _durations = durations.get(key, [])
@@ -150,7 +160,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
     report.append(details)
 
     failure_types = ["4xx", "5xx", too_long_col, "state"]
-    cols = ["Operation", "Image", "Min", "Max", "Med", "%d%%" % percentile,
+    cols = ["Operation", "Image", "OS", "Min", "Max", "Med", "%d%%" % percentile,
             "Requests"]
     for failure_type in failure_types:
         cols.append("%s" % failure_type)
@@ -161,7 +171,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
     failure_totals = {}
     for key, count in attempts.iteritems():
         total += count
-        operation, image = key
+        operation, image, os_type = key
 
         breakdown = failures.get(key, {})
         this_failure_pair = []
@@ -199,7 +209,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
         _fmedian = dt.sec_to_str(_median)
         _fpercentile = dt.sec_to_str(_percentile)
 
-        row = [operation, image, _fmin, _fmax, _fmedian, _fpercentile, count]
+        row = [operation, image, os_type, _fmin, _fmax, _fmedian, _fpercentile, count]
         for failure_count, failure_percentage in this_failure_pair:
             row.append(failure_count)
             row.append(failure_percentage)
@@ -316,7 +326,7 @@ if __name__ == '__main__':
 
     for row in raw_report[2:]:
         frow = row[:]
-        for col in [8, 10, 12, 14]:
+        for col in [9, 11, 13, 15]:
             frow[col] = "%.1f%%" % (row[col] * 100.0)
         p.add_row(frow)
     print p
