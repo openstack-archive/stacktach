@@ -78,13 +78,13 @@ class ImageTypeTestCase(unittest.TestCase):
             "image_meta": {
                 "image_type": "base",
                 "os_type": "linux",
-                "os_distro": "ubuntu"
+                "os_distro": "centos"
             }
         }
 
         result = image_type.get_numeric_code(payload, 0)
 
-        self.assertEqual(result, 0x111)
+        self.assertEqual(result, 0x411)
 
     def test_readable(self):
         value = 0x111
@@ -112,7 +112,7 @@ class ImageTypeTestCase(unittest.TestCase):
         self.assertFalse(image_type.isset(value, image_type.LINUX_IMAGE))
 
     def test_false_isset_windows_image(self):
-        value = 0 
+        value = 0
         value |= image_type.LINUX_IMAGE
 
         self.assertFalse(image_type.isset(value, image_type.WINDOWS_IMAGE))
@@ -141,3 +141,5 @@ class ImageTypeTestCase(unittest.TestCase):
 
         self.assertFalse(image_type.isset(value, image_type.OS_CENTOS))
 
+    def test_blank_argument_isset(self):
+        self.assertFalse(image_type.isset(None, image_type.OS_CENTOS))
