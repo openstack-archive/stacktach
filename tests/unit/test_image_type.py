@@ -27,59 +27,67 @@ class ImageTypeTestCase(unittest.TestCase):
 
     def test_isset_base_image(self):
         value = 0
-        expected = True
         value |= image_type.BASE_IMAGE
+
         result = image_type.isset(value, image_type.BASE_IMAGE)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_isset_snapshot_image(self):
         value = 0
-        expected = True
         value |= image_type.SNAPSHOT_IMAGE
+
         result = image_type.isset(value, image_type.SNAPSHOT_IMAGE)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_isset_linux_image(self):
         value = 0
-        expected = True
         value |= image_type.LINUX_IMAGE
+
         result = image_type.isset(value, image_type.LINUX_IMAGE)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_isset_windows_image(self):
         value = 0
-        expected = True
         value |= image_type.WINDOWS_IMAGE
+
         result = image_type.isset(value, image_type.WINDOWS_IMAGE)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_isset_os_debian(self):
         value = 0
-        expected = True
         value |= image_type.OS_DEBIAN
+
         result = image_type.isset(value, image_type.OS_DEBIAN)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_isset_os_ubuntu(self):
         value = 0
-        expected = True
         value |= image_type.OS_UBUNTU
+
         result = image_type.isset(value, image_type.OS_UBUNTU)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_isset_os_centos(self):
         value = 0
-        expected = True
         value |= image_type.OS_CENTOS
+
         result = image_type.isset(value, image_type.OS_CENTOS)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_isset_os_rhel(self):
         value = 0
-        expected = True
         value |= image_type.OS_RHEL
+
         result = image_type.isset(value, image_type.OS_RHEL)
-        self.assertEqual(result, expected)
+
+        self.assertTrue(result)
 
     def test_get_numeric_code(self):
         payload = {
@@ -89,64 +97,42 @@ class ImageTypeTestCase(unittest.TestCase):
                 "os_distro": "ubuntu"
             }
         }
-        expected = 0x111
+
         result = image_type.get_numeric_code(payload, 0)
-        self.assertEqual(result, expected)
+
+        self.assertEqual(result, 0x111)
 
     def test_readable(self):
         value = 0x111
-        expected = ['base', 'linux', 'ubuntu']
+
         result = image_type.readable(value)
-        self.assertEqual(result, expected)
 
-    def test_windows_image_from_payload(self):
-        payload = {
-            "image_meta": {
-                "image_type": "base",
-                "os_type": "windows",
-                "os_distro": ""
-            }
-        }
-        expected = True
-        type_code = image_type.get_numeric_code(payload, 0)
-        result = image_type.isset(type_code, image_type.WINDOWS_IMAGE)
-        self.assertEqual(result, expected)
+        self.assertEqual(result, ['base', 'linux', 'ubuntu'])
 
-    def test_linux_image_from_payload(self):
-        payload = {
-            "image_meta": {
-                "image_type": "base",
-                "os_type": "linux",
-                "os_distro": "debian"
-            }
-        }
-        expected = True
-        type_code = image_type.get_numeric_code(payload, 0)
-        result = image_type.isset(type_code, image_type.LINUX_IMAGE)
-        self.assertEqual(result, expected)
+    def test_false_isset_base_image_from_payload(self):
+        value = 0
 
-    def test_base_image_from_payload(self):
-        payload = {
-            "image_meta": {
-                "image_type": "base",
-                "os_type": "linux",
-                "os_distro": "debian"
-            }
-        }
-        expected = True
-        type_code = image_type.get_numeric_code(payload, 0)
-        result = image_type.isset(type_code, image_type.BASE_IMAGE)
-        self.assertEqual(result, expected)
+        value |= image_type.SNAPSHOT_IMAGE
 
-    def test_snapshot_image_from_payload(self):
-        payload = {
-            "image_meta": {
-                "image_type": "snapshot",
-                "os_type": "linux",
-                "os_distro": "debian"
-            }
-        }
-        expected = True
-        type_code = image_type.get_numeric_code(payload, 0)
-        result = image_type.isset(type_code, image_type.SNAPSHOT_IMAGE)
-        self.assertEqual(result, expected)
+        self.assertFalse(image_type.isset(value, image_type.BASE_IMAGE))
+
+    def test_false_isset_snapshot_image(self):
+        value = 0
+
+        value |= image_type.BASE_IMAGE
+
+        self.assertFalse(image_type.isset(value, image_type.SNAPSHOT_IMAGE))
+
+    def test_false_isset_linux_image(self):
+        value = 0
+
+        value |= image_type.WINDOWS_IMAGE
+
+        self.assertFalse(image_type.isset(value, image_type.LINUX_IMAGE))
+
+    def test_false_isset_windows_image(self):
+        value = 0
+
+        value |= image_type.LINUX_IMAGE
+
+        self.assertFalse(image_type.isset(value, image_type.WINDOWS_IMAGE))
