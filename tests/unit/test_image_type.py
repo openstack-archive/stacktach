@@ -29,65 +29,49 @@ class ImageTypeTestCase(unittest.TestCase):
         value = 0
         value |= image_type.BASE_IMAGE
 
-        result = image_type.isset(value, image_type.BASE_IMAGE)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.BASE_IMAGE))
 
     def test_isset_snapshot_image(self):
         value = 0
         value |= image_type.SNAPSHOT_IMAGE
 
-        result = image_type.isset(value, image_type.SNAPSHOT_IMAGE)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.SNAPSHOT_IMAGE))
 
     def test_isset_linux_image(self):
         value = 0
         value |= image_type.LINUX_IMAGE
 
-        result = image_type.isset(value, image_type.LINUX_IMAGE)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.LINUX_IMAGE))
 
     def test_isset_windows_image(self):
         value = 0
         value |= image_type.WINDOWS_IMAGE
 
-        result = image_type.isset(value, image_type.WINDOWS_IMAGE)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.WINDOWS_IMAGE))
 
     def test_isset_os_debian(self):
         value = 0
         value |= image_type.OS_DEBIAN
 
-        result = image_type.isset(value, image_type.OS_DEBIAN)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.OS_DEBIAN))
 
     def test_isset_os_ubuntu(self):
         value = 0
         value |= image_type.OS_UBUNTU
 
-        result = image_type.isset(value, image_type.OS_UBUNTU)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.OS_UBUNTU))
 
     def test_isset_os_centos(self):
         value = 0
         value |= image_type.OS_CENTOS
 
-        result = image_type.isset(value, image_type.OS_CENTOS)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.OS_CENTOS))
 
     def test_isset_os_rhel(self):
         value = 0
         value |= image_type.OS_RHEL
 
-        result = image_type.isset(value, image_type.OS_RHEL)
-
-        self.assertTrue(result)
+        self.assertTrue(image_type.isset(value, image_type.OS_RHEL))
 
     def test_get_numeric_code(self):
         payload = {
