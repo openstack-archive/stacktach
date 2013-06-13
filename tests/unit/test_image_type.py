@@ -111,28 +111,49 @@ class ImageTypeTestCase(unittest.TestCase):
 
     def test_false_isset_base_image_from_payload(self):
         value = 0
-
         value |= image_type.SNAPSHOT_IMAGE
 
         self.assertFalse(image_type.isset(value, image_type.BASE_IMAGE))
 
     def test_false_isset_snapshot_image(self):
         value = 0
-
         value |= image_type.BASE_IMAGE
 
         self.assertFalse(image_type.isset(value, image_type.SNAPSHOT_IMAGE))
 
     def test_false_isset_linux_image(self):
         value = 0
-
         value |= image_type.WINDOWS_IMAGE
 
         self.assertFalse(image_type.isset(value, image_type.LINUX_IMAGE))
 
     def test_false_isset_windows_image(self):
-        value = 0
-
+        value = 0 
         value |= image_type.LINUX_IMAGE
 
         self.assertFalse(image_type.isset(value, image_type.WINDOWS_IMAGE))
+
+    def test_false_isset_os_debian(self):
+        value = 0
+        value |= image_type.OS_UBUNTU
+
+        self.assertFalse(image_type.isset(value, image_type.OS_DEBIAN))
+
+    def test_false_isset_os_ubuntu(self):
+        value = 0
+        value |= image_type.OS_RHEL
+
+        self.assertFalse(image_type.isset(value, image_type.OS_UBUNTU))
+
+    def test_false_isset_os_rhel(self):
+        value = 0
+        value |= image_type.OS_DEBIAN
+
+        self.assertFalse(image_type.isset(value, image_type.OS_RHEL))
+
+    def test_false_isset_os_centos(self):
+        value = 0
+        value |= image_type.OS_UBUNTU
+
+        self.assertFalse(image_type.isset(value, image_type.OS_CENTOS))
+
