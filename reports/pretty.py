@@ -77,7 +77,6 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
             failure_type = None
 
             operation = "aux"
-            os_type = "other"
             image_type_num = 0
 
             for raw in raws:
@@ -112,11 +111,19 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                 if raw.image_type:
                     image_type_num |= raw.image_type
 
+            # Get image (base or snapshot) from image_type bit field
             image = "?"
             if image_type.isset(image_type_num, image_type.BASE_IMAGE):
                 image = "base"
             if image_type.isset(image_type_num, image_type.SNAPSHOT_IMAGE):
                 image = "snap"
+
+            #Get os_type from image_type bit field
+            os_type = "other"
+            if image_type.isset(image_type_num, image_type.LINUX_IMAGE):
+                os_type = "linux"
+            if image_type.isset(image_type_num, image_type.WINDOWS_IMAGE):
+                os_type = "windows"
 
             if not start:
                 continue
