@@ -1,3 +1,6 @@
+import operator
+
+
 BASE_IMAGE = 0x1
 SNAPSHOT_IMAGE = 0x2
 
@@ -30,7 +33,7 @@ flags = {'base' : BASE_IMAGE,
 
 def readable(num):
     result = []
-    for k, v in flags.iteritems():
+    for k, v in sorted(flags.iteritems(), key=lambda x: x[1]):
         if isset(num, v):
             result.append(k)
     return result

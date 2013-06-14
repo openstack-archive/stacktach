@@ -26,7 +26,8 @@ from stacktach import image_type
 class ImageTypeTestCase(unittest.TestCase):
 
     # Abstractions
-    def _test_get_numeric_code(self, image, os_type, os_distro, expected):
+    def _test_get_numeric_code(self, image, os_type, os_distro,
+                               expected, default=0):
         payload = {
             "image_meta": {
                 "image_type": image,
@@ -35,7 +36,7 @@ class ImageTypeTestCase(unittest.TestCase):
             }
         }
 
-        result = image_type.get_numeric_code(payload, 0)
+        result = image_type.get_numeric_code(payload, default)
 
         self.assertEqual(result, expected)
 
@@ -44,12 +45,9 @@ class ImageTypeTestCase(unittest.TestCase):
     def _test_readable(self, value, image, os_type, os_distro):
         result = image_type.readable(value)
         if os_distro is None:
-            self.assertIn(image, result)
-            self.assertIn(os_type, result)
+            self.assertEqual(result, [image, os_type])
         else:
-            self.assertIn(image, result)
-            self.assertIn(os_type, result)
-            self.assertIn(os_distro, result)
+            self.assertEqual(result, [image, os_type, os_distro])
 
     def _test_isset(self, code):
         value = 0
@@ -65,40 +63,48 @@ class ImageTypeTestCase(unittest.TestCase):
 
     # Test get_numeric_code
     def test_get_numeric_code_base_linux_ubuntu(self):
-        self._test_get_numeric_code('base', 'linux', 'ubuntu', 0x111)
+        self._test_get_numeric_code('base', 'linux', 'ubuntu', expected=0x111)
 
     def test_get_numeric_code_base_linux_debian(self):
-        self._test_get_numeric_code('base', 'linux', 'debian', 0x211)
+        self._test_get_numeric_code('base', 'linux', 'debian', expected=0x211)
 
     def test_get_numeric_code_base_linux_centos(self):
-        self._test_get_numeric_code('base', 'linux', 'centos', 0x411)
+        self._test_get_numeric_code('base', 'linux', 'centos', expected=0x411)
 
     def test_get_numeric_code_base_linux_rhel(self):
-        self._test_get_numeric_code('base', 'linux', 'rhel', 0x811)
+        self._test_get_numeric_code('base', 'linux', 'rhel', expected=0x811)
 
     def test_get_numeric_code_snapshot_linux_ubuntu(self):
-        self._test_get_numeric_code('snapshot', 'linux', 'ubuntu', 0x112)
+        self._test_get_numeric_code('snapshot', 'linux', 'ubuntu',
+                                    expected=0x112)
 
     def test_get_numeric_code_snapshot_linux_debian(self):
-        self._test_get_numeric_code('snapshot', 'linux', 'debian', 0x212)
+        self._test_get_numeric_code('snapshot', 'linux', 'debian',
+                                    expected=0x212)
 
     def test_get_numeric_code_snapshot_linux_centos(self):
-        self._test_get_numeric_code('snapshot', 'linux', 'centos', 0x412)
+        self._test_get_numeric_code('snapshot', 'linux', 'centos',
+                                    expected=0x412)
 
     def test_get_numeric_code_snapshot_linux_rhel(self):
-        self._test_get_numeric_code('snapshot', 'linux', 'rhel', 0x812)
+        self._test_get_numeric_code('snapshot', 'linux', 'rhel', expected=0x812)
 
     def test_get_numeric_code_base_windows(self):
-        self._test_get_numeric_code('base', 'windows', None, 0x21)
+        self._test_get_numeric_code('base', 'windows', None, expected=0x21)
 
     def test_get_numeric_code_snapshot_windows(self):
-        self._test_get_numeric_code('snapshot', 'windows', None, 0x22)
+        self._test_get_numeric_code('snapshot', 'windows', None, expected=0x22)
 
     def test_get_numeric_code_base_freebsd(self):
-        self._test_get_numeric_code('base', 'freebsd', None, 0x41)
+        self._test_get_numeric_code('base', 'freebsd', None, expected=0x41)
 
     def test_get_numeric_code_snapshot_freebsd(self):
-        self._test_get_numeric_code('snapshot', 'freebsd', None, 0x42)
+        self._test_get_numeric_code('snapshot', 'freebsd', None, expected=0x42)
+
+    def test_get_numeric_code_default_none(self):
+        self._test_get_numeric_code('snapshot', 'freebsd',
+                                    None, expected=0x42,
+                                    default=None)
 
     # Test readable
     def test_readable_base_linux_ubuntu(self):
