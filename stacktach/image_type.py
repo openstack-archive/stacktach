@@ -1,6 +1,3 @@
-import operator
-
-
 BASE_IMAGE = 0x1
 SNAPSHOT_IMAGE = 0x2
 
