@@ -40,8 +40,6 @@ class ImageTypeTestCase(unittest.TestCase):
 
         self.assertEqual(result, expected)
 
-    # TMaddox - Not thinking this is what we actually want from readable;
-    # perhaps another motivation for TDD? :)
     def _test_readable(self, value, image, os_type, os_distro):
         result = image_type.readable(value)
         if os_distro is None:
@@ -102,9 +100,7 @@ class ImageTypeTestCase(unittest.TestCase):
         self._test_get_numeric_code('snapshot', 'freebsd', None, expected=0x42)
 
     def test_get_numeric_code_default_none(self):
-        self._test_get_numeric_code('snapshot', 'freebsd',
-                                    None, expected=0x42,
-                                    default=None)
+        self._test_get_numeric_code('', '', '', expected=0x0, default=None)
 
     # Test readable
     def test_readable_base_linux_ubuntu(self):
