@@ -25,121 +25,180 @@ from stacktach import image_type
 
 class ImageTypeTestCase(unittest.TestCase):
 
-    def test_isset_base_image(self):
-        value = 0
-        value |= image_type.BASE_IMAGE
-
-        self.assertTrue(image_type.isset(value, image_type.BASE_IMAGE))
-
-    def test_isset_snapshot_image(self):
-        value = 0
-        value |= image_type.SNAPSHOT_IMAGE
-
-        self.assertTrue(image_type.isset(value, image_type.SNAPSHOT_IMAGE))
-
-    def test_isset_linux_image(self):
-        value = 0
-        value |= image_type.LINUX_IMAGE
-
-        self.assertTrue(image_type.isset(value, image_type.LINUX_IMAGE))
-
-    def test_isset_windows_image(self):
-        value = 0
-        value |= image_type.WINDOWS_IMAGE
-
-        self.assertTrue(image_type.isset(value, image_type.WINDOWS_IMAGE))
-
-    def test_isset_os_debian(self):
-        value = 0
-        value |= image_type.OS_DEBIAN
-
-        self.assertTrue(image_type.isset(value, image_type.OS_DEBIAN))
-
-    def test_isset_os_ubuntu(self):
-        value = 0
-        value |= image_type.OS_UBUNTU
-
-        self.assertTrue(image_type.isset(value, image_type.OS_UBUNTU))
-
-    def test_isset_os_centos(self):
-        value = 0
-        value |= image_type.OS_CENTOS
-
-        self.assertTrue(image_type.isset(value, image_type.OS_CENTOS))
-
-    def test_isset_os_rhel(self):
-        value = 0
-        value |= image_type.OS_RHEL
-
-        self.assertTrue(image_type.isset(value, image_type.OS_RHEL))
-
-    def test_get_numeric_code(self):
+    # Abstractions
+    def _test_get_numeric_code(self, image, os_type, os_distro, expected):
         payload = {
             "image_meta": {
-                "image_type": "base",
-                "os_type": "linux",
-                "os_distro": "centos"
+                "image_type": image,
+                "os_type": os_type,
+                "os_distro": os_distro
             }
         }
 
         result = image_type.get_numeric_code(payload, 0)
 
-        self.assertEqual(result, 0x411)
+        self.assertEqual(result, expected)
 
-    def test_readable(self):
-        value = 0x111
-
+    # TMaddox - Not thinking this is what we actually want from readable;
+    # perhaps another motivation for TDD? :)
+    def _test_readable(self, value, image, os_type, os_distro):
         result = image_type.readable(value)
+        if os_distro is None:
+            self.assertIn(image, result)
+            self.assertIn(os_type, result)
+        else:
+            self.assertIn(image, result)
+            self.assertIn(os_type, result)
+            self.assertIn(os_distro, result)
 
-        self.assertEqual(result, ['base', 'linux', 'ubuntu'])
-
-    def test_false_isset_base_image_from_payload(self):
+    def _test_isset(self, code, negativeAsserting=False):
         value = 0
-        value |= image_type.SNAPSHOT_IMAGE
+        value |= code
 
-        self.assertFalse(image_type.isset(value, image_type.BASE_IMAGE))
+        self.assertTrue(image_type.isset(value, code))
 
-    def test_false_isset_snapshot_image(self):
+    def _test_false_isset(self, code, false_code):
         value = 0
-        value |= image_type.BASE_IMAGE
+        value |= code
 
-        self.assertFalse(image_type.isset(value, image_type.SNAPSHOT_IMAGE))
+        self.assertFalse(image_type.isset(value, false_code))
 
-    def test_false_isset_linux_image(self):
-        value = 0
-        value |= image_type.WINDOWS_IMAGE
+    # Test get_numeric_code
+    def test_get_numeric_code_base_linux_ubuntu(self):
+        self._test_get_numeric_code('base', 'linux', 'ubuntu', 0x111)
 
-        self.assertFalse(image_type.isset(value, image_type.LINUX_IMAGE))
+    def test_get_numeric_code_base_linux_debian(self):
+        self._test_get_numeric_code('base', 'linux', 'debian', 0x211)
 
-    def test_false_isset_windows_image(self):
-        value = 0
-        value |= image_type.LINUX_IMAGE
+    def test_get_numeric_code_base_linux_centos(self):
+        self._test_get_numeric_code('base', 'linux', 'centos', 0x411)
 
-        self.assertFalse(image_type.isset(value, image_type.WINDOWS_IMAGE))
+    def test_get_numeric_code_base_linux_rhel(self):
+        self._test_get_numeric_code('base', 'linux', 'rhel', 0x811)
 
-    def test_false_isset_os_debian(self):
-        value = 0
-        value |= image_type.OS_UBUNTU
+    def test_get_numeric_code_snapshot_linux_ubuntu(self):
+        self._test_get_numeric_code('snapshot', 'linux', 'ubuntu', 0x112)
 
-        self.assertFalse(image_type.isset(value, image_type.OS_DEBIAN))
+    def test_get_numeric_code_snapshot_linux_debian(self):
+        self._test_get_numeric_code('snapshot', 'linux', 'debian', 0x212)
 
-    def test_false_isset_os_ubuntu(self):
-        value = 0
-        value |= image_type.OS_RHEL
+    def test_get_numeric_code_snapshot_linux_centos(self):
+        self._test_get_numeric_code('snapshot', 'linux', 'centos', 0x412)
 
-        self.assertFalse(image_type.isset(value, image_type.OS_UBUNTU))
+    def test_get_numeric_code_snapshot_linux_rhel(self):
+        self._test_get_numeric_code('snapshot', 'linux', 'rhel', 0x812)
 
-    def test_false_isset_os_rhel(self):
-        value = 0
-        value |= image_type.OS_DEBIAN
+    def test_get_numeric_code_base_windows(self):
+        self._test_get_numeric_code('base', 'windows', None, 0x21)
 
-        self.assertFalse(image_type.isset(value, image_type.OS_RHEL))
+    def test_get_numeric_code_snapshot_windows(self):
+        self._test_get_numeric_code('snapshot', 'windows', None, 0x22)
 
-    def test_false_isset_os_centos(self):
-        value = 0
-        value |= image_type.OS_UBUNTU
+    # Test readable
+    def test_readable_base_linux_ubuntu(self):
+        self._test_readable(0x111, 'base', 'linux', 'ubuntu')
 
-        self.assertFalse(image_type.isset(value, image_type.OS_CENTOS))
+    def test_readable_base_linux_debian(self):
+        self._test_readable(0x211, 'base', 'linux', 'debian')
 
+    def test_readable_base_linux_centos(self):
+        self._test_readable(0x411, 'base', 'linux', 'centos')
+
+    def test_readable_base_linux_rhel(self):
+        self._test_readable(0x811, 'base', 'linux', 'rhel')
+
+    def test_readable_snapshot_linux_ubuntu(self):
+        self._test_readable(0x112, 'snapshot', 'linux', 'ubuntu')
+
+    def test_readable_snapshot_linux_debian(self):
+        self._test_readable(0x212, 'snapshot', 'linux', 'debian')
+
+    def test_readable_snapshot_linux_centos(self):
+        self._test_readable(0x412, 'snapshot', 'linux', 'centos')
+
+    def test_readable_snapshot_linux_rhel(self):
+        self._test_readable(0x812, 'snapshot', 'linux', 'rhel')
+
+    def test_readable_base_windows(self):
+        self._test_readable(0x21, 'base', 'windows', None)
+
+    def test_readable_snapshot_windows(self):
+        self._test_readable(0x22, 'snapshot', 'windows', None)
+
+    # Test isset
+    def test_isset_base_image(self):
+        self._test_isset(image_type.BASE_IMAGE)
+
+    def test_isset_snapshot_image(self):
+        self._test_isset(image_type.SNAPSHOT_IMAGE)
+
+    def test_isset_linux_image(self):
+        self._test_isset(image_type.LINUX_IMAGE)
+
+    def test_isset_windows_image(self):
+        self._test_isset(image_type.WINDOWS_IMAGE)
+
+    def test_isset_os_debian(self):
+        self._test_isset(image_type.OS_DEBIAN)
+
+    def test_isset_os_ubuntu(self):
+        self._test_isset(image_type.OS_UBUNTU)
+
+    def test_isset_os_centos(self):
+        self._test_isset(image_type.OS_CENTOS)
+
+    def test_isset_os_rhel(self):
+        self._test_isset(image_type.OS_RHEL)
+
+    # Test blank argument to isset
     def test_blank_argument_isset(self):
         self.assertFalse(image_type.isset(None, image_type.OS_CENTOS))
+
+    # Negative test isset
+    def test_false_isset_base_image_from_payload(self):
+        self._test_false_isset(image_type.SNAPSHOT_IMAGE, image_type.BASE_IMAGE)
+
+    def test_false_isset_snapshot_image(self):
+        self._test_false_isset(image_type.BASE_IMAGE, image_type.SNAPSHOT_IMAGE)
+
+    def test_false_isset_linux_image(self):
+        self._test_false_isset(image_type.WINDOWS_IMAGE, image_type.LINUX_IMAGE)
+
+    def test_false_isset_windows_image(self):
+        self._test_false_isset(image_type.LINUX_IMAGE, image_type.WINDOWS_IMAGE)
+
+    def test_false_isset_os_debian_os_ubuntu(self):
+        self._test_false_isset(image_type.OS_DEBIAN, image_type.OS_UBUNTU)
+
+    def test_false_isset_os_centos_os_ubuntu(self):
+        self._test_false_isset(image_type.OS_CENTOS, image_type.OS_UBUNTU)
+
+    def test_false_isset_os_rhel_os_ubuntu(self):
+        self._test_false_isset(image_type.OS_RHEL, image_type.OS_UBUNTU)
+
+    def test_false_isset_os_ubuntu_os_debian(self):
+        self._test_false_isset(image_type.OS_UBUNTU, image_type.OS_DEBIAN)
+
+    def test_false_isset_os_centos_os_debian(self):
+        self._test_false_isset(image_type.OS_CENTOS, image_type.OS_DEBIAN)
+
+    def test_false_isset_os_rhel_os_debian(self):
+        self._test_false_isset(image_type.OS_RHEL, image_type.OS_DEBIAN)
+
+    def test_false_isset_os_debian_os_centos(self):
+        self._test_false_isset(image_type.OS_DEBIAN, image_type.OS_CENTOS)
+
+    def test_false_isset_os_ubuntu_os_centos(self):
+        self._test_false_isset(image_type.OS_DEBIAN, image_type.OS_CENTOS)
+
+    def test_false_isset_os_rhel_os_centos(self):
+        self._test_false_isset(image_type.OS_RHEL, image_type.OS_CENTOS)
+
+    def test_false_isset_os_debian_os_rhel(self):
+        self._test_false_isset(image_type.OS_DEBIAN, image_type.OS_RHEL)
+
+    def test_false_isset_os_centos_os_rhel(self):
+        self._test_false_isset(image_type.OS_CENTOS, image_type.OS_RHEL)
+
+    def test_false_isset_os_ubuntu_os_rhel(self):
+        self._test_false_isset(image_type.OS_UBUNTU, image_type.OS_RHEL)
