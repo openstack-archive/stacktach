@@ -1,6 +1,9 @@
 BASE_IMAGE = 0x1
 SNAPSHOT_IMAGE = 0x2
+
 LINUX_IMAGE = 0x10
+WINDOWS_IMAGE = 0x20
+FREEBSD_IMAGE = 0x40
 
 OS_UBUNTU = 0x100
 OS_DEBIAN = 0x200
@@ -17,6 +20,8 @@ def isset(num, flag):
 flags = {'base' : BASE_IMAGE,
          'snapshot' : SNAPSHOT_IMAGE,
          'linux' : LINUX_IMAGE,
+         'windows': WINDOWS_IMAGE,
+         'freebsd': FREEBSD_IMAGE,
          'ubuntu' : OS_UBUNTU,
          'debian' : OS_DEBIAN,
          'centos' : OS_CENTOS,
@@ -46,6 +51,10 @@ def get_numeric_code(payload, default=0):
     os_type = meta.get('os_type', payload.get('os_type', ''))
     if os_type == 'linux':
         num |= LINUX_IMAGE
+    if os_type == 'windows':
+        num |= WINDOWS_IMAGE
+    if os_type == 'freebsd':
+        num |= FREEBSD_IMAGE
 
     os_distro = meta.get('os_distro', '')
     if os_distro == 'ubuntu':
