@@ -26,8 +26,8 @@ from stacktach import image_type
 class ImageTypeTestCase(unittest.TestCase):
 
     # Abstractions
-    def _test_get_numeric_code(self, image, os_type, os_distro,
-                               expected, default=0):
+    def _test_get_numeric_code(self, image, os_type, os_distro, expected,
+                               default=0):
         payload = {
             "image_meta": {
                 "image_type": image,
@@ -40,12 +40,15 @@ class ImageTypeTestCase(unittest.TestCase):
 
         self.assertEqual(result, expected)
 
-    def _test_readable(self, value, image, os_type, os_distro):
+    def _test_readable_with_os_distro(self, value, image, os_type, os_distro):
         result = image_type.readable(value)
-        if os_distro is None:
-            self.assertEqual(result, [image, os_type])
-        else:
-            self.assertEqual(result, [image, os_type, os_distro])
+
+        self.assertEqual(result, [image, os_type, os_distro])
+
+    def _test_readable_without_os_distro(self, value, image, os_type, os_distro):
+        result = image_type.readable(value)
+
+        self.assertEqual(result, [image, os_type])
 
     def _test_isset(self, code):
         value = 0
@@ -61,16 +64,20 @@ class ImageTypeTestCase(unittest.TestCase):
 
     # Test get_numeric_code
     def test_get_numeric_code_base_linux_ubuntu(self):
-        self._test_get_numeric_code('base', 'linux', 'ubuntu', expected=0x111)
+        self._test_get_numeric_code('base', 'linux', 'ubuntu',
+                                    expected=0x111)
 
     def test_get_numeric_code_base_linux_debian(self):
-        self._test_get_numeric_code('base', 'linux', 'debian', expected=0x211)
+        self._test_get_numeric_code('base', 'linux', 'debian',
+                                    expected=0x211)
 
     def test_get_numeric_code_base_linux_centos(self):
-        self._test_get_numeric_code('base', 'linux', 'centos', expected=0x411)
+        self._test_get_numeric_code('base', 'linux', 'centos',
+                                    expected=0x411)
 
     def test_get_numeric_code_base_linux_rhel(self):
-        self._test_get_numeric_code('base', 'linux', 'rhel', expected=0x811)
+        self._test_get_numeric_code('base', 'linux', 'rhel',
+                                    expected=0x811)
 
     def test_get_numeric_code_snapshot_linux_ubuntu(self):
         self._test_get_numeric_code('snapshot', 'linux', 'ubuntu',
@@ -85,59 +92,62 @@ class ImageTypeTestCase(unittest.TestCase):
                                     expected=0x412)
 
     def test_get_numeric_code_snapshot_linux_rhel(self):
-        self._test_get_numeric_code('snapshot', 'linux', 'rhel', expected=0x812)
+        self._test_get_numeric_code('snapshot', 'linux', 'rhel',
+                                    expected=0x812)
 
     def test_get_numeric_code_base_windows(self):
-        self._test_get_numeric_code('base', 'windows', None, expected=0x21)
+        self._test_get_numeric_code('base', 'windows', None,
+                                    expected=0x21)
 
     def test_get_numeric_code_snapshot_windows(self):
-        self._test_get_numeric_code('snapshot', 'windows', None, expected=0x22)
+        self._test_get_numeric_code('snapshot', 'windows', None,
+                                    expected=0x22)
 
     def test_get_numeric_code_base_freebsd(self):
-        self._test_get_numeric_code('base', 'freebsd', None, expected=0x41)
+        self._test_get_numeric_code('base', 'freebsd', None,
+                                    expected=0x41)
 
     def test_get_numeric_code_snapshot_freebsd(self):
-        self._test_get_numeric_code('snapshot', 'freebsd', None, expected=0x42)
+        self._test_get_numeric_code('snapshot', 'freebsd', None,
+                                    expected=0x42)
 
-    def test_get_numeric_code_default_none(self):
-        self._test_get_numeric_code('', '', '', expected=0x0, default=None)
+    # Test readable with os_distro available
+    def _test_readable_with_os_distro_base_linux_ubuntu(self):
+        self._test_readable_with_os_distro(0x111, 'base', 'linux', 'ubuntu')
 
-    # Test readable
-    def test_readable_base_linux_ubuntu(self):
-        self._test_readable(0x111, 'base', 'linux', 'ubuntu')
+    def _test_readable_with_os_distro_base_linux_debian(self):
+        self._test_readable_with_os_distro(0x211, 'base', 'linux', 'debian')
 
-    def test_readable_base_linux_debian(self):
-        self._test_readable(0x211, 'base', 'linux', 'debian')
+    def _test_readable_with_os_distro_base_linux_centos(self):
+        self._test_readable_with_os_distro(0x411, 'base', 'linux', 'centos')
 
-    def test_readable_base_linux_centos(self):
-        self._test_readable(0x411, 'base', 'linux', 'centos')
+    def _test_readable_with_os_distro_base_linux_rhel(self):
+        self._test_readable_with_os_distro(0x811, 'base', 'linux', 'rhel')
 
-    def test_readable_base_linux_rhel(self):
-        self._test_readable(0x811, 'base', 'linux', 'rhel')
+    def _test_readable_with_os_distro_snapshot_linux_ubuntu(self):
+        self._test_readable_with_os_distro(0x112, 'snapshot', 'linux', 'ubuntu')
 
-    def test_readable_snapshot_linux_ubuntu(self):
-        self._test_readable(0x112, 'snapshot', 'linux', 'ubuntu')
+    def _test_readable_with_os_distro_snapshot_linux_debian(self):
+        self._test_readable_with_os_distro(0x212, 'snapshot', 'linux', 'debian')
 
-    def test_readable_snapshot_linux_debian(self):
-        self._test_readable(0x212, 'snapshot', 'linux', 'debian')
+    def _test_readable_with_os_distro_snapshot_linux_centos(self):
+        self._test_readable_with_os_distro(0x412, 'snapshot', 'linux', 'centos')
 
-    def test_readable_snapshot_linux_centos(self):
-        self._test_readable(0x412, 'snapshot', 'linux', 'centos')
+    def _test_readable_with_os_distro_snapshot_linux_rhel(self):
+        self._test_readable_with_os_distro(0x812, 'snapshot', 'linux', 'rhel')
 
-    def test_readable_snapshot_linux_rhel(self):
-        self._test_readable(0x812, 'snapshot', 'linux', 'rhel')
+    # Test readable without os_distro available
+    def test_readable_without_os_distro_base_windows_(self):
+        self._test_readable_without_os_distro(0x21, 'base', 'windows', None)
 
-    def test_readable_base_windows(self):
-        self._test_readable(0x21, 'base', 'windows', None)
+    def test_readable_without_os_distro_snapshot_windows(self):
+        self._test_readable_without_os_distro(0x22, 'snapshot', 'windows', None)
 
-    def test_readable_snapshot_windows(self):
-        self._test_readable(0x22, 'snapshot', 'windows', None)
+    def test_readable_without_distro_base_freebsd(self):
+        self._test_readable_without_os_distro(0x41, 'base', 'freebsd', None)
 
-    def test_readable_base_freebsd(self):
-        self._test_readable(0x41, 'base', 'freebsd', None)
-
-    def test_readable_snapshot_freebsd(self):
-        self._test_readable(0x42, 'snapshot', 'freebsd', None)
+    def test_readable__without_distro_snapshot_freebsd(self):
+        self._test_readable_without_os_distro(0x42, 'snapshot', 'freebsd', None)
 
     # Test isset
     def test_isset_base_image(self):
@@ -166,10 +176,6 @@ class ImageTypeTestCase(unittest.TestCase):
 
     def test_isset_os_rhel(self):
         self._test_isset(image_type.OS_RHEL)
-
-    # Test blank argument to isset
-    def test_blank_argument_isset(self):
-        self.assertFalse(image_type.isset(None, image_type.OS_CENTOS))
 
     # Negative test isset
     def test_false_isset_base_image_from_payload(self):
@@ -222,3 +228,7 @@ class ImageTypeTestCase(unittest.TestCase):
 
     def test_false_isset_os_ubuntu_os_rhel(self):
         self._test_false_isset(image_type.OS_UBUNTU, image_type.OS_RHEL)
+
+    # Test blank argument to isset
+    def test_blank_argument_isset(self):
+        self.assertFalse(image_type.isset(None, image_type.OS_CENTOS))

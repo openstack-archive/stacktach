@@ -1,3 +1,6 @@
+from operator import itemgetter
+
+
 BASE_IMAGE = 0x1
 SNAPSHOT_IMAGE = 0x2
 
@@ -30,7 +33,7 @@ flags = {'base' : BASE_IMAGE,
 
 def readable(num):
     result = []
-    for k, v in sorted(flags.iteritems(), key=lambda x: x[1]):
+    for k, v in sorted(flags.iteritems(), key=itemgetter(1)):
         if isset(num, v):
             result.append(k)
     return result
@@ -38,8 +41,6 @@ def readable(num):
 
 def get_numeric_code(payload, default=0):
     meta = payload.get('image_meta', {})
-    if default == None:
-        default = 0
     num = default
 
     image_type = meta.get('image_type', '')
