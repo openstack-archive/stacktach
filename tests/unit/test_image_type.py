@@ -51,7 +51,7 @@ class ImageTypeTestCase(unittest.TestCase):
             self.assertIn(os_type, result)
             self.assertIn(os_distro, result)
 
-    def _test_isset(self, code, negativeAsserting=False):
+    def _test_isset(self, code):
         value = 0
         value |= code
 
