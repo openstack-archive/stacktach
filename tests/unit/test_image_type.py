@@ -94,6 +94,12 @@ class ImageTypeTestCase(unittest.TestCase):
     def test_get_numeric_code_snapshot_windows(self):
         self._test_get_numeric_code('snapshot', 'windows', None, 0x22)
 
+    def test_get_numeric_code_base_freebsd(self):
+        self._test_get_numeric_code('base', 'freebsd', None, 0x41)
+
+    def test_get_numeric_code_snapshot_freebsd(self):
+        self._test_get_numeric_code('snapshot', 'freebsd', None, 0x42)
+
     # Test readable
     def test_readable_base_linux_ubuntu(self):
         self._test_readable(0x111, 'base', 'linux', 'ubuntu')
@@ -125,6 +131,12 @@ class ImageTypeTestCase(unittest.TestCase):
     def test_readable_snapshot_windows(self):
         self._test_readable(0x22, 'snapshot', 'windows', None)
 
+    def test_readable_base_freebsd(self):
+        self._test_readable(0x41, 'base', 'freebsd', None)
+
+    def test_readable_snapshot_freebsd(self):
+        self._test_readable(0x42, 'snapshot', 'freebsd', None)
+
     # Test isset
     def test_isset_base_image(self):
         self._test_isset(image_type.BASE_IMAGE)
@@ -137,6 +149,9 @@ class ImageTypeTestCase(unittest.TestCase):
 
     def test_isset_windows_image(self):
         self._test_isset(image_type.WINDOWS_IMAGE)
+
+    def test_isset_freebsd_image(self):
+        self._test_isset(image_type.FREEBSD_IMAGE)
 
     def test_isset_os_debian(self):
         self._test_isset(image_type.OS_DEBIAN)
@@ -166,6 +181,9 @@ class ImageTypeTestCase(unittest.TestCase):
 
     def test_false_isset_windows_image(self):
         self._test_false_isset(image_type.LINUX_IMAGE, image_type.WINDOWS_IMAGE)
+
+    def test_false_isset_freebsd_image(self):
+        self._test_false_isset(image_type.LINUX_IMAGE, image_type.FREEBSD_IMAGE)
 
     def test_false_isset_os_debian_os_ubuntu(self):
         self._test_false_isset(image_type.OS_DEBIAN, image_type.OS_UBUNTU)
