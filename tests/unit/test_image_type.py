@@ -63,6 +63,55 @@ class ImageTypeTestCase(unittest.TestCase):
         self.assertFalse(image_type.isset(value, false_code))
 
     # Test get_numeric_code
+    def test_empty_payload_in_get_numeric_code(self):
+        result = image_type.get_numeric_code({})
+
+        self.assertEqual(result, 0x0)
+
+    def test_empty_meta_in_get_numeric_code(self):
+        result = image_type.get_numeric_code({'image_meta': {}})
+
+        self.assertEqual(result, 0x0)
+
+    def test_empty_os_type_in_payload_not_meta(self):
+        result = image_type.get_numeric_code({'image_meta': {}, 'os_type': ''})
+
+        self.assertEqual(result, 0x0)
+
+    def test_os_type_in_meta_with_empty_os_type_in_payload(self):
+        payload = {
+            "image_meta":   {
+                "os_type": "windows"
+            },
+            "os_type": ''
+        }
+
+        result = image_type.get_numeric_code(payload)
+
+        self.assertEqual(result, image_type.WINDOWS_IMAGE)
+
+    def test_os_type_in_meta_has_precedent_over_one_in_payload(self):
+        payload = {
+            "image_meta": {
+                "os_type": "linux"
+            },
+            "os_type": "windows"
+        }
+
+        result = image_type.get_numeric_code(payload)
+
+        self.assertEqual(result, image_type.LINUX_IMAGE)
+
+    def test_os_type_in_payload_not_meta(self):
+        payload = {
+            "image_meta": {},
+            "os_type": "linux"
+        }
+
+        result = image_type.get_numeric_code(payload)
+
+        self.assertEqual(result, image_type.LINUX_IMAGE)
+
     def test_get_numeric_code_base_linux_ubuntu(self):
         self._test_get_numeric_code('base', 'linux', 'ubuntu',
                                     expected=0x111)
