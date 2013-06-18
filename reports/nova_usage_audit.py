@@ -26,6 +26,8 @@ import os
 
 sys.path.append(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach'))
 
+from django.db.models import F
+
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 
@@ -129,28 +131,30 @@ def _audit_for_exists(exists_query):
     return report
 
 
-def _verifier_audit_for_period(beginning, ending):
+def _verifier_audit_for_day(beginning, ending):
     summary = {}
 
     filters = {
-        'audit_period_beginning': beginning,
-        'audit_period_ending': ending,
+        'raw__when__gte': beginning,
+        'raw__when__lte': ending,
+        'audit_period_ending': F('audit_period_beginning') + (60*60*24)
     }
     periodic_exists = models.InstanceExists.objects.filter(**filters)
 
     summary['periodic'] = _audit_for_exists(periodic_exists)
 
     filters = {
-        'audit_period_beginning': beginning,
-        'audit_period_ending__lt': ending,
+        'raw__when__gte': beginning,
+        'raw__when__lte': ending,
+        'audit_period_ending__lt': F('audit_period_beginning') + (60*60*24)
     }
     instant_exists = models.InstanceExists.objects.filter(**filters)
 
     summary['instantaneous'] = _audit_for_exists(instant_exists)
 
     filters = {
-        'audit_period_beginning': beginning,
-        'audit_period_ending__lte': ending,
+        'raw__when__gte': beginning,
+        'raw__when__lte': ending,
         'status': models.InstanceExists.FAILED
     }
     failed = models.InstanceExists.objects.filter(**filters)
@@ -211,8 +215,8 @@ def audit_for_period(beginning, ending):
     ending_decimal = dt.dt_to_decimal(ending)
 
     (verify_summary,
-     verify_detail) = _verifier_audit_for_period(beginning_decimal,
-                                                 ending_decimal)
+     verify_detail) = _verifier_audit_for_day(beginning_decimal,
+                                              ending_decimal)
     detail, new_count, old_count = _launch_audit_for_period(beginning_decimal,
                                                             ending_decimal)
 
