@@ -89,6 +89,13 @@ class InstanceUsage(models.Model):
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
 
+    def deployment(self):
+        raws = RawData.objects.filter(request_id=self.request_id)
+        if raws.count() == 0:
+            return False
+        raw = raws[0]
+        return raw.deployment
+
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)

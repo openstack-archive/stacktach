@@ -22,14 +22,15 @@ import datetime
 import unittest
 
 import mox
-from novaclient.exceptions import NotFound
-from novaclient.v1_1 import client as nova_client
+import requests
 
 from stacktach import models
 from stacktach import reconciler
-import utils
-from utils import INSTANCE_ID_1
-from utils import REQUEST_ID_1
+from stacktach import utils as stackutils
+from stacktach.reconciler import exceptions
+from stacktach.reconciler import nova
+from tests.unit import utils
+from tests.unit.utils import INSTANCE_ID_1
 
 
 config = {
@@ -61,9 +62,12 @@ region_mapping = {
 
 class ReconcilerTestCase(unittest.TestCase):
     def setUp(self):
-        self.reconciler = reconciler.Reconciler(config,
-                                                region_mapping=region_mapping)
         self.mox = mox.Mox()
+        self.client = self.mox.CreateMockAnything()
+        self.client.src_str = 'mocked_client'
+        self.reconciler = reconciler.Reconciler(config,
+                                                client=self.client,
+                                                region_mapping=region_mapping)
         self.mox.StubOutWithMock(models, 'RawData', use_mock_anything=True)
         models.RawData.objects = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(models, 'Deployment', use_mock_anything=True)
@@ -89,27 +93,50 @@ class ReconcilerTestCase(unittest.TestCase):
         models.InstanceExists.objects = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(models, 'JsonReport', use_mock_anything=True)
         models.JsonReport.objects = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(nova_client, 'Client', use_mock_anything=True)
 
     def tearDown(self):
         self.mox.UnsetStubs()
 
-    def _mocked_nova_client(self):
-        nova = self.mox.CreateMockAnything()
-        nova.servers = self.mox.CreateMockAnything()
-        return nova
+    def _fake_reconciler_instance(self, uuid=INSTANCE_ID_1, launched_at=None,
+                                  deleted_at=None, deleted=False,
+                                  instance_type_id=1):
+        return {
+            'id': uuid,
+            'launched_at': launched_at,
+            'deleted_at': deleted_at,
+            'deleted': deleted,
+            'instance_type_id': instance_type_id
+        }
+
+    def test_load_client_json_bridge(self):
+        mock_config = self.mox.CreateMockAnything()
+        config = {'client_class': 'JSONBridgeClient', 'client': mock_config}
+        nova.JSONBridgeClient(mock_config)
+        self.mox.ReplayAll()
+        reconciler.Reconciler.load_client(config)
+        self.mox.VerifyAll()
+
+    def test_load_client_no_class_loads_default_class(self):
+        mock_config = self.mox.CreateMockAnything()
+        config = {'client': mock_config}
+        nova.JSONBridgeClient(mock_config)
+        self.mox.ReplayAll()
+        reconciler.Reconciler.load_client(config)
+        self.mox.VerifyAll()
+
+    def test_load_client_incorrect_class_loads_default_class(self):
+        mock_config = self.mox.CreateMockAnything()
+        config = {'client_class': 'BadConfigValue', 'client': mock_config}
+        nova.JSONBridgeClient(mock_config)
+        self.mox.ReplayAll()
+        reconciler.Reconciler.load_client(config)
+        self.mox.VerifyAll()
 
     def test_region_for_launch(self):
         launch = self.mox.CreateMockAnything()
-        launch.request_id = REQUEST_ID_1
-        result = self.mox.CreateMockAnything()
-        models.RawData.objects.filter(request_id=REQUEST_ID_1)\
-                              .AndReturn(result)
-        result.count().AndReturn(1)
-        raw = self.mox.CreateMockAnything()
-        raw.deployment = self.mox.CreateMockAnything()
-        raw.deployment.name = 'RegionOne.prod.cell1'
-        result[0].AndReturn(raw)
+        deployment = self.mox.CreateMockAnything()
+        deployment.name = 'RegionOne.prod.cell1'
+        launch.deployment().AndReturn(deployment)
         self.mox.ReplayAll()
         region = self.reconciler._region_for_launch(launch)
         self.assertEqual('RegionOne', region)
@@ -117,15 +144,9 @@ class ReconcilerTestCase(unittest.TestCase):
 
     def test_region_for_launch_no_mapping(self):
         launch = self.mox.CreateMockAnything()
-        launch.request_id = REQUEST_ID_1
-        result = self.mox.CreateMockAnything()
-        models.RawData.objects.filter(request_id=REQUEST_ID_1)\
-                              .AndReturn(result)
-        result.count().AndReturn(1)
-        raw = self.mox.CreateMockAnything()
-        raw.deployment = self.mox.CreateMockAnything()
-        raw.deployment.name = 'RegionOne.prod.cell2'
-        result[0].AndReturn(raw)
+        deployment = self.mox.CreateMockAnything()
+        deployment.name = 'RegionOne.prod.cell2'
+        launch.deployment().AndReturn(deployment)
         self.mox.ReplayAll()
         region = self.reconciler._region_for_launch(launch)
         self.assertFalse(region)
@@ -133,215 +154,127 @@ class ReconcilerTestCase(unittest.TestCase):
 
     def test_region_for_launch_no_raws(self):
         launch = self.mox.CreateMockAnything()
-        launch.request_id = REQUEST_ID_1
-        result = self.mox.CreateMockAnything()
-        models.RawData.objects.filter(request_id=REQUEST_ID_1)\
-                              .AndReturn(result)
-        result.count().AndReturn(0)
+        launch.deployment()
         self.mox.ReplayAll()
         region = self.reconciler._region_for_launch(launch)
         self.assertFalse(region)
         self.mox.VerifyAll()
 
-    def test_get_nova(self):
-        expected_client = self._mocked_nova_client
-        nova_client.Client('demo', 'some_key', '111111',
-                           auth_url='https://identity.example.com/v2.0',
-                           auth_system='keystone').AndReturn(expected_client)
-        self.mox.ReplayAll()
-        client = self.reconciler._get_nova('RegionOne')
-        self.assertEqual(expected_client, client)
-        self.mox.VerifyAll()
-
-    def test_get_nova_already_created(self):
-        expected_client = self.mox.CreateMockAnything()
-        nova_client.Client('demo', 'some_key', '111111',
-                           auth_url='https://identity.example.com/v2.0',
-                           auth_system='keystone').AndReturn(expected_client)
-        self.mox.ReplayAll()
-        self.reconciler._get_nova('RegionOne')
-        client = self.reconciler._get_nova('RegionOne')
-        self.assertEqual(expected_client, client)
-        self.mox.VerifyAll()
-
-    def test_reconcile_from_api(self):
-        deleted_at = datetime.datetime.utcnow()
-        launched_at = deleted_at - datetime.timedelta(hours=4)
-        launch = self.mox.CreateMockAnything()
-        launch.instance = INSTANCE_ID_1
-        launch.launched_at = utils.decimal_utc(launched_at)
-        launch.instance_type_id = 1
-        server = self.mox.CreateMockAnything()
-        server.id = INSTANCE_ID_1
-        server._info = {
-            'OS-INST-USG:terminated_at': str(deleted_at),
-        }
-        values = {
-            'instance': INSTANCE_ID_1,
-            'instance_type_id': 1,
-            'launched_at': utils.decimal_utc(launched_at),
-            'deleted_at': utils.decimal_utc(deleted_at),
-            'source': 'reconciler:nova_api'
-        }
-        result = self.mox.CreateMockAnything()
-        models.InstanceReconcile(**values).AndReturn(result)
-        result.save()
-        self.mox.ReplayAll()
-        self.reconciler._reconcile_from_api(launch, server)
-        self.mox.VerifyAll()
-
-    def test_reconcile_from_api_not_found(self):
-        deleted_at = datetime.datetime.utcnow()
-        launched_at = deleted_at - datetime.timedelta(hours=4)
-        launch = self.mox.CreateMockAnything()
-        launch.instance = INSTANCE_ID_1
-        launch.launched_at = utils.decimal_utc(launched_at)
-        launch.instance_type_id = 1
-        values = {
-            'instance': INSTANCE_ID_1,
-            'instance_type_id': 1,
-            'launched_at': utils.decimal_utc(launched_at),
-            'deleted_at': 1,
-            'source': 'reconciler:nova_api:not_found'
-        }
-        result = self.mox.CreateMockAnything()
-        models.InstanceReconcile(**values).AndReturn(result)
-        result.save()
-        self.mox.ReplayAll()
-        self.reconciler._reconcile_from_api_not_found(launch)
-        self.mox.VerifyAll()
-
     def test_missing_exists_for_instance(self):
-        now = datetime.datetime.utcnow()
-        deleted_at_dt = now - datetime.timedelta(days=2)
-        beginning_dt = now - datetime.timedelta(days=1)
-        beginning_dec = utils.decimal_utc(beginning_dt)
-
+        launch_id = 1
+        beginning_d = utils.decimal_utc()
         launch = self.mox.CreateMockAnything()
         launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
-        self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
-        self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
-
-        self.mox.StubOutWithMock(self.reconciler, '_get_nova')
-        nova = self._mocked_nova_client()
-        self.reconciler._get_nova('RegionOne').AndReturn(nova)
-        server = self.mox.CreateMockAnything()
-        server.status = 'DELETED'
-        server._info = {
-            'OS-INST-USG:terminated_at': str(deleted_at_dt),
+        launch.launched_at = beginning_d - (60*60)
+        launch.instance_type_id = 1
+        models.InstanceUsage.objects.get(id=launch_id).AndReturn(launch)
+        deployment = self.mox.CreateMockAnything()
+        launch.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        deleted_at = beginning_d - (60*30)
+        rec_inst = self._fake_reconciler_instance(deleted=True,
+                                                  deleted_at=deleted_at)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        reconcile_vals = {
+            'instance': launch.instance,
+            'launched_at': launch.launched_at,
+            'deleted_at': deleted_at,
+            'instance_type_id': launch.instance_type_id,
+            'source': 'reconciler:mocked_client'
         }
-        nova.servers.get(INSTANCE_ID_1).AndReturn(server)
-
-        self.mox.StubOutWithMock(self.reconciler, '_reconcile_from_api')
-        self.reconciler._reconcile_from_api(launch, server)
-
+        result = self.mox.CreateMockAnything()
+        models.InstanceReconcile(**reconcile_vals).AndReturn(result)
+        result.save()
         self.mox.ReplayAll()
-        result = self.reconciler.missing_exists_for_instance(1, beginning_dec)
+        result = self.reconciler.missing_exists_for_instance(launch_id,
+                                                             beginning_d)
         self.assertTrue(result)
-        self.mox.VerifyAll()
-
-    def test_missing_exists_for_instance_non_deleted_status(self):
-        now = datetime.datetime.utcnow()
-        beginning_dt = now - datetime.timedelta(days=1)
-        beginning_dec = utils.decimal_utc(beginning_dt)
-
-        launch = self.mox.CreateMockAnything()
-        launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
-        self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
-        self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
-
-        self.mox.StubOutWithMock(self.reconciler, '_get_nova')
-        nova = self._mocked_nova_client()
-        self.reconciler._get_nova('RegionOne').AndReturn(nova)
-        server = self.mox.CreateMockAnything()
-        server.status = 'ACTIVE'
-        server._info = {
-            'OS-INST-USG:terminated_at': None,
-        }
-        nova.servers.get(INSTANCE_ID_1).AndReturn(server)
-
-        self.mox.ReplayAll()
-        result = self.reconciler.missing_exists_for_instance(1, beginning_dec)
-        self.assertFalse(result)
-        self.mox.VerifyAll()
-
-    def test_missing_exists_for_instance_deleted_too_soon(self):
-        now = datetime.datetime.utcnow()
-        deleted_at_dt = now - datetime.timedelta(hours=4)
-        beginning_dt = now - datetime.timedelta(days=1)
-        beginning_dec = utils.decimal_utc(beginning_dt)
-
-        launch = self.mox.CreateMockAnything()
-        launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
-        self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
-        self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
-
-        self.mox.StubOutWithMock(self.reconciler, '_get_nova')
-        nova = self._mocked_nova_client()
-        self.reconciler._get_nova('RegionOne').AndReturn(nova)
-        server = self.mox.CreateMockAnything()
-        server._info = {
-            'OS-INST-USG:terminated_at': str(deleted_at_dt),
-        }
-        nova.servers.get(INSTANCE_ID_1).AndReturn(server)
-
-        self.mox.StubOutWithMock(self.reconciler, '_reconcile_from_api')
-
-        self.mox.ReplayAll()
-        result = self.reconciler.missing_exists_for_instance(1, beginning_dec)
-        self.assertFalse(result)
-        self.mox.VerifyAll()
-
-    def test_missing_exists_for_instance_not_deleted(self):
-        now = datetime.datetime.utcnow()
-        beginning_dt = now - datetime.timedelta(days=1)
-        beginning_dec = utils.decimal_utc(beginning_dt)
-
-        launch = self.mox.CreateMockAnything()
-        launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
-        self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
-        self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
-
-        self.mox.StubOutWithMock(self.reconciler, '_get_nova')
-        nova = self._mocked_nova_client()
-        self.reconciler._get_nova('RegionOne').AndReturn(nova)
-        server = self.mox.CreateMockAnything()
-        server._info = {}
-        nova.servers.get(INSTANCE_ID_1).AndReturn(server)
-
-        self.mox.StubOutWithMock(self.reconciler, '_reconcile_from_api')
-
-        self.mox.ReplayAll()
-        result = self.reconciler.missing_exists_for_instance(1, beginning_dec)
-        self.assertFalse(result)
         self.mox.VerifyAll()
 
     def test_missing_exists_for_instance_not_found(self):
-        now = datetime.datetime.utcnow()
-        beginning_dt = now - datetime.timedelta(days=1)
-        beginning_dec = utils.decimal_utc(beginning_dt)
-
+        launch_id = 1
+        beginning_d = utils.decimal_utc()
         launch = self.mox.CreateMockAnything()
         launch.instance = INSTANCE_ID_1
-        models.InstanceUsage.objects.get(id=1).AndReturn(launch)
-        self.mox.StubOutWithMock(self.reconciler, '_region_for_launch')
-        self.reconciler._region_for_launch(launch).AndReturn('RegionOne')
-
-        self.mox.StubOutWithMock(self.reconciler, '_get_nova')
-        nova = self._mocked_nova_client()
-        self.reconciler._get_nova('RegionOne').AndReturn(nova)
-
-        nova.servers.get(INSTANCE_ID_1).AndRaise(NotFound(404))
-
-        self.mox.StubOutWithMock(self.reconciler,
-                                 '_reconcile_from_api_not_found')
-        self.reconciler._reconcile_from_api_not_found(launch)
-
+        launch.launched_at = beginning_d - (60*60)
+        launch.instance_type_id = 1
+        models.InstanceUsage.objects.get(id=launch_id).AndReturn(launch)
+        deployment = self.mox.CreateMockAnything()
+        launch.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        ex = exceptions.NotFound()
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndRaise(ex)
         self.mox.ReplayAll()
-        result = self.reconciler.missing_exists_for_instance(1, beginning_dec)
-        self.assertTrue(result)
+        result = self.reconciler.missing_exists_for_instance(launch_id,
+                                                             beginning_d)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+
+json_bridge_config = {
+    'url': 'http://json_bridge.example.com/query/',
+    'username': 'user',
+    'password': 'pass',
+    'regions': {
+        'RegionOne': 'nova',
+    }
+}
+
+
+class NovaJSONBridgeClientTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+        self.client = nova.JSONBridgeClient(json_bridge_config)
+        self.mox.StubOutWithMock(requests, 'post')
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def mock_for_query(self, database, query, results):
+        url = json_bridge_config['url'] + database
+        data = {'sql': query}
+        auth = (json_bridge_config['username'], json_bridge_config['password'])
+        result = {'result': results}
+        response = self.mox.CreateMockAnything()
+        requests.post(url, data, auth=auth, verify=False)\
+                .AndReturn(response)
+        response.json().AndReturn(result)
+
+    def _fake_instance(self, uuid=INSTANCE_ID_1, launched_at=None,
+                      terminated_at=None, deleted=0, instance_type_id=1):
+        return {
+            'uuid': uuid,
+            'launched_at': launched_at,
+            'terminated_at': terminated_at,
+            'deleted': deleted,
+            'instance_type_id': instance_type_id
+        }
+
+    def test_get_instance(self):
+        launched_at = datetime.datetime.utcnow() - datetime.timedelta(minutes=5)
+        launched_at = str(launched_at)
+        terminated_at = str(datetime.datetime.utcnow())
+        results = [self._fake_instance(launched_at=launched_at,
+                                       terminated_at=terminated_at,
+                                       deleted=True)]
+        self.mock_for_query('nova', nova.GET_INSTANCE_QUERY % INSTANCE_ID_1,
+                            results)
+        self.mox.ReplayAll()
+        instance = self.client.get_instance('RegionOne', INSTANCE_ID_1)
+        self.assertIsNotNone(instance)
+        self.assertEqual(instance['id'], INSTANCE_ID_1)
+        self.assertEqual(instance['instance_type_id'], 1)
+        launched_at_dec = stackutils.str_time_to_unix(launched_at)
+        self.assertEqual(instance['launched_at'], launched_at_dec)
+        terminated_at_dec = stackutils.str_time_to_unix(terminated_at)
+        self.assertEqual(instance['deleted_at'], terminated_at_dec)
+        self.assertTrue(instance['deleted'])
+        self.mox.VerifyAll()
+
+    def test_get_instance_not_found(self):
+        self.mock_for_query('nova', nova.GET_INSTANCE_QUERY % INSTANCE_ID_1,
+                            [])
+        self.mox.ReplayAll()
+        self.assertRaises(exceptions.NotFound, self.client.get_instance,
+                          'RegionOne', INSTANCE_ID_1)
         self.mox.VerifyAll()
