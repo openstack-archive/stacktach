@@ -137,6 +137,7 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'stacktach',
+    'south'
 )
 
 ALLOWED_HOSTS = ['*']
