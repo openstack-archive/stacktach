@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import logging
+import logging.handlers
 
 LOGGERS = {}
 default_logger_name = 'stacktach-default'
@@ -32,7 +33,7 @@ def set_default_logger_name(name):
 def _make_logger(name):
     log = logging.getLogger(__name__)
     log.setLevel(logging.DEBUG)
-    handler = logging.handlers.TimedRotatingFileHandler('%s.log' % name,
+    handler = logging.handlers.TimedRotatingFileHandler('/var/log/stacktach/%s.log' % name,
                                             when='midnight', interval=1, backupCount=3)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
