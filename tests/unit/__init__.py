@@ -21,6 +21,7 @@
 import os
 import sys
 
+
 def setup_sys_path():
     sys.path = [os.path.abspath(os.path.dirname('stacktach'))] + sys.path
 
@@ -40,3 +41,7 @@ def setup_environment():
 
 setup_sys_path()
 setup_environment()
+
+from stacktach import stacklog
+
+stacklog.set_default_logger_location("%s.log")

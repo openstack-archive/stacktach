@@ -33,8 +33,8 @@ from django.shortcuts import get_object_or_404
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
+from stacktach import stacklog
 from stacktach import utils
-
 
 DEFAULT_LIMIT = 50
 HARD_LIMIT = 1000
@@ -68,6 +68,13 @@ def rsp(data):
     return HttpResponse(json.dumps(data), content_type="application/json")
 
 
+def _log_api_exception(cls, ex, request):
+    line1 = "Exception: %s - %s - %s" % (cls.__name__, ex.status, ex.message)
+    line2 = "Request: %s - %s" % (request.method, request.path)
+    line3 = "Body: %s" % request.body
+    stacklog.error("%s/n%s/n%s" % (line1, line2, line3))
+
+
 def api_call(func):
 
     @functools.wraps(func)
@@ -75,12 +82,15 @@ def api_call(func):
         try:
             return rsp(func(*args, **kwargs))
         except NotFoundException, e:
+            _log_api_exception(NotFoundException, e, args[0])
             return HttpResponseNotFound(json.dumps(e.to_dict()),
                                         content_type="application/json")
         except BadRequestException, e:
+            _log_api_exception(BadRequestException, e, args[0])
             return HttpResponseBadRequest(json.dumps(e.to_dict()),
                                           content_type="application/json")
         except APIException, e:
+            _log_api_exception(APIException, e, args[0])
             return HttpResponseServerError(json.dumps(e.to_dict()),
                                            content_type="application/json")
 

@@ -50,21 +50,22 @@ function search_form(deployment_id)
         <div>
         <form action="">
         <select id='field'>
-           <option>deployment
-           <option value='routing_key'>source
-           <option value='tenant'>tenant
-           <option>service
-           <option>host
-           <option>event
+           <option>deployment</option>
+           <option value='routing_key'>source</option>
+           <option value='tenant'>tenant</option>
+           <option>service</option>
+           <option>host</option>
+           <option>event</option>
+           <option value='request_id'>request</option>
            <option selected='true'>instance
         </select>
         <input type='text' id='query' size='60' value=''/>
         Include Updates: <input type='checkbox' id="updates" checked />
         <select id='count'>
-            <option selected>25
-            <option>100
-            <option>250
-            <option>All
+            <option selected='true'>25</option>
+            <option>100</option>
+            <option>250</option>
+            <option>All</option>
         </select>
         <input type='submit' value='Search' onclick='return search_form({{deployment_id}});'/>
         </form>
