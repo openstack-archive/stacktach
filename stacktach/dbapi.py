@@ -72,7 +72,11 @@ def _log_api_exception(cls, ex, request):
     line1 = "Exception: %s - %s - %s" % (cls.__name__, ex.status, ex.message)
     line2 = "Request: %s - %s" % (request.method, request.path)
     line3 = "Body: %s" % request.body
-    stacklog.error("%s/n%s/n%s" % (line1, line2, line3))
+    msg = "%s\n%s\n%s" % (line1, line2, line3)
+    if 400 <= ex.status < 500:
+        stacklog.warn(msg)
+    else:
+        stacklog.error(msg)
 
 
 def api_call(func):
