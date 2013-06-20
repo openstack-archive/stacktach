@@ -99,15 +99,6 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                         operation = cmd
                         break
 
-                # Brace yourself. We are now painfully digging into the
-                # notification to get the os_type attribute
-                if os_type == "other" and raw.json:
-                    notification = json.loads(raw.json)
-                    if notification[1]:
-                        os_type = notification[1].get('payload', {})\
-                            .get('image_meta', {})\
-                            .get('os_type', "other")
-
                 if raw.image_type:
                     image_type_num |= raw.image_type
 
