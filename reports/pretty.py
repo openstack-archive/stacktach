@@ -16,17 +16,16 @@ from stacktach import models
 def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                 store=False, region=None, too_long=1800):
     if not yesterday:
-        yesterday = datetime.datetime.utcnow().date() - \
-                    datetime.timedelta(days=1)
+        yesterday = datetime.datetime.utcnow().date() -\
+            datetime.timedelta(days=1)
 
     rstart = datetime.datetime(year=yesterday.year, month=yesterday.month,
-                              day=yesterday.day, hour=start_hour)
+                               day=yesterday.day, hour=start_hour)
     rend = rstart + datetime.timedelta(hours=hours-1, minutes=59, seconds=59)
 
     dstart = dt.dt_to_decimal(rstart)
     dend = dt.dt_to_decimal(rend)
 
-    codes = {}
     too_long_col = '> %d' % (too_long / 60)
 
     cells = []
@@ -87,11 +86,12 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                     err = raw
                     failure_type = 'http'
 
-                if raw.old_state != 'error' and raw.state == 'error':
+                if failure_type != 'state' and raw.old_state != 'error'\
+                        and raw.state == 'error':
                     failure_type = 'state'
 
                 if raw.old_state == 'error' and \
-                                (not raw.state in ['deleted', 'error']):
+                        (not raw.state in ['deleted', 'error']):
                     failure_type = None
 
                 for cmd in cmds:
@@ -110,7 +110,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
                 image = "snap"
 
             #Get os_type from image_type bit field
-            os_type = "other"
+            os_type = "?"
             if image_type.isset(image_type_num, image_type.LINUX_IMAGE):
                 os_type = "linux"
             if image_type.isset(image_type_num, image_type.WINDOWS_IMAGE):
@@ -122,7 +122,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
             end = raw.when
             diff = end - start
 
-            if diff > too_long and failure_type == None:
+            if diff > too_long and failure_type is None:
                 failure_type = too_long_col
 
             key = (operation, image, os_type)
@@ -158,7 +158,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
     report.append(details)
 
     failure_types = ["4xx", "5xx", too_long_col, "state"]
-    cols = ["Operation", "Image", "OS", "Min", "Max", "Med", "%d%%" % percentile,
+    cols = ["Operation", "Image", "OS Type", "Min", "Max", "Med", "%d%%" % percentile,
             "Requests"]
     for failure_type in failure_types:
         cols.append("%s" % failure_type)
@@ -178,7 +178,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
             # Sum for grand totals.
             failure_count = breakdown.get(failure_type, 0)
             failure_totals[failure_type] = \
-                         failure_totals.get(failure_type, 0) + failure_count
+                failure_totals.get(failure_type, 0) + failure_count
 
             # Failure percentage for this attempt.
             percentage = float(failure_count) / float(count)
@@ -231,9 +231,9 @@ def valid_date(date):
     try:
         t = time.strptime(date, "%Y-%m-%d")
         return datetime.datetime(*t[:6])
-    except Exception, e:
+    except Exception:
         raise argparse.ArgumentTypeError(
-                                    "'%s' is not in YYYY-MM-DD format." % date)
+            "'%s' is not in YYYY-MM-DD format." % date)
 
 
 if __name__ == '__main__':

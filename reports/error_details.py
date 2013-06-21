@@ -17,6 +17,16 @@ if __name__ != '__main__':
 
 # To mask unique identifiers for categorizing notifications
 def mask_msg(text):
+    # Needs order because of how precedent effects masking.
+    #
+    # Example: REQ_ID has a UUID in it, but the meaning is different
+    # in this context, so best to grab those first.
+    #
+    # LG_NUM usually represents a memory size; with the number of flavors
+    # this can create a lot of noise.
+    #
+    # The intent is to remove noise from unimportant subtleties
+
     masking_regex = (
         (1, 'REQ_ID',
          r"req-[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}"
@@ -117,14 +127,21 @@ if __name__ == '__main__':
                               day=yesterday.day)
     end = start + datetime.timedelta(hours=length-1, minutes=59, seconds=59)
 
+    deployments = {}
+
     instance_map = {}  # { uuid : [request_id, request_id, ...] }
     exception_counts = {}  # { exception_message : count }
     event_counts = {}  # { event_name : count }
-    metadata = {'report_format': 'json',
-                'instances': instance_map,
-                'exception_counts': exception_counts,
-                'event_counts': event_counts
-                }
+    tenant_issues = {}
+    codes = {}
+    metadata = {
+        'report_format': 'json',
+        'instances': instance_map,
+        'exception_counts': exception_counts,
+        'event_counts': event_counts,
+        'tenant_issues': tenant_issues,
+        'codes': codes,
+    }
 
     # Tell Stacky to format as JSON and set placeholders for various summaries
     report = [metadata]
@@ -132,8 +149,6 @@ if __name__ == '__main__':
     dstart = dt.dt_to_decimal(start)
     dend = dt.dt_to_decimal(end)
 
-    codes = {}
-    deployments = {}
     for deploy in models.Deployment.objects.all():
         deployments[deploy.id] = deploy.name
 
@@ -144,12 +159,6 @@ if __name__ == '__main__':
 
     expiry = 60 * 60  # 1 hour
     cmds = ['create', 'rebuild', 'rescue', 'resize', 'snapshot']
-
-    failures = {}
-    causes = {}
-    durations = {}
-    successes = {}
-    tenant_issues = {}
 
     for uuid_dict in updates:
         uuid = uuid_dict['instance']
@@ -224,42 +233,24 @@ if __name__ == '__main__':
             if not _start:
                 continue
 
-            image = "?"
-            if image_type.isset(image_type_num, image_type.BASE_IMAGE):
-                image = "base"
-            if image_type.isset(image_type_num, image_type.SNAPSHOT_IMAGE):
-                image = "snap"
-
             _end = _when
             diff = _end - _start
 
-            if diff > 3600 and failure_type is None:
-                failure_type = ">60"
+            if diff > 1800 and failure_type is None:
+                failure_type = ">30"
 
-            key = (operation, image_type_num, cell)
-
-            # Track durations for all attempts, good and bad ...
-            duration_min, duration_max, duration_count, duration_total = \
-                durations.get(key, (9999999, 0, 0, 0))
-            duration_min = min(duration_min, diff)
-            duration_max = max(duration_max, diff)
-            duration_count += 1
-            duration_total += diff
-            durations[key] = (duration_min, duration_max, duration_count,
-                              duration_total)
-
-            if not failure_type:
-                successes[key] = successes.get(key, 0) + 1
-            else:
+            if failure_type:
+                key = (operation, image_type_num, cell)
                 failed_request = {}
                 message = []  # For exception message masking
                 req_list.append(req)
                 instance_map[uuid] = req_list
                 failed_request['req'] = req
+                failed_request['uuid'] = uuid
+                failed_request['tenant'] = tenant
                 failed_request['duration'] = "%.2f minutes" % (diff/60)
                 failed_request['operation'] = operation
                 failed_request['platform'] = image_type.readable(image_type_num)
-                failures[key] = failures.get(key, 0) + 1
                 tenant_issues[tenant] = tenant_issues.get(tenant, 0) + 1
 
                 if err_id:
@@ -296,12 +287,12 @@ if __name__ == '__main__':
                             codes[code] = codes.get(code, 0) + 1
                             failure_type = code
                     failed_request['failure_type'] = failure_type
+
                     raws = models.RawData.objects.filter(request_id=req)\
                                          .exclude(event='compute.instance.exists')\
                                          .order_by('when')
 
                     failed_request['details'] = []
-
                     for raw in raws:
                         failure_detail = {}
                         failure_detail['host'] = raw.host
@@ -310,12 +301,10 @@ if __name__ == '__main__':
                         failure_detail['state'] = raw.state
                         failure_detail['old_task'] = raw.old_task
                         failure_detail['task'] = raw.task
+
                         failed_request['details'].append(failure_detail)
 
                     report.append(failed_request)
-
-                cause_key = (key, failure_type)
-                causes[cause_key] = causes.get(cause_key, 0) + 1
 
     # Assign values to store in DB
     values = {'json': json.dumps(report),
