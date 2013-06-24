@@ -20,58 +20,11 @@
 
 from decimal import Decimal
 import unittest
-from stacktach.notification import MonitorNotification
-from stacktach.notification import ComputeUpdateNotification
+from stacktach.notification import Notification
 from tests.unit.utils import REQUEST_ID_1, TENANT_ID_1, INSTANCE_ID_1
 
 
-class ComputeUpdateNotificationTestCase(unittest.TestCase):
-    def test_rawdata_kwargs(self):
-        message = {
-            '_context_request_id': REQUEST_ID_1,
-            'method': 'some_method',
-            'event_type': 'compute.instance.update',
-            'publisher_id': 'compute.c-10-13-137-10',
-            '_context_project_id': '5845730',
-            'timestamp': '2013-06-12 06:30:52.790476',
-            'args': {
-                'host': 'compute',
-                'service_name': 'compute',
-                '_context_project_id': TENANT_ID_1
-            },
-            'payload': {
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                'new_task_state': 'rebuild_spawning',
-                'image_meta': {
-                    'image_type': 'base',
-                    'org.openstack__1__architecture': 'x64',
-                    'org.openstack__1__os_distro': 'com.microsoft.server',
-                    'org.openstack__1__os_version': '2008.2',
-                    'com.rackspace__1__options': '36'
-                }
-            }
-        }
-        kwargs = ComputeUpdateNotification(message).rawdata_kwargs('1', 'monitor.info', 'json')
-
-        self.assertEquals(kwargs['deployment'], '1')
-        self.assertEquals(kwargs['routing_key'], 'monitor.info')
-        self.assertEquals(kwargs['tenant'], TENANT_ID_1)
-        self.assertEquals(kwargs['json'], 'json')
-        self.assertEquals(kwargs['state'], 'active')
-        self.assertEquals(kwargs['old_state'], 'building')
-        self.assertEquals(kwargs['old_task'], 'build')
-        self.assertEquals(kwargs['task'], 'rebuild_spawning')
-        self.assertEquals(kwargs['image_type'], 1)
-        self.assertEquals(kwargs['when'], Decimal('1371018652.790476'))
-        self.assertEquals(kwargs['publisher'], None)
-        self.assertEquals(kwargs['event'], 'some_method')
-        self.assertEquals(kwargs['host'], 'compute')
-        self.assertEquals(kwargs['request_id'], REQUEST_ID_1)
-
-
-class MonitorNotificationTestCase(unittest.TestCase):
+class NotificationTestCase(unittest.TestCase):
 
     def test_rawdata_kwargs(self):
         message = {
@@ -95,7 +48,7 @@ class MonitorNotificationTestCase(unittest.TestCase):
                 }
             }
         }
-        kwargs = MonitorNotification(message).rawdata_kwargs('1', 'monitor.info', 'json')
+        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
 
         self.assertEquals(kwargs['host'], 'cpu1-n01.example.com')
         self.assertEquals(kwargs['deployment'], '1')
@@ -134,7 +87,7 @@ class MonitorNotificationTestCase(unittest.TestCase):
                 }
             }
         }
-        kwargs = MonitorNotification(message).rawdata_kwargs('1', 'monitor.info', 'json')
+        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
         self.assertEquals(kwargs['host'], None)
 
         self.assertEquals(kwargs['deployment'], '1')
@@ -174,7 +127,7 @@ class MonitorNotificationTestCase(unittest.TestCase):
                 }
             }
         }
-        kwargs = MonitorNotification(message).rawdata_kwargs('1', 'monitor.info', 'json')
+        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
 
         self.assertEquals(kwargs['host'], 'cpu1-n01.example.com')
         self.assertEquals(kwargs['deployment'], '1')

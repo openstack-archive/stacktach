@@ -12,8 +12,7 @@ from stacktach import db as stackdb
 from stacktach import models
 from stacktach import stacklog
 from stacktach import utils
-from stacktach.notification import MonitorNotification
-from stacktach.notification import ComputeUpdateNotification
+from stacktach.notification import Notification
 
 STACKDB = stackdb
 
@@ -29,9 +28,8 @@ def log_warn(msg):
 # routing_key : handler
 
 NOTIFICATIONS = {
-    'monitor.info': MonitorNotification,
-    'monitor.error': MonitorNotification,
-    '': ComputeUpdateNotification}
+    'monitor.info': Notification,
+    'monitor.error': Notification}
 
 
 def start_kpi_tracking(lifecycle, raw):

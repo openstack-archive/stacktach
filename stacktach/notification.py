@@ -12,6 +12,8 @@ class Notification(object):
         self.old_task = self.payload.get('old_task_state', "")
         self.task = self.payload.get('new_task_state', "")
         self.image_type = image_type.get_numeric_code(self.payload)
+        self.publisher = self.body['publisher_id']
+        self.event = self.body['event_type']
         self.os_architecture = self.payload['image_meta']['org.openstack__1__architecture']
         self.os_distro = self.payload['image_meta']['org.openstack__1__os_distro']
         self.os_version = self.payload['image_meta']['org.openstack__1__os_version']
@@ -50,42 +52,6 @@ class Notification(object):
             'rax_options': self.rax_options
         }
 
-from stacktach.notification import Notification
-
-
-class ComputeUpdateNotification(Notification):
-    def __init__(self, body):
-        super(ComputeUpdateNotification, self).__init__(body)
-
-    @property
-    def instance(self):
-        return None
-
-    @property
-    def host(self):
-        return self.body['args']['host']
-
-    @property
-    def publisher(self):
-        return None
-
-    @property
-    def service(self):
-        return self.body['args']['service_name']
-
-    @property
-    def event(self):
-        return self.body['method']
-
-    @property
-    def tenant(self):
-        return self.body['args'].get('_context_project_id', None)
-
-
-class MonitorNotification(Notification):
-    def __init__(self, body):
-        super(MonitorNotification, self).__init__(body)
-
     @property
     def instance(self):
         # instance UUID's seem to hide in a lot of odd places.
@@ -106,17 +72,9 @@ class MonitorNotification(Notification):
         return host
 
     @property
-    def publisher(self):
-        return self.body['publisher_id']
-
-    @property
     def service(self):
         parts = self.publisher.split('.')
         return parts[0]
-
-    @property
-    def event(self):
-        return self.body['event_type']
 
     @property
     def tenant(self):
