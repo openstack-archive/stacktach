@@ -7,7 +7,11 @@
         "rabbit_userid": "rabbit",
         "rabbit_password": "rabbit",
         "rabbit_virtual_host": "/",
-        "exit_on_exception": true
+        "exit_on_exception": true,
+        "topics": {
+            "nova": ["monitor.info", "monitor.error"],
+            "glance": ["monitor_glance.info", "monitor_glance.error"]
+        }
     },
     {
         "name": "east_coast.prod.cell1",
@@ -17,6 +21,10 @@
         "rabbit_userid": "rabbit",
         "rabbit_password": "rabbit",
         "rabbit_virtual_host": "/",
-        "exit_on_exception": false
+        "exit_on_exception": false,
+        "topics": {
+            "nova": ["monitor.info", "monitor.error"],
+            "glance": ["monitor_glance.info", "monitor_glance.error"]
+        }
     }]
 }

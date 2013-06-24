@@ -22,15 +22,14 @@ import json
 import unittest
 
 import kombu
-import kombu.entity
-import kombu.connection
 import mox
 
-from stacktach import db, views
+from stacktach import db
+from stacktach import views
 import worker.worker as worker
 
 
-class NovaConsumerTestCase(unittest.TestCase):
+class ConsumerTestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
@@ -47,9 +46,10 @@ class NovaConsumerTestCase(unittest.TestCase):
             consumer = self.mox.CreateMockAnything()
             created_consumers.append(consumer)
             return consumer
-        self.mox.StubOutWithMock(worker.NovaConsumer, '_create_exchange')
-        self.mox.StubOutWithMock(worker.NovaConsumer, '_create_queue')
-        consumer = worker.NovaConsumer('test', None, None, True, {})
+        self.mox.StubOutWithMock(worker.Consumer, '_create_exchange')
+        self.mox.StubOutWithMock(worker.Consumer, '_create_queue')
+        consumer = worker.Consumer('test', None, None, True, {}, "nova",
+                                   ["monitor.info", "monitor.error"])
         exchange = self.mox.CreateMockAnything()
         consumer._create_exchange('nova', 'topic').AndReturn(exchange)
         info_queue = self.mox.CreateMockAnything()
@@ -71,7 +71,8 @@ class NovaConsumerTestCase(unittest.TestCase):
 
     def test_create_exchange(self):
         args = {'key': 'value'}
-        consumer = worker.NovaConsumer('test', None, None, True, args)
+        consumer = worker.Consumer('test', None, None, True, args, 'nova',
+                                   ["monitor.info", "monitor.error"])
 
         self.mox.StubOutClassWithMocks(kombu.entity, 'Exchange')
         exchange = kombu.entity.Exchange('nova', type='topic', exclusive=False,
@@ -87,7 +88,8 @@ class NovaConsumerTestCase(unittest.TestCase):
         queue = kombu.Queue('name', exchange, auto_delete=False, durable=True,
                             exclusive=False, routing_key='routing.key',
                             queue_arguments={})
-        consumer = worker.NovaConsumer('test', None, None, True, {})
+        consumer = worker.Consumer('test', None, None, True, {}, 'nova',
+                                   ["monitor.info", "monitor.error"])
         self.mox.ReplayAll()
         actual_queue = consumer._create_queue('name', exchange, 'routing.key',
                                               exclusive=False,
@@ -103,7 +105,8 @@ class NovaConsumerTestCase(unittest.TestCase):
         queue = kombu.Queue('name', exchange, auto_delete=False, durable=True,
                             exclusive=False, routing_key='routing.key',
                             queue_arguments=queue_args)
-        consumer = worker.NovaConsumer('test', None, None, True, queue_args)
+        consumer = worker.Consumer('test', None, None, True, queue_args,
+                                   'nova', ["monitor.info", "monitor.error"])
         self.mox.ReplayAll()
         actual_queue = consumer._create_queue('name', exchange, 'routing.key',
                                               exclusive=False,
@@ -114,21 +117,29 @@ class NovaConsumerTestCase(unittest.TestCase):
     def test_process(self):
         deployment = self.mox.CreateMockAnything()
         raw = self.mox.CreateMockAnything()
+        raw.get_name().AndReturn('RawData')
         message = self.mox.CreateMockAnything()
 
-        consumer = worker.NovaConsumer('test', None, deployment, True, {})
+        exchange = 'nova'
+        consumer = worker.Consumer('test', None, deployment, True, {},
+                                   exchange, ["monitor.info", "monitor.error"])
         routing_key = 'monitor.info'
         message.delivery_info = {'routing_key': routing_key}
         body_dict = {u'key': u'value'}
         message.body = json.dumps(body_dict)
+
+        mock_post_process_method = self.mox.CreateMockAnything()
+        mock_post_process_method(raw, body_dict)
+        old_handler = worker.POST_PROCESS_METHODS
+        worker.POST_PROCESS_METHODS["RawData"] = mock_post_process_method
+
         self.mox.StubOutWithMock(views, 'process_raw_data',
                                  use_mock_anything=True)
         args = (routing_key, body_dict)
-        views.process_raw_data(deployment, args, json.dumps(args))\
-             .AndReturn(raw)
+        views.process_raw_data(deployment, args, json.dumps(args), exchange) \
+            .AndReturn(raw)
         message.ack()
-        self.mox.StubOutWithMock(views, 'post_process')
-        views.post_process(raw, body_dict)
+
         self.mox.StubOutWithMock(consumer, '_check_memory',
                                  use_mock_anything=True)
         consumer._check_memory()
@@ -136,13 +147,16 @@ class NovaConsumerTestCase(unittest.TestCase):
         consumer._process(message)
         self.assertEqual(consumer.processed, 1)
         self.mox.VerifyAll()
+        worker.POST_PROCESS_METHODS["RawData"] = old_handler
 
     def test_process_no_raw_dont_ack(self):
         deployment = self.mox.CreateMockAnything()
         raw = self.mox.CreateMockAnything()
         message = self.mox.CreateMockAnything()
 
-        consumer = worker.NovaConsumer('test', None, deployment, True, {})
+        exchange = 'nova'
+        consumer = worker.Consumer('test', None, deployment, True, {},
+                                   exchange, ["monitor.info", "monitor.error"])
         routing_key = 'monitor.info'
         message.delivery_info = {'routing_key': routing_key}
         body_dict = {u'key': u'value'}
@@ -150,8 +164,8 @@ class NovaConsumerTestCase(unittest.TestCase):
         self.mox.StubOutWithMock(views, 'process_raw_data',
                                  use_mock_anything=True)
         args = (routing_key, body_dict)
-        views.process_raw_data(deployment, args, json.dumps(args))\
-             .AndReturn(None)
+        views.process_raw_data(deployment, args, json.dumps(args), exchange) \
+            .AndReturn(None)
         self.mox.StubOutWithMock(consumer, '_check_memory',
                                  use_mock_anything=True)
         consumer._check_memory()
@@ -168,7 +182,9 @@ class NovaConsumerTestCase(unittest.TestCase):
             'rabbit_port': 5672,
             'rabbit_userid': 'rabbit',
             'rabbit_password': 'rabbit',
-            'rabbit_virtual_host': '/'
+            'rabbit_virtual_host': '/',
+            "services": ["nova"],
+            "topics": {"nova": ["monitor.info", "monitor.error"]}
         }
         self.mox.StubOutWithMock(db, 'get_or_create_deployment')
         deployment = self.mox.CreateMockAnything()
@@ -187,13 +203,15 @@ class NovaConsumerTestCase(unittest.TestCase):
         kombu.connection.BrokerConnection(**params).AndReturn(conn)
         conn.__enter__().AndReturn(conn)
         conn.__exit__(None, None, None).AndReturn(None)
-        self.mox.StubOutClassWithMocks(worker, 'NovaConsumer')
-        consumer = worker.NovaConsumer(config['name'], conn, deployment,
-                                       config['durable_queue'], {})
+        self.mox.StubOutClassWithMocks(worker, 'Consumer')
+        exchange = 'nova'
+        consumer = worker.Consumer(config['name'], conn, deployment,
+                                   config['durable_queue'], {}, exchange,
+                                   ["monitor.info", "monitor.error"])
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config)
+        worker.run(config, exchange)
         self.mox.VerifyAll()
 
     def test_run_queue_args(self):
@@ -205,7 +223,9 @@ class NovaConsumerTestCase(unittest.TestCase):
             'rabbit_userid': 'rabbit',
             'rabbit_password': 'rabbit',
             'rabbit_virtual_host': '/',
-            'queue_arguments': {'x-ha-policy': 'all'}
+            'queue_arguments': {'x-ha-policy': 'all'},
+            "services": ["nova"],
+            "topics": {"nova": ["monitor.info", "monitor.error"]}
         }
         self.mox.StubOutWithMock(db, 'get_or_create_deployment')
         deployment = self.mox.CreateMockAnything()
@@ -224,12 +244,14 @@ class NovaConsumerTestCase(unittest.TestCase):
         kombu.connection.BrokerConnection(**params).AndReturn(conn)
         conn.__enter__().AndReturn(conn)
         conn.__exit__(None, None, None).AndReturn(None)
-        self.mox.StubOutClassWithMocks(worker, 'NovaConsumer')
-        consumer = worker.NovaConsumer(config['name'], conn, deployment,
-                                       config['durable_queue'],
-                                       config['queue_arguments'])
+        self.mox.StubOutClassWithMocks(worker, 'Consumer')
+        exchange = 'nova'
+        consumer = worker.Consumer(config['name'], conn, deployment,
+                                   config['durable_queue'],
+                                   config['queue_arguments'], exchange,
+                                   ["monitor.info", "monitor.error"])
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config)
+        worker.run(config, exchange)
         self.mox.VerifyAll()

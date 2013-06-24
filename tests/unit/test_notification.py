@@ -18,163 +18,167 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-from decimal import Decimal
 import unittest
+
+import mox
+
+from stacktach import notification, utils
+
 from stacktach.notification import Notification
-from tests.unit.utils import REQUEST_ID_1, TENANT_ID_1, INSTANCE_ID_1
+from stacktach.notification import GlanceNotification
+from stacktach import db
+from tests.unit.utils import REQUEST_ID_1
+from tests.unit.utils import TIMESTAMP_1
+from tests.unit.utils import TENANT_ID_1
+from tests.unit.utils import INSTANCE_ID_1
+
+
+class NovaNotificationTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.mox = mox.Mox()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_factory_should_return_nova_notification_for_nova_exchange(
+            self):
+        body = {}
+        deployment = "1"
+        json = "{}"
+        routing_key = "monitor.info"
+        self.mox.StubOutWithMock(notification, 'NovaNotification')
+        notification.NovaNotification(body, deployment, routing_key, json)
+
+        self.mox.ReplayAll()
+        notification.notification_factory(body, deployment, routing_key, json,
+                                          'nova')
+        self.mox.VerifyAll()
+
+    def test_factory_should_return_glance_notification_for_glance_exchange(
+            self):
+        body = {}
+        deployment = "1"
+        json = "{}"
+        routing_key = "monitor_glance.info"
+
+        self.mox.StubOutWithMock(notification, 'GlanceNotification')
+        notification.GlanceNotification(body, deployment, routing_key, json)
+
+        self.mox.ReplayAll()
+        notification.notification_factory(body, deployment, routing_key, json,
+                                          'glance')
+        self.mox.VerifyAll()
+
+    def test_factory_should_return_notification_for_unknown_exchange(
+            self):
+        body = {}
+        deployment = "1"
+        json = "{}"
+        routing_key = "unknown.info"
+
+        self.mox.StubOutWithMock(notification, 'Notification')
+        notification.Notification(body, deployment, routing_key, json)
+
+        self.mox.ReplayAll()
+        notification.notification_factory(body, deployment, routing_key, json,
+                                          'unknown_exchange')
+        self.mox.VerifyAll()
+
+
+class GlanceNotificationTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_save_should_persist_glance_rawdata_to_database(self):
+        body = {
+            "event_type": "image.upload",
+            "timestamp": "2013-06-20 17:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
+                "status": "saving",
+                "properties": {
+                    "image_type": "snapshot",
+                    "instance_uuid": INSTANCE_ID_1,
+                },
+                "owner": TENANT_ID_1,
+                "id": "2df2ccf6-bc1b-4853-aab0-25fda346b3bb",
+            }
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json = '{["routing_key", {%s}]}' % body
+        self.mox.StubOutWithMock(db, 'create_glance_rawdata')
+        db.create_glance_rawdata(
+            deployment="1",
+            owner=TENANT_ID_1,
+            json=json,
+            routing_key=routing_key,
+            when=utils.str_time_to_unix("2013-06-20 17:31:57.939614"),
+            publisher="glance-api01-r2961.global.preprod-ord.ohthree.com",
+            event="image.upload",
+            service="glance-api01-r2961",
+            host="global.preprod-ord.ohthree.com",
+            instance=INSTANCE_ID_1,
+            request_id=None,
+            image_type=0,
+            status="saving",
+            uuid="2df2ccf6-bc1b-4853-aab0-25fda346b3bb")
+
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json)
+        notification.save()
+        self.mox.VerifyAll()
 
 
 class NotificationTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
 
-    def test_rawdata_kwargs(self):
-        message = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute.cpu1-n01.example.com',
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_save_should_persist_generic_rawdata_to_database(self):
+        body = {
+            "event_type": "image.upload",
             '_context_request_id': REQUEST_ID_1,
             '_context_project_id': TENANT_ID_1,
-            'timestamp': '2013-06-12 06:30:52.790476',
-            'payload': {
+            "timestamp": TIMESTAMP_1,
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
                 'instance_id': INSTANCE_ID_1,
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                "new_task_state": 'rebuild_spawning',
-                'image_meta': {
-                    'image_type': 'base',
-                    'org.openstack__1__architecture': 'x64',
-                    'org.openstack__1__os_distro': 'com.microsoft.server',
-                    'org.openstack__1__os_version': '2008.2',
-                    'com.rackspace__1__options': '36'
-                }
+                "status": "saving",
+                "container_format": "ovf",
+                "properties": {
+                    "image_type": "snapshot",
+                },
+                "tenant": "5877054",
             }
         }
-        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
+        deployment = "1"
+        routing_key = "generic_monitor.info"
+        json = '{["routing_key", {%s}]}' % body
+        self.mox.StubOutWithMock(db, 'create_generic_rawdata')
+        db.create_generic_rawdata(
+            deployment="1",
+            tenant=TENANT_ID_1,
+            json=json,
+            routing_key=routing_key,
+            when=utils.str_time_to_unix(TIMESTAMP_1),
+            publisher="glance-api01-r2961.global.preprod-ord.ohthree.com",
+            event="image.upload",
+            service="glance-api01-r2961",
+            host="global.preprod-ord.ohthree.com",
+            instance=INSTANCE_ID_1,
+            request_id=REQUEST_ID_1)
 
-        self.assertEquals(kwargs['host'], 'cpu1-n01.example.com')
-        self.assertEquals(kwargs['deployment'], '1')
-        self.assertEquals(kwargs['routing_key'], 'monitor.info')
-        self.assertEquals(kwargs['tenant'], TENANT_ID_1)
-        self.assertEquals(kwargs['json'], 'json')
-        self.assertEquals(kwargs['state'], 'active')
-        self.assertEquals(kwargs['old_state'], 'building')
-        self.assertEquals(kwargs['old_task'], 'build')
-        self.assertEquals(kwargs['task'], 'rebuild_spawning')
-        self.assertEquals(kwargs['image_type'], 1)
-        self.assertEquals(kwargs['when'], Decimal('1371018652.790476'))
-        self.assertEquals(kwargs['publisher'], 'compute.cpu1-n01.example.com')
-        self.assertEquals(kwargs['event'], 'compute.instance.create.start')
-        self.assertEquals(kwargs['request_id'], REQUEST_ID_1)
+        self.mox.ReplayAll()
 
-    def test_rawdata_kwargs_missing_image_meta(self):
-        message = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute.cpu1-n01.example.com',
-            '_context_request_id': REQUEST_ID_1,
-            '_context_project_id': TENANT_ID_1,
-            'timestamp': '2013-06-12 06:30:52.790476',
-            'payload': {
-                'instance_id': INSTANCE_ID_1,
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                "new_task_state": 'rebuild_spawning',
-                'image_meta': {
-                    'image_type': 'base',
-                }
-            }
-        }
-        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
-
-        self.assertEquals(kwargs['host'], 'cpu1-n01.example.com')
-        self.assertEquals(kwargs['deployment'], '1')
-        self.assertEquals(kwargs['routing_key'], 'monitor.info')
-        self.assertEquals(kwargs['tenant'], TENANT_ID_1)
-        self.assertEquals(kwargs['json'], 'json')
-        self.assertEquals(kwargs['state'], 'active')
-        self.assertEquals(kwargs['old_state'], 'building')
-        self.assertEquals(kwargs['old_task'], 'build')
-        self.assertEquals(kwargs['task'], 'rebuild_spawning')
-        self.assertEquals(kwargs['image_type'], 1)
-        self.assertEquals(kwargs['when'], Decimal('1371018652.790476'))
-        self.assertEquals(kwargs['publisher'], 'compute.cpu1-n01.example.com')
-        self.assertEquals(kwargs['event'], 'compute.instance.create.start')
-        self.assertEquals(kwargs['request_id'], REQUEST_ID_1)
-
-    def test_rawdata_kwargs_for_message_with_no_host(self):
-        message = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute',
-            '_context_request_id': REQUEST_ID_1,
-            '_context_project_id': TENANT_ID_1,
-            'timestamp': '2013-06-12 06:30:52.790476',
-            'payload': {
-                'instance_id': INSTANCE_ID_1,
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                "new_task_state": 'rebuild_spawning',
-                'image_meta': {
-                    'image_type': 'base',
-                    'org.openstack__1__architecture': 'x64',
-                    'org.openstack__1__os_distro': 'com.microsoft.server',
-                    'org.openstack__1__os_version': '2008.2',
-                    'com.rackspace__1__options': '36'
-                }
-            }
-        }
-        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
-        self.assertEquals(kwargs['host'], None)
-
-        self.assertEquals(kwargs['deployment'], '1')
-        self.assertEquals(kwargs['routing_key'], 'monitor.info')
-        self.assertEquals(kwargs['tenant'], TENANT_ID_1)
-        self.assertEquals(kwargs['json'], 'json')
-        self.assertEquals(kwargs['state'], 'active')
-        self.assertEquals(kwargs['old_state'], 'building')
-        self.assertEquals(kwargs['old_task'], 'build')
-        self.assertEquals(kwargs['task'], 'rebuild_spawning')
-        self.assertEquals(kwargs['image_type'], 1)
-        self.assertEquals(kwargs['when'], Decimal('1371018652.790476'))
-        self.assertEquals(kwargs['publisher'], 'compute')
-        self.assertEquals(kwargs['event'], 'compute.instance.create.start')
-        self.assertEquals(kwargs['request_id'], REQUEST_ID_1)
-
-    def test_rawdata_kwargs_for_message_with_exception(self):
-        message = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute.cpu1-n01.example.com',
-            '_context_request_id': REQUEST_ID_1,
-            '_context_project_id': TENANT_ID_1,
-            'timestamp': '2013-06-12 06:30:52.790476',
-            'payload': {
-                'exception': {'kwargs':{'uuid': INSTANCE_ID_1}},
-                'instance_id': INSTANCE_ID_1,
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                "new_task_state": 'rebuild_spawning',
-                'image_meta': {
-                    'image_type': 'base',
-                    'org.openstack__1__architecture': 'x64',
-                    'org.openstack__1__os_distro': 'com.microsoft.server',
-                    'org.openstack__1__os_version': '2008.2',
-                    'com.rackspace__1__options': '36'
-                }
-            }
-        }
-        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
-
-        self.assertEquals(kwargs['host'], 'cpu1-n01.example.com')
-        self.assertEquals(kwargs['deployment'], '1')
-        self.assertEquals(kwargs['routing_key'], 'monitor.info')
-        self.assertEquals(kwargs['tenant'], TENANT_ID_1)
-        self.assertEquals(kwargs['json'], 'json')
-        self.assertEquals(kwargs['state'], 'active')
-        self.assertEquals(kwargs['old_state'], 'building')
-        self.assertEquals(kwargs['old_task'], 'build')
-        self.assertEquals(kwargs['task'], 'rebuild_spawning')
-        self.assertEquals(kwargs['image_type'], 1)
-        self.assertEquals(kwargs['when'], Decimal('1371018652.790476'))
-        self.assertEquals(kwargs['publisher'], 'compute.cpu1-n01.example.com')
-        self.assertEquals(kwargs['event'], 'compute.instance.create.start')
-        self.assertEquals(kwargs['request_id'], REQUEST_ID_1)
+        notification = Notification(body, deployment, routing_key, json)
+        notification.save()
+        self.mox.VerifyAll()

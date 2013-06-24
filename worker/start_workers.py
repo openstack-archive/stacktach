@@ -1,9 +1,9 @@
-import json
 import os
 import signal
 import sys
 
 from multiprocessing import Process
+from worker import config
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir, os.pardir))
@@ -11,14 +11,6 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 import worker.worker as worker
-
-config_filename = os.environ.get('STACKTACH_DEPLOYMENTS_FILE',
-                                 'stacktach_worker_config.json')
-try:
-    from local_settings import *
-    config_filename = STACKTACH_DEPLOYMENTS_FILE
-except ImportError:
-    pass
 
 processes = []
 
@@ -35,18 +27,15 @@ def kill_time(signal, frame):
 
 
 if __name__ == '__main__':
-    config = None
-    with open(config_filename, "r") as f:
-        config = json.load(f)
 
-    deployments = config['deployments']
-
-    for deployment in deployments:
+    for deployment in config.deployments():
         if deployment.get('enabled', True):
-            process = Process(target=worker.run, args=(deployment,))
-            process.daemon = True
-            process.start()
-            processes.append(process)
+            for exchange in deployment.get('topics').keys():
+                process = Process(target=worker.run, args=(deployment,
+                                                           exchange,))
+                process.daemon = True
+                process.start()
+                processes.append(process)
     signal.signal(signal.SIGINT, kill_time)
     signal.signal(signal.SIGTERM, kill_time)
     signal.pause()

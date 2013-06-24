@@ -1,102 +1,58 @@
 # -*- coding: utf-8 -*-
-import copy
-from south.v2 import DataMigration
-from stacktach.notification import notification_factory
-
-try:
-    import ujson as json
-except ImportError:
-    try:
-        import simplejson as json
-    except ImportError:
-        import json
-
-USAGE_EVENTS = [
-    'compute.instance.create.start',
-    'compute.instance.create.end',
-    'compute.instance.rebuild.start',
-    'compute.instance.rebuild.end',
-    'compute.instance.resize.prep.start',
-    'compute.instance.resize.prep.end',
-    'compute.instance.resize.revert.start',
-    'compute.instance.resize.revert.end',
-    'compute.instance.finish_resize.end',
-    'compute.instance.delete.end',
-    'compute.instance.exists']
-
-USAGE_EVENTS_EXCEPT_EXISTS = copy.deepcopy(USAGE_EVENTS)
-USAGE_EVENTS_EXCEPT_EXISTS.remove('compute.instance.exists')
+import datetime
+from south.db import db
+from south.v2 import SchemaMigration
+from django.db import models
 
 
-class Migration(DataMigration):
-
-    def _find_latest_usage_related_raw_id_for_request_id(self, orm, request_id):
-        rawdata = orm.RawData.objects.filter(
-            request_id=request_id,
-            event__in=USAGE_EVENTS_EXCEPT_EXISTS).order_by('id')[:1].values('id')
-        if rawdata.count() > 0:
-            return rawdata[0]['id']
-        return None
-
-    def _notification(self, json_message):
-        json_dict = json.loads(json_message)
-        routing_key = json_dict[0]
-        body = json_dict[1]
-        return notification_factory(body, None, routing_key, json_message, None)
+class Migration(SchemaMigration):
 
     def forwards(self, orm):
-        # Note: Don't use "from appname.models import ModelName".
-        # Use orm.ModelName to refer to models in this application,
-        # and orm['appname.ModelName'] for models in other applications.
-        print "Started inserting records in RawDataImageMeta"
-        rawdata_all = orm.RawData.objects.filter(event__in=USAGE_EVENTS).values('json', 'id')
-        for rawdata in rawdata_all:
-            notification = self._notification(rawdata['json'])
-            orm.RawDataImageMeta.objects.create(
-                raw_id=rawdata['id'],
-                os_architecture=notification.os_architecture,
-                os_distro=notification.os_distro,
-                os_version=notification.os_version,
-                rax_options=notification.rax_options)
-        print "Inserted %s records in RawDataImageMeta" % rawdata_all.count()
+        # Adding model 'GlanceRawData'
+        db.create_table(u'stacktach_glancerawdata', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('deployment', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.Deployment'])),
+            ('owner', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('json', self.gf('django.db.models.fields.TextField')()),
+            ('routing_key', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('when', self.gf('django.db.models.fields.DecimalField')(max_digits=20, decimal_places=6, db_index=True)),
+            ('publisher', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
+            ('event', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('service', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('host', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
+            ('instance', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('request_id', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('uuid', self.gf('django.db.models.fields.CharField')(max_length=50)),
+            ('status', self.gf('django.db.models.fields.CharField')(default='queued', max_length=50, db_index=True)),
+            ('image_type', self.gf('django.db.models.fields.IntegerField')(default=0, null=True, db_index=True)),
+        ))
+        db.send_create_signal(u'stacktach', ['GlanceRawData'])
 
-        print "\nStarted updating records in InstanceExists"
-        exists = orm.InstanceExists.objects.values('raw_id')
-        exists_update_count = 0
-        for exist in exists:
-            image_metadata = orm.RawDataImageMeta.objects.filter(raw_id=exist['raw_id'])
-            if image_metadata.count() == 0:
-                print "RawDataImageMeta not found for InstanceExists with raw_id %s" % exist['raw_id']
-                continue
-            orm.InstanceExists.objects.filter(
-                raw_id=exist['raw_id']).update(
-                    os_architecture=image_metadata[0].os_architecture,
-                    os_distro=image_metadata[0].os_distro,
-                    os_version=image_metadata[0].os_version,
-                    rax_options=image_metadata[0].rax_options)
-            exists_update_count += 1
-        print "Updated %s records in InstanceExists" % exists_update_count
+        # Adding model 'GenericRawData'
+        db.create_table(u'stacktach_genericrawdata', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('deployment', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.Deployment'])),
+            ('tenant', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('json', self.gf('django.db.models.fields.TextField')()),
+            ('routing_key', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('image_type', self.gf('django.db.models.fields.IntegerField')(default=0, null=True, db_index=True)),
+            ('when', self.gf('django.db.models.fields.DecimalField')(max_digits=20, decimal_places=6, db_index=True)),
+            ('publisher', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
+            ('event', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('service', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('host', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
+            ('instance', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('request_id', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+        ))
+        db.send_create_signal(u'stacktach', ['GenericRawData'])
 
-        print "\nStarted updating records in InstanceUsages"
-        usages = orm.InstanceUsage.objects.all().values('request_id')
-        usages_update_count = 0
-        for usage in usages:
-            raw_id = self._find_latest_usage_related_raw_id_for_request_id(orm, usage['request_id'])
-            if not raw_id:
-                print "No Rawdata entry found for a usage related event with request_id %s" % usage['request_id']
-                continue
-            image_metadata = orm.RawDataImageMeta.objects.filter(raw_id=raw_id)[0]
-            orm.InstanceUsage.objects.filter(
-                request_id=usage['request_id']).update(
-                    os_architecture=image_metadata.os_architecture,
-                    os_distro=image_metadata.os_distro,
-                    os_version=image_metadata.os_version,
-                    rax_options=image_metadata.rax_options)
-            usages_update_count += 1
-        print "Updated %s records in InstanceUsages" % usages_update_count
 
     def backwards(self, orm):
-        raise RuntimeError("Cannot reverse this migration.")
+        # Deleting model 'GlanceRawData'
+        db.delete_table(u'stacktach_glancerawdata')
+
+        # Deleting model 'GenericRawData'
+        db.delete_table(u'stacktach_genericrawdata')
 
 
     models = {
@@ -104,6 +60,40 @@ class Migration(DataMigration):
             'Meta': {'object_name': 'Deployment'},
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '50'})
+        },
+        u'stacktach.genericrawdata': {
+            'Meta': {'object_name': 'GenericRawData'},
+            'deployment': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.Deployment']"}),
+            'event': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'host': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '100', 'null': 'True', 'blank': 'True'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'image_type': ('django.db.models.fields.IntegerField', [], {'default': '0', 'null': 'True', 'db_index': 'True'}),
+            'instance': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'json': ('django.db.models.fields.TextField', [], {}),
+            'publisher': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '100', 'null': 'True', 'blank': 'True'}),
+            'request_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'routing_key': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'service': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'tenant': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'when': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'})
+        },
+        u'stacktach.glancerawdata': {
+            'Meta': {'object_name': 'GlanceRawData'},
+            'deployment': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.Deployment']"}),
+            'event': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'host': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '100', 'null': 'True', 'blank': 'True'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'image_type': ('django.db.models.fields.IntegerField', [], {'default': '0', 'null': 'True', 'db_index': 'True'}),
+            'instance': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'json': ('django.db.models.fields.TextField', [], {}),
+            'owner': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'publisher': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '100', 'null': 'True', 'blank': 'True'}),
+            'request_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'routing_key': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'service': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'status': ('django.db.models.fields.CharField', [], {'default': "'queued'", 'max_length': '50', 'db_index': 'True'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
+            'when': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'})
         },
         u'stacktach.instancedeletes': {
             'Meta': {'object_name': 'InstanceDeletes'},
@@ -219,4 +209,3 @@ class Migration(DataMigration):
     }
 
     complete_apps = ['stacktach']
-    symmetrical = True

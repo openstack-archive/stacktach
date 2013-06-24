@@ -37,6 +37,7 @@ from utils import INSTANCE_TYPE_ID_1
 from utils import DUMMY_TIME
 from utils import INSTANCE_TYPE_ID_2
 from stacktach import stacklog
+from stacktach import notification
 from stacktach import views
 
 
@@ -59,54 +60,45 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         dict = {
             'timestamp': when,
         }
-        args = ('monitor.info', dict)
+        routing_key = 'monitor.info'
+        args = (routing_key, dict)
         json_args = json.dumps(args)
-        raw_values = {
-            'deployment': deployment,
-            'when': utils.decimal_utc(datetime.datetime.strptime(when, '%Y-%m-%d %H:%M:%S.%f')),
-            'host': 'api',
-            'routing_key': 'monitor.info',
-            'json': json_args
-        }
-
-        old_info_handler = views.NOTIFICATIONS['monitor.info']
+        mock_record = self.mox.CreateMockAnything()
         mock_notification = self.mox.CreateMockAnything()
-        mock_notification.rawdata_kwargs(deployment, 'monitor.info', json_args).AndReturn(raw_values)
-        views.NOTIFICATIONS['monitor.info'] = lambda message_body: mock_notification
-
-        views.STACKDB.create_rawdata(**raw_values)
+        mock_notification.save().AndReturn(mock_record)
+        self.mox.StubOutWithMock(notification, 'notification_factory')
+        exchange = 'nova'
+        notification.notification_factory(dict, deployment, routing_key,
+                                          json_args, exchange).AndReturn(
+            mock_notification)
         self.mox.ReplayAll()
-        views.process_raw_data(deployment, args, json_args)
-        self.mox.VerifyAll()
 
-        views.NOTIFICATIONS['monitor.info'] = old_info_handler
+        self.assertEquals(
+            views.process_raw_data(deployment, args, json_args, exchange),
+            mock_record)
+        self.mox.VerifyAll()
 
     def test_process_raw_data_old_timestamp(self):
         deployment = self.mox.CreateMockAnything()
         when = '2013-1-25T13:38:23.123'
         dict = {
             '_context_timestamp': when,
-            }
+        }
+        routing_key = 'monitor.info'
         args = ('monitor.info', dict)
         json_args = json.dumps(args[1])
-        raw_values = {
-            'deployment': deployment,
-            'when': utils.decimal_utc(datetime.datetime.strptime(when, '%Y-%m-%dT%H:%M:%S.%f')),
-            'host': 'api',
-            'routing_key': 'monitor.info',
-            'json': json_args
-        }
-        old_info_handler = views.NOTIFICATIONS['monitor.info']
-        mock_notification = self.mox.CreateMockAnything()
-        mock_notification.rawdata_kwargs(deployment, 'monitor.info', json_args).AndReturn(raw_values)
-        views.NOTIFICATIONS['monitor.info'] = lambda message_body: mock_notification
 
-        views.STACKDB.create_rawdata(**raw_values)
+        mock_notification = self.mox.CreateMockAnything()
+        mock_notification.save()
+        self.mox.StubOutWithMock(notification, 'notification_factory')
+        exchange = 'nova'
+        notification.notification_factory(dict, deployment, routing_key,
+                                          json_args, exchange).AndReturn(mock_notification)
         self.mox.ReplayAll()
-        views.process_raw_data(deployment, args, json_args)
+
+        views.process_raw_data(deployment, args, json_args, exchange)
         self.mox.VerifyAll()
 
-        views.NOTIFICATIONS['monitor.info'] = old_info_handler
 
 class StacktachLifecycleTestCase(unittest.TestCase):
     def setUp(self):

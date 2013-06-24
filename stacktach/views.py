@@ -12,7 +12,7 @@ from stacktach import db as stackdb
 from stacktach import models
 from stacktach import stacklog
 from stacktach import utils
-from stacktach.notification import Notification
+from stacktach import notification
 
 STACKDB = stackdb
 
@@ -23,13 +23,6 @@ def log_warn(msg):
         LOG = stacklog.get_logger()
     if LOG is not None:
         LOG.warn(msg)
-
-
-# routing_key : handler
-
-NOTIFICATIONS = {
-    'monitor.info': Notification,
-    'monitor.error': Notification}
 
 
 def start_kpi_tracking(lifecycle, raw):
@@ -279,10 +272,8 @@ def _process_exists(raw, body):
         values['tenant'] = payload['tenant_id']
         image_meta = payload.get('image_meta', {})
         values['rax_options'] = image_meta.get('com.rackspace__1__options', '')
-        os_arch = image_meta.get('org.openstack__1__architecture', '')
-        values['os_architecture'] = os_arch
-        os_version = image_meta.get('org.openstack__1__os_version', '')
-        values['os_version'] = os_version
+        values['os_architecture'] = image_meta.get('org.openstack__1__architecture', '')
+        values['os_version'] = image_meta.get('org.openstack__1__os_version', '')
         values['os_distro'] = image_meta.get('org.openstack__1__os_distro', '')
 
         deleted_at = payload.get('deleted_at')
@@ -327,24 +318,27 @@ def aggregate_usage(raw, body):
         USAGE_PROCESS_MAPPING[raw.event](raw, body)
 
 
-def process_raw_data(deployment, args, json_args):
+def process_raw_data(deployment, args, json_args, exchange):
     """This is called directly by the worker to add the event to the db."""
     db.reset_queries()
 
     routing_key, body = args
-    record = None
-    notification = NOTIFICATIONS[routing_key](body)
-    if notification:
-        values = notification.rawdata_kwargs(deployment, routing_key, json_args)
-        if not values:
-            return record
-        record = STACKDB.create_rawdata(**values)
-    return record
+    notif = notification.notification_factory(body, deployment, routing_key,
+                                              json_args, exchange)
+    return notif.save()
 
 
-def post_process(raw, body):
+def post_process_rawdata(raw, body):
     aggregate_lifecycle(raw)
     aggregate_usage(raw, body)
+
+
+def post_process_glancerawdata(raw, body):
+    pass
+
+
+def post_process_genericrawdata(raw, body):
+    pass
 
 
 def _post_process_raw_data(rows, highlight=None):
