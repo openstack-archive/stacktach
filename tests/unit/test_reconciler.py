@@ -32,28 +32,6 @@ from stacktach.reconciler import nova
 from tests.unit import utils
 from tests.unit.utils import INSTANCE_ID_1
 
-
-config = {
-    'nova': {
-        'RegionOne': {
-            'username': 'demo',
-            'project_id': '111111',
-            'api_key': 'some_key',
-            'auth_url': 'https://identity.example.com/v2.0',
-            'auth_system': 'keystone',
-        },
-        'RegionTwo': {
-            'username': 'demo',
-            'project_id': '111111',
-            'api_key': 'some_key',
-            'auth_url': 'https://identity.example.com/v2.0',
-            'auth_system': 'keystone',
-        },
-
-    },
-    'region_mapping_loc': '/etc/stacktach/region_mapping.json',
-}
-
 region_mapping = {
     'RegionOne.prod.cell1': 'RegionOne',
     'RegionTwo.prod.cell1': 'RegionTwo',
@@ -65,7 +43,7 @@ class ReconcilerTestCase(unittest.TestCase):
         self.mox = mox.Mox()
         self.client = self.mox.CreateMockAnything()
         self.client.src_str = 'mocked_client'
-        self.reconciler = reconciler.Reconciler(config,
+        self.reconciler = reconciler.Reconciler({},
                                                 client=self.client,
                                                 region_mapping=region_mapping)
         self.mox.StubOutWithMock(models, 'RawData', use_mock_anything=True)
@@ -215,7 +193,7 @@ json_bridge_config = {
     'url': 'http://json_bridge.example.com/query/',
     'username': 'user',
     'password': 'pass',
-    'regions': {
+    'databases': {
         'RegionOne': 'nova',
     }
 }

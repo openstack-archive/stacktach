@@ -44,9 +44,9 @@ class Reconciler(object):
 
     def __init__(self, config, client=None, region_mapping=None):
         self.config = config
-        self.client = (client or Reconciler._load_client(config))
+        self.client = (client or Reconciler.load_client(config))
         self.region_mapping = (region_mapping or
-                               Reconciler._load_region_mapping(config))
+                               Reconciler.load_region_mapping(config))
 
     @classmethod
     def load_client(cls, config):

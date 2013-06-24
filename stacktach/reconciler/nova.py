@@ -17,7 +17,7 @@ class JSONBridgeClient(object):
         self.config = config
 
     def _url_for_region(self, region):
-        return self.config['url'] + self.config['regions'][region]
+        return self.config['url'] + self.config['databases'][region]
 
     def _do_query(self, region, query):
         data = {'sql': query}
