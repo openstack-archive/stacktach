@@ -247,10 +247,6 @@ def _verify_with_reconciled_data(exist, ex):
                        delete_type="InstanceReconcile")
 
 
-def _attempt_reconciliation(exists, ex):
-    pass
-
-
 def _verify(exist):
     verified = False
     try:
@@ -270,30 +266,12 @@ def _verify(exist):
             verified = True
             _mark_exist_verified(exist)
         except NotFound, rec_e:
-            # No reconciled data available, so let's try to reconcile
-            if _attempt_reconciliation(exist, rec_e):
-                # We were able to reconcile the data, but we still need
-                # to record why it originally failed
-                verified = True
-                _mark_exist_verified(exist,
-                                     reconciled=True,
-                                     reason=str(orig_e))
-            else:
-                # Couldn't reconcile the data, just mark it failed
-                _mark_exist_failed(exist, reason=str(orig_e))
+            # No reconciled data, just mark it failed
+            _mark_exist_failed(exist, reason=str(orig_e))
         except VerificationException, rec_e:
-            # Reconciled data was available, but it's wrong as well
-            # Let's try to reconcile again
-            if _attempt_reconciliation(exist, rec_e):
-                # We were able to reconcile the data, but we still need
-                # to record why it failed again
-                verified = True
-                _mark_exist_verified(exist,
-                                     reconciled=True,
-                                     reason=str(rec_e))
-            else:
-                # Couldn't reconcile the data, just mark it failed
-                _mark_exist_failed(exist, reason=str(rec_e))
+            # Verification failed against reconciled data, mark it failed
+            #    using the second failure.
+            _mark_exist_failed(exist, reason=str(rec_e))
         except Exception, rec_e:
             _mark_exist_failed(exist, reason=rec_e.__class__.__name__)
             LOG.exception(rec_e)
