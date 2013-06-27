@@ -278,11 +278,12 @@ def _process_exists(raw, body):
         values['raw'] = raw
         values['tenant'] = payload['tenant_id']
         image_meta = payload.get('image_meta', {})
-        usage.rax_options = image_meta.get('com.rackspace__1__options', '')
-        usage.os_architecture = image_meta.get('org.openstack__1__architecture',
-                                               '')
-        usage.os_version = image_meta.get('org.openstack__1__os_version', '')
-        usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
+        values['rax_options'] = image_meta.get('com.rackspace__1__options', '')
+        os_arch = image_meta.get('org.openstack__1__architecture', '')
+        values['os_architecture'] = os_arch
+        os_version = image_meta.get('org.openstack__1__os_version', '')
+        values['os_version'] = os_version
+        values['os_distro'] = image_meta.get('org.openstack__1__os_distro', '')
 
         deleted_at = payload.get('deleted_at')
         if deleted_at and deleted_at != '':
