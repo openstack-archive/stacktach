@@ -193,10 +193,12 @@ def _process_usage_for_new_launch(raw, body):
         usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
 
     usage.tenant = payload['tenant_id']
-    usage.rax_options = payload['image_meta']['com.rackspace__1__options']
-    usage.os_architecture = payload['image_meta']['org.openstack__1__architecture']
-    usage.os_version = payload['image_meta']['org.openstack__1__os_version']
-    usage.os_distro = payload['image_meta']['org.openstack__1__os_distro']
+    image_meta = payload.get('image_meta', {})
+    usage.rax_options = image_meta.get('com.rackspace__1__options', '')
+    usage.os_architecture = image_meta.get('org.openstack__1__architecture',
+                                           '')
+    usage.os_version = image_meta.get('org.openstack__1__os_version', '')
+    usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
     STACKDB.save(usage)
 
 
@@ -224,10 +226,12 @@ def _process_usage_for_updates(raw, body):
         usage.instance_type_id = payload['new_instance_type_id']
 
     usage.tenant = payload['tenant_id']
-    usage.rax_options = payload['image_meta']['com.rackspace__1__options']
-    usage.os_architecture = payload['image_meta']['org.openstack__1__architecture']
-    usage.os_version = payload['image_meta']['org.openstack__1__os_version']
-    usage.os_distro = payload['image_meta']['org.openstack__1__os_distro']
+    image_meta = payload.get('image_meta', {})
+    usage.rax_options = image_meta.get('com.rackspace__1__options', '')
+    usage.os_architecture = image_meta.get('org.openstack__1__architecture',
+                                           '')
+    usage.os_version = image_meta.get('org.openstack__1__os_version', '')
+    usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
 
     STACKDB.save(usage)
 
@@ -273,10 +277,12 @@ def _process_exists(raw, body):
             values['usage'] = usage
         values['raw'] = raw
         values['tenant'] = payload['tenant_id']
-        values['rax_options'] = payload['image_meta']['com.rackspace__1__options']
-        values['os_architecture'] = payload['image_meta']['org.openstack__1__architecture']
-        values['os_version'] = payload['image_meta']['org.openstack__1__os_version']
-        values['os_distro'] = payload['image_meta']['org.openstack__1__os_distro']
+        image_meta = payload.get('image_meta', {})
+        usage.rax_options = image_meta.get('com.rackspace__1__options', '')
+        usage.os_architecture = image_meta.get('org.openstack__1__architecture',
+                                               '')
+        usage.os_version = image_meta.get('org.openstack__1__os_version', '')
+        usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
 
         deleted_at = payload.get('deleted_at')
         if deleted_at and deleted_at != '':
