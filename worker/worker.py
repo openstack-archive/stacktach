@@ -55,7 +55,8 @@ class NovaConsumer(kombu.mixins.ConsumerMixin):
 
     def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
         return kombu.entity.Exchange(name, type=type, exclusive=exclusive,
-                                     durable=self.durable, auto_delete=auto_delete)
+                                     durable=self.durable,
+                                     auto_delete=auto_delete)
 
     def _create_queue(self, name, nova_exchange, routing_key, exclusive=False,
                      auto_delete=False):

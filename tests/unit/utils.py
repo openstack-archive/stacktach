@@ -40,6 +40,18 @@ REQUEST_ID_1 = 'req-611a4d70-9e47-4b27-a95e-27996cc40c06'
 REQUEST_ID_2 = 'req-a951dec0-52ee-425d-9f56-d68bd1ad00ac'
 REQUEST_ID_3 = 'req-039a33f7-5849-4406-8166-4db8cd085f52'
 
+RAX_OPTIONS_1 = '1'
+RAX_OPTIONS_2 = '2'
+
+OS_DISTRO_1 = "linux"
+OS_DISTRO_2 = "selinux"
+
+OS_ARCH_1 = "x86"
+OS_ARCH_2 = "x64"
+
+OS_VERSION_1 = "1"
+OS_VERSION_2 = "2"
+
 
 def decimal_utc(t = datetime.datetime.utcnow()):
     return dt.dt_to_decimal(t)
@@ -48,29 +60,29 @@ def decimal_utc(t = datetime.datetime.utcnow()):
 def create_nova_notif(request_id=None, instance=INSTANCE_ID_1, type_id='1',
                       launched=None, deleted=None, new_type_id=None,
                       message_id=MESSAGE_ID_1, audit_period_beginning=None,
-                      audit_period_ending=None, tenant_id = None):
+                      audit_period_ending=None, tenant_id=None,
+                      rax_options=None, os_architecture=None,
+                      os_version=None, os_distro=None):
     notif = ['', {
         'message_id': message_id,
         'payload': {
+            'image_meta': {},
             'instance_id': instance,
             'instance_type_id': type_id,
-            }
+        }
     }]
 
-    if request_id:
-        notif[1]['_context_request_id'] = request_id
-    if launched:
-        notif[1]['payload']['launched_at'] = launched
-    if deleted:
-        notif[1]['payload']['deleted_at'] = deleted
-    if new_type_id:
-        notif[1]['payload']['new_instance_type_id'] = new_type_id
-    if audit_period_beginning:
-        notif[1]['payload']['audit_period_beginning'] = audit_period_beginning
-    if audit_period_ending:
-        notif[1]['payload']['audit_period_ending'] = audit_period_ending
-    if tenant_id:
-        notif[1]['payload']['tenant_id'] = tenant_id
+    notif[1]['_context_request_id'] = request_id
+    notif[1]['payload']['launched_at'] = launched
+    notif[1]['payload']['deleted_at'] = deleted
+    notif[1]['payload']['new_instance_type_id'] = new_type_id
+    notif[1]['payload']['audit_period_beginning'] = audit_period_beginning
+    notif[1]['payload']['audit_period_ending'] = audit_period_ending
+    notif[1]['payload']['tenant_id'] = tenant_id
+    notif[1]['payload']['image_meta']['com.rackspace__1__options'] = rax_options
+    notif[1]['payload']['image_meta']['org.openstack__1__architecture'] = os_architecture
+    notif[1]['payload']['image_meta']['org.openstack__1__os_distro'] = os_distro
+    notif[1]['payload']['image_meta']['org.openstack__1__os_version'] = os_version
 
     return notif
 
