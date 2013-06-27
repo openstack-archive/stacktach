@@ -14,10 +14,12 @@ class Notification(object):
         self.image_type = image_type.get_numeric_code(self.payload)
         self.publisher = self.body['publisher_id']
         self.event = self.body['event_type']
-        self.os_architecture = self.payload['image_meta']['org.openstack__1__architecture']
-        self.os_distro = self.payload['image_meta']['org.openstack__1__os_distro']
-        self.os_version = self.payload['image_meta']['org.openstack__1__os_version']
-        self.rax_options = self.payload['image_meta']['com.rackspace__1__options']
+        image_meta = self.payload.get('image_meta', {})
+        self.os_architecture = image_meta.get('org.openstack__1__architecture',
+                                              '')
+        self.os_distro = image_meta.get('org.openstack__1__os_distro', '')
+        self.os_version = image_meta.get('org.openstack__1__os_version', '')
+        self.rax_options = image_meta.get('com.rackspace__1__options', '')
 
     @property
     def when(self):
