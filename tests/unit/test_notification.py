@@ -65,6 +65,41 @@ class NotificationTestCase(unittest.TestCase):
         self.assertEquals(kwargs['event'], 'compute.instance.create.start')
         self.assertEquals(kwargs['request_id'], REQUEST_ID_1)
 
+    def test_rawdata_kwargs_missing_image_meta(self):
+        message = {
+            'event_type': 'compute.instance.create.start',
+            'publisher_id': 'compute.cpu1-n01.example.com',
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            'timestamp': '2013-06-12 06:30:52.790476',
+            'payload': {
+                'instance_id': INSTANCE_ID_1,
+                'state': 'active',
+                'old_state': 'building',
+                'old_task_state': 'build',
+                "new_task_state": 'rebuild_spawning',
+                'image_meta': {
+                    'image_type': 'base',
+                }
+            }
+        }
+        kwargs = Notification(message).rawdata_kwargs('1', 'monitor.info', 'json')
+
+        self.assertEquals(kwargs['host'], 'cpu1-n01.example.com')
+        self.assertEquals(kwargs['deployment'], '1')
+        self.assertEquals(kwargs['routing_key'], 'monitor.info')
+        self.assertEquals(kwargs['tenant'], TENANT_ID_1)
+        self.assertEquals(kwargs['json'], 'json')
+        self.assertEquals(kwargs['state'], 'active')
+        self.assertEquals(kwargs['old_state'], 'building')
+        self.assertEquals(kwargs['old_task'], 'build')
+        self.assertEquals(kwargs['task'], 'rebuild_spawning')
+        self.assertEquals(kwargs['image_type'], 1)
+        self.assertEquals(kwargs['when'], Decimal('1371018652.790476'))
+        self.assertEquals(kwargs['publisher'], 'compute.cpu1-n01.example.com')
+        self.assertEquals(kwargs['event'], 'compute.instance.create.start')
+        self.assertEquals(kwargs['request_id'], REQUEST_ID_1)
+
     def test_rawdata_kwargs_for_message_with_no_host(self):
         message = {
             'event_type': 'compute.instance.create.start',
