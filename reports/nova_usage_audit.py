@@ -30,12 +30,21 @@ from django.db.models import F
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
+from stacktach.reconciler import Reconciler
 
-OLD_LAUNCHES_QUERY = "select * from stacktach_instanceusage " \
-                     "where launched_at is not null and " \
-                     "launched_at < %s and instance not in " \
-                     "(select distinct(instance) " \
-                     "from stacktach_instancedeletes where deleted_at < %s)"
+OLD_LAUNCHES_QUERY = """
+select * from stacktach_instanceusage where
+    launched_at is not null and
+    launched_at < %s and
+    instance not in
+        (select distinct(instance)
+            from stacktach_instancedeletes where
+                deleted_at < %s union
+        select distinct(instance)
+            from stacktach_instancereconcile where
+                deleted_at < %s);"""
+
+reconciler = None
 
 
 def _get_new_launches(beginning, ending):
@@ -63,25 +72,34 @@ def _get_exists(beginning, ending):
     return models.InstanceExists.objects.filter(**filters)
 
 
-def _audit_launches_to_exists(launches, exists):
+def _audit_launches_to_exists(launches, exists, beginning):
     fails = []
     for (instance, launches) in launches.items():
         if instance in exists:
-            for launch1 in launches:
+            for expected in launches:
                 found = False
-                for launch2 in exists[instance]:
-                    if int(launch1['launched_at']) == int(launch2['launched_at']):
+                for actual in exists[instance]:
+                    if int(expected['launched_at']) == \
+                            int(actual['launched_at']):
                     # HACK (apmelton): Truncate the decimal because we may not
                     #    have the milliseconds.
                         found = True
 
                 if not found:
+                    rec = False
+                    if reconciler:
+                        args = (expected['id'], beginning)
+                        rec = reconciler.missing_exists_for_instance(*args)
                     msg = "Couldn't find exists for launch (%s, %s)"
-                    msg = msg % (instance, launch1['launched_at'])
-                    fails.append(['Launch', launch1['id'], msg])
+                    msg = msg % (instance, expected['launched_at'])
+                    fails.append(['Launch', expected['id'], msg, 'Y' if rec else 'N'])
         else:
+            rec = False
+            if reconciler:
+                args = (launches[0]['id'], beginning)
+                rec = reconciler.missing_exists_for_instance(*args)
             msg = "No exists for instance (%s)" % instance
-            fails.append(['Launch', '-', msg])
+            fails.append(['Launch', '-', msg, 'Y' if rec else 'N'])
     return fails
 
 
@@ -175,8 +193,13 @@ def _launch_audit_for_period(beginning, ending):
         else:
             launches_dict[instance] = [l, ]
 
-    old_launches = models.InstanceUsage.objects.raw(OLD_LAUNCHES_QUERY,
-                                                    [beginning, beginning])
+    # NOTE (apmelton)
+    # Django's safe substitution doesn't allow dict substitution...
+    # Thus, we send it 'beginning' three times...
+    old_launches = models.InstanceUsage.objects\
+                         .raw(OLD_LAUNCHES_QUERY,
+                              [beginning, beginning, beginning])
+
     old_launches_dict = {}
     for launch in old_launches:
         instance = launch.instance
@@ -205,7 +228,8 @@ def _launch_audit_for_period(beginning, ending):
             exists_dict[instance] = [e, ]
 
     launch_to_exists_fails = _audit_launches_to_exists(launches_dict,
-                                                       exists_dict)
+                                                       exists_dict,
+                                                       beginning)
 
     return launch_to_exists_fails, new_launches.count(), len(old_launches_dict)
 
@@ -222,11 +246,11 @@ def audit_for_period(beginning, ending):
 
     summary = {
         'verifier': verify_summary,
-        'launch_fails': {
-            'total_failures': len(detail),
+        'launch_summary': {
             'new_launches': new_count,
-            'old_launches': old_count
-        }
+            'old_launches': old_count,
+            'failures': len(detail)
+        },
     }
 
     details = {
@@ -276,7 +300,7 @@ def store_results(start, end, summary, details):
 
 def make_json_report(summary, details):
     report = [{'summary': summary},
-              ['Object', 'ID', 'Error Description']]
+              ['Object', 'ID', 'Error Description', 'Reconciled?']]
     report.extend(details['exist_fails'])
     report.extend(details['launch_fails'])
     return json.dumps(report)
@@ -302,7 +326,19 @@ if __name__ == '__main__':
                         help="If set to true, report will be stored. "
                              "Otherwise, it will just be printed",
                         type=bool, default=False)
+    parser.add_argument('--reconcile',
+                        help="Enabled reconciliation",
+                        type=bool, default=False)
+    parser.add_argument('--reconciler_config',
+                        help="Location of the reconciler config file",
+                        type=str,
+                        default='/etc/stacktach/reconciler-config.json')
     args = parser.parse_args()
+
+    if args.reconcile:
+        with open(args.reconciler_config) as f:
+            reconciler_config = json.load(f)
+            reconciler = Reconciler(reconciler_config)
 
     if args.utcdatetime is not None:
         time = args.utcdatetime

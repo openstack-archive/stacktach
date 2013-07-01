@@ -1,0 +1,13 @@
+{
+    "client_class": "JSONBridgeClient",
+    "client": {
+        "url": "http://jsonbridge.example.com:8080/query/",
+        "username": "bridgeuser",
+        "password": "super_secure_password",
+        "regions": {
+            "RegionOne": "nova-regionone",
+            "RegionTwo": "nova-regiontwo"
+        }
+    },
+    "region_mapping_loc": "etc/sample_region_mapping.json"
+}
