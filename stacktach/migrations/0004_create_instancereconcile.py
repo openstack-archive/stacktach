@@ -53,7 +53,11 @@ class Migration(SchemaMigration):
             'instance_type_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'launched_at': ('django.db.models.fields.DecimalField', [], {'null': 'True', 'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
             'message_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'os_architecture': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'os_distro': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'os_version': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'raw': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'+'", 'null': 'True', 'to': u"orm['stacktach.RawData']"}),
+            'rax_options': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'send_status': ('django.db.models.fields.IntegerField', [], {'default': '0', 'null': 'True', 'db_index': 'True'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'pending'", 'max_length': '50', 'db_index': 'True'}),
             'tenant': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
@@ -76,6 +80,10 @@ class Migration(SchemaMigration):
             'instance': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'instance_type_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'launched_at': ('django.db.models.fields.DecimalField', [], {'null': 'True', 'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
+            'os_architecture': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'os_distro': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'os_version': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'rax_options': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
             'request_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'tenant': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'})
         },
@@ -116,6 +124,15 @@ class Migration(SchemaMigration):
             'task': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '30', 'null': 'True', 'blank': 'True'}),
             'tenant': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'when': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'})
+        },
+        u'stacktach.rawdataimagemeta': {
+            'Meta': {'object_name': 'RawDataImageMeta'},
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'os_architecture': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'os_distro': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'os_version': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'}),
+            'raw': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.RawData']"}),
+            'rax_options': ('django.db.models.fields.TextField', [], {'null': 'True', 'blank': 'True'})
         },
         u'stacktach.requesttracker': {
             'Meta': {'object_name': 'RequestTracker'},
