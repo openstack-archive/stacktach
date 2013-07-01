@@ -129,9 +129,6 @@ class StacktachDBTestCase(unittest.TestCase):
         self.assertEqual(returned, object)
         self.mox.VerifyAll()
 
-    def test_create_rawdata(self):
-        self._test_db_create_func(models.RawData, db.create_rawdata)
-
     def test_create_lifecycle(self):
         self._test_db_create_func(models.Lifecycle, db.create_lifecycle)
 

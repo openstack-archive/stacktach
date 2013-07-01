@@ -21,8 +21,19 @@ def get_or_create_deployment(name):
 
 
 def create_rawdata(**kwargs):
-    return models.RawData(**kwargs)
+    imagemeta_fields = ['os_architecture', 'os_version',
+                        'os_distro', 'rax_options']
+    imagemeta_kwargs = \
+        dict((k, v) for k, v in kwargs.iteritems() if k in imagemeta_fields)
+    rawdata_kwargs = \
+        dict((k, v) for k, v in kwargs.iteritems() if k not in imagemeta_fields)
+    rawdata = models.RawData(**rawdata_kwargs)
+    rawdata.save()
 
+    imagemeta_kwargs.update({'raw_id': rawdata.id})
+    save(models.RawDataImageMeta(**imagemeta_kwargs))
+
+    return rawdata
 
 def create_lifecycle(**kwargs):
     return models.Lifecycle(**kwargs)
