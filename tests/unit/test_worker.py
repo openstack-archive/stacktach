@@ -128,8 +128,9 @@ class ConsumerTestCase(unittest.TestCase):
         body_dict = {u'key': u'value'}
         message.body = json.dumps(body_dict)
 
+        mock_notification = self.mox.CreateMockAnything()
         mock_post_process_method = self.mox.CreateMockAnything()
-        mock_post_process_method(raw, body_dict)
+        mock_post_process_method(raw, mock_notification)
         old_handler = worker.POST_PROCESS_METHODS
         worker.POST_PROCESS_METHODS["RawData"] = mock_post_process_method
 
@@ -137,7 +138,7 @@ class ConsumerTestCase(unittest.TestCase):
                                  use_mock_anything=True)
         args = (routing_key, body_dict)
         views.process_raw_data(deployment, args, json.dumps(args), exchange) \
-            .AndReturn(raw)
+            .AndReturn((raw, mock_notification))
         message.ack()
 
         self.mox.StubOutWithMock(consumer, '_check_memory',
@@ -148,31 +149,6 @@ class ConsumerTestCase(unittest.TestCase):
         self.assertEqual(consumer.processed, 1)
         self.mox.VerifyAll()
         worker.POST_PROCESS_METHODS["RawData"] = old_handler
-
-    def test_process_no_raw_dont_ack(self):
-        deployment = self.mox.CreateMockAnything()
-        raw = self.mox.CreateMockAnything()
-        message = self.mox.CreateMockAnything()
-
-        exchange = 'nova'
-        consumer = worker.Consumer('test', None, deployment, True, {},
-                                   exchange, ["monitor.info", "monitor.error"])
-        routing_key = 'monitor.info'
-        message.delivery_info = {'routing_key': routing_key}
-        body_dict = {u'key': u'value'}
-        message.body = json.dumps(body_dict)
-        self.mox.StubOutWithMock(views, 'process_raw_data',
-                                 use_mock_anything=True)
-        args = (routing_key, body_dict)
-        views.process_raw_data(deployment, args, json.dumps(args), exchange) \
-            .AndReturn(None)
-        self.mox.StubOutWithMock(consumer, '_check_memory',
-                                 use_mock_anything=True)
-        consumer._check_memory()
-        self.mox.ReplayAll()
-        consumer._process(message)
-        self.assertEqual(consumer.processed, 0)
-        self.mox.VerifyAll()
 
     def test_run(self):
         config = {

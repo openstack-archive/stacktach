@@ -26,6 +26,7 @@ import mox
 
 import utils
 from utils import INSTANCE_ID_1
+from utils import DECIMAL_DUMMY_TIME
 from utils import OS_VERSION_1
 from utils import OS_ARCH_1
 from utils import OS_DISTRO_1
@@ -36,6 +37,7 @@ from utils import TENANT_ID_1
 from utils import INSTANCE_TYPE_ID_1
 from utils import DUMMY_TIME
 from utils import INSTANCE_TYPE_ID_2
+from utils import IMAGE_UUID_1
 from stacktach import stacklog
 from stacktach import notification
 from stacktach import views
@@ -75,7 +77,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
 
         self.assertEquals(
             views.process_raw_data(deployment, args, json_args, exchange),
-            mock_record)
+                                  (mock_record, mock_notification))
         self.mox.VerifyAll()
 
     def test_process_raw_data_old_timestamp(self):
@@ -709,4 +711,169 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         self.mox.ReplayAll()
         views._process_exists(raw, notif[1])
         self.mox.VerifyAll()
+
+
+class StacktachImageUsageParsingTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+        views.STACKDB = self.mox.CreateMockAnything()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_process_image_usage_for_new_launch(self):
+        raw = self.mox.CreateMockAnything()
+        values = {
+            'created_at': str(DUMMY_TIME),
+            'owner': TENANT_ID_1,
+            'uuid': IMAGE_UUID_1,
+            'size': 1234,
+            'last_raw': raw
+        }
+        notification = self.mox.CreateMockAnything()
+        notification.created_at = values['created_at']
+        notification.owner = values['owner']
+        notification.uuid = values['uuid']
+        notification.size = values['size']
+        notification.raw = values['last_raw']
+        views.STACKDB.create_image_usage(**values)
+        self.mox.ReplayAll()
+        views._process_glance_usage(raw, notification)
+        self.mox.VerifyAll()
+
+    def test_process_image_deletes(self):
+        raw = self.mox.CreateMockAnything()
+        values = {
+            'uuid': IMAGE_UUID_1,
+            'created_at': str(DUMMY_TIME),
+            'deleted_at': str(DUMMY_TIME),
+            'owner': TENANT_ID_1,
+            'size': 1234,
+            'raw': raw
+        }
+
+        notification = self.mox.CreateMockAnything()
+        notification.created_at = values['created_at']
+        notification.deleted_at = values['deleted_at']
+        notification.owner = values['owner']
+        notification.uuid = values['uuid']
+        notification.size = values['size']
+        notification.raw = values['raw']
+        views.STACKDB.create_image_delete(**values)
+        self.mox.ReplayAll()
+        views._process_glance_delete(raw, notification)
+        self.mox.VerifyAll()
+
+    def test_process_image_exists(self):
+        raw = self.mox.CreateMockAnything()
+        values = {
+            'uuid': IMAGE_UUID_1,
+            'created_at': DECIMAL_DUMMY_TIME,
+            'deleted_at': DECIMAL_DUMMY_TIME,
+            'audit_period_beginning': DECIMAL_DUMMY_TIME,
+            'audit_period_ending': DECIMAL_DUMMY_TIME,
+            'owner': TENANT_ID_1,
+            'size': 1234,
+            'raw': raw,
+            'usage': None,
+            'delete': None
+        }
+
+        notification = self.mox.CreateMockAnything()
+        notification.created_at = values['created_at']
+        notification.deleted_at = values['deleted_at']
+        notification.owner = values['owner']
+        notification.uuid = values['uuid']
+        notification.size = values['size']
+        notification.raw = values['raw']
+        notification.audit_period_beginning = values['audit_period_beginning']
+        notification.audit_period_ending = values['audit_period_ending']
+        created_at_range = (DECIMAL_DUMMY_TIME, DECIMAL_DUMMY_TIME+1)
+        views.STACKDB.get_image_usage(created_at__range=created_at_range,
+                                      uuid=notification.uuid).AndReturn(None)
+        views.STACKDB.get_image_delete(created_at__range=created_at_range,
+                                       uuid=notification.uuid).AndReturn(None)
+        views.STACKDB.create_image_exists(**values)
+
+        self.mox.ReplayAll()
+
+        views._process_glance_exists(raw, notification)
+        self.mox.VerifyAll()
+
+    def test_process_image_exists_with_usage_not_none(self):
+        raw = self.mox.CreateMockAnything()
+        usage = self.mox.CreateMockAnything()
+        values = {
+            'uuid': IMAGE_UUID_1,
+            'created_at': DECIMAL_DUMMY_TIME,
+            'deleted_at': DECIMAL_DUMMY_TIME,
+            'audit_period_beginning': DECIMAL_DUMMY_TIME,
+            'audit_period_ending': DECIMAL_DUMMY_TIME,
+            'owner': TENANT_ID_1,
+            'size': 1234,
+            'raw': raw,
+            'usage': usage,
+            'delete': None
+        }
+
+        notification = self.mox.CreateMockAnything()
+        notification.created_at = values['created_at']
+        notification.deleted_at = values['deleted_at']
+        notification.owner = values['owner']
+        notification.uuid = values['uuid']
+        notification.size = values['size']
+        notification.raw = values['raw']
+        notification.audit_period_beginning = values['audit_period_beginning']
+        notification.audit_period_ending = values['audit_period_ending']
+        created_at_range = (DECIMAL_DUMMY_TIME, DECIMAL_DUMMY_TIME+1)
+        views.STACKDB.get_image_usage(created_at__range=created_at_range,
+                                      uuid=notification.uuid).AndReturn(usage)
+        views.STACKDB.get_image_delete(created_at__range=created_at_range,
+                                       uuid=notification.uuid).AndReturn(None)
+        views.STACKDB.create_image_exists(**values)
+
+        self.mox.ReplayAll()
+
+        views._process_glance_exists(raw, notification)
+        self.mox.VerifyAll()
+
+
+    def test_process_image_exists_with_delete_not_none(self):
+        raw = self.mox.CreateMockAnything()
+        delete = self.mox.CreateMockAnything()
+        values = {
+            'uuid': IMAGE_UUID_1,
+            'created_at': DECIMAL_DUMMY_TIME,
+            'deleted_at': DECIMAL_DUMMY_TIME,
+            'audit_period_beginning': DECIMAL_DUMMY_TIME,
+            'audit_period_ending': DECIMAL_DUMMY_TIME,
+            'owner': TENANT_ID_1,
+            'size': 1234,
+            'raw': raw,
+            'usage': None,
+            'delete': delete
+        }
+
+        notification = self.mox.CreateMockAnything()
+        notification.created_at = values['created_at']
+        notification.deleted_at = values['deleted_at']
+        notification.owner = values['owner']
+        notification.uuid = values['uuid']
+        notification.size = values['size']
+        notification.raw = values['raw']
+        notification.audit_period_beginning = values['audit_period_beginning']
+        notification.audit_period_ending = values['audit_period_ending']
+        created_at_range = (DECIMAL_DUMMY_TIME, DECIMAL_DUMMY_TIME+1)
+        views.STACKDB.get_image_usage(created_at__range=created_at_range,
+                                      uuid=notification.uuid).AndReturn(None)
+        views.STACKDB.get_image_delete(created_at__range=created_at_range,
+                                       uuid=notification.uuid).AndReturn(delete)
+        views.STACKDB.create_image_exists(**values)
+
+        self.mox.ReplayAll()
+
+        views._process_glance_exists(raw, notification)
+        self.mox.VerifyAll()
+
+    # def test_process_image_exists_should_not_populate_delete_and_deleted_at_when_deleted_at_is_absent(self):
 

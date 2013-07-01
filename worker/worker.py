@@ -34,7 +34,9 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
+from django import db as django_db
 from stacktach import db
+from stacktach import notification
 from stacktach import stacklog
 from stacktach import views
 
@@ -84,12 +86,12 @@ class Consumer(kombu.mixins.ConsumerMixin):
         args = (routing_key, json.loads(body))
         asJson = json.dumps(args)
         # save raw and ack the message
-        raw = views.process_raw_data(self.deployment, args, asJson, self.exchange)
+        raw, notif = views.process_raw_data(
+            self.deployment, args, asJson, self.exchange)
 
-        if raw:
-            self.processed += 1
-            message.ack()
-            POST_PROCESS_METHODS[raw.get_name()](raw, args[1])
+        self.processed += 1
+        message.ack()
+        POST_PROCESS_METHODS[raw.get_name()](raw, notif)
 
         self._check_memory()
 

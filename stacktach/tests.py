@@ -22,7 +22,7 @@ from datetime import datetime
 from django.test import TransactionTestCase
 import db
 from stacktach.datetime_to_decimal import dt_to_decimal
-from stacktach.models import RawDataImageMeta
+from stacktach.models import RawDataImageMeta, ImageUsage, ImageDeletes
 from stacktach.models import GenericRawData
 from stacktach.models import GlanceRawData
 from stacktach.models import RawData
@@ -69,8 +69,8 @@ class RawDataImageMetaDbTestCase(TransactionTestCase):
         self.assertEquals(raw_image_meta.rax_options, kwargs['rax_options'])
 
 
-class GlanceRawDataTestCase(TransactionTestCase):
-    def test_create_rawdata_should_populate_glance_rawdata(self):
+class GlanceTestCase(TransactionTestCase):
+    def _create_glance_rawdata(self):
         deployment = db.get_or_create_deployment('deployment1')[0]
         kwargs = {
             'deployment': deployment,
@@ -88,13 +88,51 @@ class GlanceRawDataTestCase(TransactionTestCase):
             'uuid': '1234-5678-0912-3456',
             'status': 'active',
         }
-
         db.create_glance_rawdata(**kwargs)
-        rawdata = GlanceRawData.objects.all().order_by('-id')[0]
+        rawdata = GlanceRawData.objects.all()[0]
+        return kwargs, rawdata
+
+    def test_create_rawdata_should_populate_glance_rawdata(self):
+        kwargs, rawdata = self._create_glance_rawdata()
 
         for field in get_model_fields(GlanceRawData):
             if field.name != 'id':
                 self.assertEquals(getattr(rawdata, field.name),
+                                  kwargs[field.name])
+
+    def test_create_glance_usage_should_populate_image_usage(self):
+        _, rawdata = self._create_glance_rawdata()
+        kwargs = {
+            'uuid': '1',
+            'created_at': dt_to_decimal(datetime.utcnow()),
+            'owner': '1234567',
+            'size': 12345,
+            'last_raw': rawdata
+        }
+        db.create_image_usage(**kwargs)
+        usage = ImageUsage.objects.all()[0]
+
+        for field in get_model_fields(ImageUsage):
+            if field.name != 'id':
+                self.assertEquals(getattr(usage, field.name),
+                                  kwargs[field.name])
+
+    def test_create_image_delete_should_populate_image_delete(self):
+        _, rawdata = self._create_glance_rawdata()
+        kwargs = {
+            'uuid': '1',
+            'created_at': dt_to_decimal(datetime.utcnow()),
+            'owner': 'owner',
+            'size': 12345,
+            'raw': rawdata,
+            'deleted_at': dt_to_decimal(datetime.utcnow())
+        }
+        db.create_image_delete(**kwargs)
+        image_delete = ImageDeletes.objects.all()[0]
+
+        for field in get_model_fields(ImageDeletes):
+            if field.name != 'id':
+                self.assertEquals(getattr(image_delete, field.name),
                                   kwargs[field.name])
 
 

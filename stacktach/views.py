@@ -295,6 +295,55 @@ def _process_exists(raw, body):
         stacklog.warn("Ignoring exists without launched_at. RawData(%s)" % raw.id)
 
 
+def _process_glance_usage(raw, notification):
+    values = {
+        'uuid': notification.uuid,
+        'created_at': notification.created_at,
+        'owner': notification.owner,
+        'size': notification.size,
+        'last_raw': raw
+    }
+    STACKDB.create_image_usage(**values)
+
+
+def _process_glance_delete(raw, notification):
+    values = {
+        'uuid': notification.uuid,
+        'created_at': notification.created_at,
+        'owner': notification.owner,
+        'size': notification.size,
+        'raw': raw,
+        'deleted_at': notification.deleted_at
+    }
+    STACKDB.create_image_delete(**values)
+
+
+def _process_glance_exists(raw, notification):
+    if notification.created_at:
+        values = {
+            'uuid': notification.uuid,
+            'audit_period_beginning': notification.audit_period_beginning,
+            'audit_period_ending': notification.audit_period_ending,
+            'owner': notification.owner,
+            'size': notification.size,
+            'raw': raw,
+        }
+        created_at_range = (notification.created_at, notification.created_at+1)
+        usage = STACKDB.get_image_usage(uuid=notification.uuid,
+                                         created_at__range=created_at_range)
+        values['usage'] = usage
+        values['created_at'] = notification.created_at
+        if notification.deleted_at:
+            delete = STACKDB.get_image_delete(uuid=notification.uuid,
+                                              created_at__range=created_at_range)
+            values['delete'] = delete
+            values['deleted_at'] = notification.deleted_at
+
+        STACKDB.create_image_exists(**values)
+    else:
+        stacklog.warn("Ignoring exists without created_at. GlanceRawData(%s)"
+                      % raw.id)
+
 USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['create_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['rebuild_start']: _process_usage_for_new_launch,
@@ -306,8 +355,14 @@ USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
     INSTANCE_EVENT['delete_end']: _process_delete,
-    INSTANCE_EVENT['exists']: _process_exists,
-} 
+    INSTANCE_EVENT['exists']: _process_exists
+}
+
+GLANCE_USAGE_PROCESS_MAPPING = {
+    'image.activate': _process_glance_usage,
+    'image.delete': _process_glance_delete,
+    'image.exists': _process_glance_exists
+}
 
 
 def aggregate_usage(raw, body):
@@ -318,6 +373,11 @@ def aggregate_usage(raw, body):
         USAGE_PROCESS_MAPPING[raw.event](raw, body)
 
 
+def aggregate_glance_usage(raw, body):
+    if raw.event in GLANCE_USAGE_PROCESS_MAPPING.keys():
+        GLANCE_USAGE_PROCESS_MAPPING[raw.event](raw, body)
+
+
 def process_raw_data(deployment, args, json_args, exchange):
     """This is called directly by the worker to add the event to the db."""
     db.reset_queries()
@@ -325,19 +385,20 @@ def process_raw_data(deployment, args, json_args, exchange):
     routing_key, body = args
     notif = notification.notification_factory(body, deployment, routing_key,
                                               json_args, exchange)
-    return notif.save()
+    raw = notif.save()
+    return raw, notif
 
 
-def post_process_rawdata(raw, body):
+def post_process_rawdata(raw, notification):
     aggregate_lifecycle(raw)
-    aggregate_usage(raw, body)
+    aggregate_usage(raw, notification)
 
 
-def post_process_glancerawdata(raw, body):
-    pass
+def post_process_glancerawdata(raw, notification):
+    aggregate_glance_usage(raw, notification)
 
 
-def post_process_genericrawdata(raw, body):
+def post_process_genericrawdata(raw, body, notification):
     pass
 
 

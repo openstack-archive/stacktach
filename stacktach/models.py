@@ -1,18 +1,3 @@
-# Copyright 2012 - Dark Secret Software Inc.
-# All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License"); you may
-# not use this file except in compliance with the License. You may obtain
-# a copy of the License at
-#
-# http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-# License for the specific language governing permissions and limitations
-# under the License.
-
 from django import forms
 from django.db import models
 
@@ -315,6 +300,61 @@ class GlanceRawData(models.Model):
     @staticmethod
     def get_name():
         return GlanceRawData.__name__
+
+
+class ImageUsage(models.Model):
+    uuid = models.CharField(max_length=50, db_index=True)
+    created_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True)
+    owner = models.CharField(max_length=50, db_index=True)
+    size = models.BigIntegerField(max_length=20)
+    last_raw = models.ForeignKey(GlanceRawData)
+
+
+class ImageDeletes(models.Model):
+    uuid = models.CharField(max_length=50, db_index=True)
+    created_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True)
+    deleted_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True)
+    owner = models.CharField(max_length=50, db_index=True)
+    size = models.BigIntegerField(max_length=20)
+    raw = models.ForeignKey(GlanceRawData)
+
+
+class ImageExists(models.Model):
+    PENDING = 'pending'
+    VERIFYING = 'verifying'
+    VERIFIED = 'verified'
+    FAILED = 'failed'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending Verification'),
+        (VERIFYING, 'Currently Being Verified'),
+        (VERIFIED, 'Passed Verification'),
+        (FAILED, 'Failed Verification'),
+    ]
+
+    uuid = models.CharField(max_length=50, db_index=True)
+    created_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True)
+    deleted_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True)
+    audit_period_beginning = models.DecimalField(max_digits=20,
+                                                 decimal_places=6,
+                                                 db_index=True)
+    audit_period_ending = models.DecimalField(max_digits=20,
+                                              decimal_places=6, db_index=True)
+    status = models.CharField(max_length=50, db_index=True,
+                              choices=STATUS_CHOICES,
+                              default=PENDING)
+    fail_reason = models.CharField(max_length=300, db_index=True, null=True)
+    raw = models.ForeignKey(GlanceRawData, related_name='+')
+    usage = models.ForeignKey(ImageUsage, related_name='+')
+    delete = models.ForeignKey(ImageDeletes, related_name='+')
+    send_status = models.IntegerField(default=0, db_index=True)
+    owner = models.CharField(max_length=255, db_index=True)
+    size = models.BigIntegerField(max_length=20)
+
 
 def get_model_fields(model):
     return model._meta.fields

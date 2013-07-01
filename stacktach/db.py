@@ -104,3 +104,32 @@ def create_generic_rawdata(**kwargs):
     rawdata.save()
 
     return rawdata
+
+
+def create_image_usage(**kwargs):
+    usage = models.ImageUsage(**kwargs)
+    usage.save()
+
+    return usage
+
+
+def create_image_delete(**kwargs):
+    delete = models.ImageDeletes(**kwargs)
+    delete.save()
+
+    return delete
+
+
+def create_image_exists(**kwargs):
+    exists = models.ImageExists(**kwargs)
+    exists.save()
+
+    return exists
+
+
+def get_image_delete(**kwargs):
+    return _safe_get(models.ImageDeletes, **kwargs)
+
+
+def get_image_usage(**kwargs):
+    return _safe_get(models.ImageUsage, **kwargs)
