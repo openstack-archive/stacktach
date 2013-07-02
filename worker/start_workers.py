@@ -3,7 +3,6 @@ import signal
 import sys
 
 from multiprocessing import Process
-from worker import config
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir, os.pardir))
@@ -11,6 +10,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 import worker.worker as worker
+from worker import config
 
 processes = []
 

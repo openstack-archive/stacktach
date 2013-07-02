@@ -42,7 +42,8 @@ class Migration(DataMigration):
         json_dict = json.loads(json_message)
         routing_key = json_dict[0]
         body = json_dict[1]
-        return notification_factory(body, None, routing_key, json_message, None)
+        return notification_factory(body, None, routing_key, json_message,
+                                    'nova')
 
     def forwards(self, orm):
         # Note: Don't use "from appname.models import ModelName".

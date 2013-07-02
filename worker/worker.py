@@ -114,9 +114,9 @@ class Consumer(kombu.mixins.ConsumerMixin):
             per_message = 0
             if self.total_processed:
                 per_message = idiff / self.total_processed
-            LOG.debug("%20s %6dk/%6dk ram, "
+            LOG.debug("%20s %20s %6dk/%6dk ram, "
                       "%3d/%4d msgs @ %6dk/msg" %
-                      (self.name, diff, idiff, self.processed,
+                      (self.name, self.exchange, diff, idiff, self.processed,
                       self.total_processed, per_message))
             self.last_vsz = self.pmi.vsz
             self.processed = 0

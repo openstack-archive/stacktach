@@ -12,7 +12,7 @@ class Migration(SchemaMigration):
         db.create_table(u'stacktach_glancerawdata', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('deployment', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.Deployment'])),
-            ('owner', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('owner', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=255, null=True, blank=True)),
             ('json', self.gf('django.db.models.fields.TextField')()),
             ('routing_key', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
             ('when', self.gf('django.db.models.fields.DecimalField')(max_digits=20, decimal_places=6, db_index=True)),
@@ -22,8 +22,8 @@ class Migration(SchemaMigration):
             ('host', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
             ('instance', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
             ('request_id', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
-            ('uuid', self.gf('django.db.models.fields.CharField')(max_length=50)),
-            ('status', self.gf('django.db.models.fields.CharField')(default='queued', max_length=50, db_index=True)),
+            ('uuid', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=36, null=True, blank=True)),
+            ('status', self.gf('django.db.models.fields.CharField')(max_length=30, null=True, db_index=True)),
             ('image_type', self.gf('django.db.models.fields.IntegerField')(default=0, null=True, db_index=True)),
         ))
         db.send_create_signal(u'stacktach', ['GlanceRawData'])
@@ -86,13 +86,13 @@ class Migration(SchemaMigration):
             'image_type': ('django.db.models.fields.IntegerField', [], {'default': '0', 'null': 'True', 'db_index': 'True'}),
             'instance': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'json': ('django.db.models.fields.TextField', [], {}),
-            'owner': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'owner': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '255', 'null': 'True', 'blank': 'True'}),
             'publisher': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '100', 'null': 'True', 'blank': 'True'}),
             'request_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'routing_key': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'service': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
-            'status': ('django.db.models.fields.CharField', [], {'default': "'queued'", 'max_length': '50', 'db_index': 'True'}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '50'}),
+            'status': ('django.db.models.fields.CharField', [], {'max_length': '30', 'null': 'True', 'db_index': 'True'}),
+            'uuid': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '36', 'null': 'True', 'blank': 'True'}),
             'when': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'})
         },
         u'stacktach.instancedeletes': {
@@ -124,6 +124,17 @@ class Migration(SchemaMigration):
             'status': ('django.db.models.fields.CharField', [], {'default': "'pending'", 'max_length': '50', 'db_index': 'True'}),
             'tenant': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
             'usage': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'+'", 'null': 'True', 'to': u"orm['stacktach.InstanceUsage']"})
+        },
+        u'stacktach.instancereconcile': {
+            'Meta': {'object_name': 'InstanceReconcile'},
+            'deleted_at': ('django.db.models.fields.DecimalField', [], {'null': 'True', 'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
+            u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
+            'instance': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'instance_type_id': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '50', 'null': 'True', 'blank': 'True'}),
+            'launched_at': ('django.db.models.fields.DecimalField', [], {'null': 'True', 'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
+            'row_created': ('django.db.models.fields.DateTimeField', [], {'auto_now_add': 'True', 'blank': 'True'}),
+            'row_updated': ('django.db.models.fields.DateTimeField', [], {'auto_now': 'True', 'blank': 'True'}),
+            'source': ('django.db.models.fields.CharField', [], {'db_index': 'True', 'max_length': '150', 'null': 'True', 'blank': 'True'})
         },
         u'stacktach.instanceusage': {
             'Meta': {'object_name': 'InstanceUsage'},

@@ -1,3 +1,18 @@
+# Copyright 2012 - Dark Secret Software Inc.
+# All Rights Reserved.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+
 from django import forms
 from django.db import models
 
@@ -273,8 +288,8 @@ class GlanceRawData(models.Model):
     ]
 
     deployment = models.ForeignKey(Deployment)
-    owner = models.CharField(max_length=50, null=True, blank=True,
-                              db_index=True)
+    owner = models.CharField(max_length=255, null=True, blank=True,
+                             db_index=True)
     json = models.TextField()
     routing_key = models.CharField(max_length=50, null=True, blank=True,
                                    db_index=True)
@@ -291,9 +306,10 @@ class GlanceRawData(models.Model):
                                 db_index=True)
     request_id = models.CharField(max_length=50, null=True, blank=True,
                                   db_index=True)
-    uuid = models.CharField(max_length=50)
-    status = models.CharField(max_length=50, db_index=True,
-                              choices=STATUS_CHOICES, default=QUEUED)
+    uuid = models.CharField(max_length=36, null=True, blank=True,
+                            db_index=True)
+    status = models.CharField(max_length=30, db_index=True,
+                              choices=STATUS_CHOICES, null=True)
     image_type = models.IntegerField(null=True, default=0, db_index=True)
 
     @staticmethod
