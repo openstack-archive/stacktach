@@ -290,7 +290,7 @@ def store_results(start, end, summary, details):
         'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
         'period_start': start,
         'period_end': end,
-        'version': 2,
+        'version': 3,
         'name': 'nova usage audit'
     }
 
