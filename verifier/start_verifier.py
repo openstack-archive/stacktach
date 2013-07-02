@@ -59,7 +59,8 @@ if __name__ == '__main__':
     with open(config_filename, "r") as f:
         config = json.load(f)
 
-    process = Process(target=dbverifier.run, args=(config, ))
+    verifier = dbverifier.Verifier(config)
+    process = Process(target=verifier.run)
     process.start()
     signal.signal(signal.SIGINT, kill_time)
     signal.signal(signal.SIGTERM, kill_time)
