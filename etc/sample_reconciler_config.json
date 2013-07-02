@@ -4,7 +4,7 @@
         "url": "http://jsonbridge.example.com:8080/query/",
         "username": "bridgeuser",
         "password": "super_secure_password",
-        "regions": {
+        "databases": {
             "RegionOne": "nova-regionone",
             "RegionTwo": "nova-regiontwo"
         }
