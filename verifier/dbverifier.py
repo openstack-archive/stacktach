@@ -359,9 +359,9 @@ class Verifier(object):
             else:
                 pending.append(result)
 
-        results = pending
+        self.results = pending
         errored = finished - successful
-        return len(results), successful, errored
+        return len(self.results), successful, errored
 
     def verify_for_range(self, ending_max, callback=None):
         exists = _list_exists(ending_max=ending_max,
