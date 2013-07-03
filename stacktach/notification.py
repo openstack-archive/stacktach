@@ -18,6 +18,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 from stacktach import utils
+from stacktach import stacklog
 from stacktach import image_type
 from stacktach import db
 
@@ -93,7 +94,17 @@ class GlanceNotification(Notification):
         self.image_type = image_type.get_numeric_code(self.payload)
         self.status = self.payload.get('status', None)
         self.uuid = self.payload.get('id', None)
-
+        self.size = self.payload.get('size', None)
+        created_at = self.payload.get('created_at', None)
+        self.created_at = created_at and utils.str_time_to_unix(created_at)
+        audit_period_beginning = self.payload.get(
+            'audit_period_beginning', None)
+        self.audit_period_beginning = audit_period_beginning and\
+            utils.str_time_to_unix(audit_period_beginning)
+        audit_period_ending = self.payload.get(
+            'audit_period_ending', None)
+        self.audit_period_ending = audit_period_ending and \
+            utils.str_time_to_unix(audit_period_ending)
 
     @property
     def owner(self):
@@ -102,39 +113,81 @@ class GlanceNotification(Notification):
     @property
     def instance(self):
         return self.properties.get('instance_uuid', None)
+    @property
+    def deleted_at(self):
+        deleted_at = self.body.get('deleted_at', None)
+        deleted_at = deleted_at or self.payload.get('deleted_at', None)
+        return deleted_at and utils.str_time_to_unix(deleted_at)
 
     def save(self):
-        db.create_glance_rawdata(deployment=self.deployment,
-                                 routing_key=self.routing_key,
-                                 owner=self.owner,
-                                 json=self.json,
-                                 when=self.when,
-                                 publisher=self.publisher,
-                                 event=self.event,
-                                 service=self.service,
-                                 host=self.host,
-                                 instance=self.instance,
-                                 request_id=self.request_id,
-                                 image_type=self.image_type,
-                                 status=self.status,
-                                 uuid=self.uuid)
+        return db.create_glance_rawdata(deployment=self.deployment,
+                                        routing_key=self.routing_key,
+                                        owner=self.owner,
+                                        json=self.json,
+                                        when=self.when,
+                                        publisher=self.publisher,
+                                        event=self.event,
+                                        service=self.service,
+                                        host=self.host,
+                                        instance=self.instance,
+                                        request_id=self.request_id,
+                                        image_type=self.image_type,
+                                        status=self.status,
+                                        uuid=self.uuid)
+
+    def save_exists(self, raw):
+        if self.created_at:
+            values = {
+                'uuid': self.uuid,
+                'audit_period_beginning': self.audit_period_beginning,
+                'audit_period_ending': self.audit_period_ending,
+                'owner': self.owner,
+                'size': self.size,
+                'raw': raw
+            }
+            created_at_range = (self.created_at, self.created_at+1)
+            usage = db.get_image_usage(
+                uuid=self.uuid, created_at__range=created_at_range)
+            values['usage'] = usage
+            values['created_at'] = self.created_at
+            if self.deleted_at:
+                delete = db.get_image_delete(
+                    uuid=self.uuid, created_at__range=created_at_range)
+                values['delete'] = delete
+                values['deleted_at'] = self.deleted_at
+
+            db.create_image_exists(**values)
+        else:
+            stacklog.warn("Ignoring exists without created_at. GlanceRawData(%s)"
+                          % raw.id)
 
 
 class NovaNotification(Notification):
     def __init__(self, body, deployment, routing_key, json):
         super(NovaNotification, self).__init__(body, deployment, routing_key,
                                                json)
-        self.state = self.payload.get('state', "")
-        self.old_state = self.payload.get('old_state', "")
-        self.old_task = self.payload.get('old_task_state', "")
-        self.task = self.payload.get('new_task_state', "")
+        self.state = self.payload.get('state', '')
+        self.old_state = self.payload.get('old_state', '')
+        self.old_task = self.payload.get('old_task_state', '')
+        self.task = self.payload.get('new_task_state', '')
         self.image_type = image_type.get_numeric_code(self.payload)
         image_meta = self.payload.get('image_meta', {})
-        self.os_architecture = image_meta.get('org.openstack__1__architecture',
-                                              '')
+        self.os_architecture = \
+            image_meta.get('org.openstack__1__architecture', '')
         self.os_distro = image_meta.get('org.openstack__1__os_distro', '')
         self.os_version = image_meta.get('org.openstack__1__os_version', '')
         self.rax_options = image_meta.get('com.rackspace__1__options', '')
+        self.instance_type_id = self.payload.get('instance_type_id', None)
+        self.new_instance_type_id = \
+            self.payload.get('new_instance_type_id', None)
+        self.launched_at = self.payload.get('launched_at', None)
+        self.deleted_at = self.payload.get('deleted_at', None)
+        self.audit_period_beginning = self.payload.get(
+            'audit_period_beginning', None)
+        self.audit_period_ending = self.payload.get(
+            'audit_period_ending', None)
+        self.message = self.payload.get('message', None)
+        self.message_id = self.body.get('message_id', None)
 
     @property
     def host(self):

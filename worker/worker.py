@@ -34,9 +34,7 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
-from django import db as django_db
 from stacktach import db
-from stacktach import notification
 from stacktach import stacklog
 from stacktach import views
 

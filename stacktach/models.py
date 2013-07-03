@@ -316,7 +316,8 @@ class ImageDeletes(models.Model):
     created_at = models.DecimalField(max_digits=20,
                                      decimal_places=6, db_index=True)
     deleted_at = models.DecimalField(max_digits=20,
-                                     decimal_places=6, db_index=True)
+                                     decimal_places=6, db_index=True,
+                                     null=True)
     owner = models.CharField(max_length=50, db_index=True)
     size = models.BigIntegerField(max_length=20)
     raw = models.ForeignKey(GlanceRawData)
@@ -336,9 +337,11 @@ class ImageExists(models.Model):
 
     uuid = models.CharField(max_length=50, db_index=True)
     created_at = models.DecimalField(max_digits=20,
-                                     decimal_places=6, db_index=True)
+                                     decimal_places=6, db_index=True,
+                                     null=True)
     deleted_at = models.DecimalField(max_digits=20,
-                                     decimal_places=6, db_index=True)
+                                     decimal_places=6, db_index=True,
+                                     null=True)
     audit_period_beginning = models.DecimalField(max_digits=20,
                                                  decimal_places=6,
                                                  db_index=True)
@@ -347,10 +350,10 @@ class ImageExists(models.Model):
     status = models.CharField(max_length=50, db_index=True,
                               choices=STATUS_CHOICES,
                               default=PENDING)
-    fail_reason = models.CharField(max_length=300, db_index=True, null=True)
+    fail_reason = models.CharField(max_length=300, null=True)
     raw = models.ForeignKey(GlanceRawData, related_name='+')
-    usage = models.ForeignKey(ImageUsage, related_name='+')
-    delete = models.ForeignKey(ImageDeletes, related_name='+')
+    usage = models.ForeignKey(ImageUsage, related_name='+', null=True)
+    delete = models.ForeignKey(ImageDeletes, related_name='+', null=True)
     send_status = models.IntegerField(default=0, db_index=True)
     owner = models.CharField(max_length=255, db_index=True)
     size = models.BigIntegerField(max_length=20)
