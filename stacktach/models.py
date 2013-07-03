@@ -117,6 +117,9 @@ class InstanceDeletes(models.Model):
                                      decimal_places=6, db_index=True)
     raw = models.ForeignKey(RawData, null=True)
 
+    def deployment(self):
+        return self.raw.deployment
+
 
 class InstanceReconcile(models.Model):
     row_created = models.DateTimeField(auto_now_add=True)
@@ -180,6 +183,9 @@ class InstanceExists(models.Model):
     os_distro = models.TextField(null=True, blank=True)
     os_version = models.TextField(null=True, blank=True)
     rax_options = models.TextField(null=True, blank=True)
+
+    def deployment(self):
+        return self.raw.deployment
 
 
 class Timing(models.Model):

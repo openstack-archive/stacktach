@@ -21,9 +21,9 @@
 import datetime
 import decimal
 import json
+import time
 import unittest
 import uuid
-import multiprocessing
 
 import kombu.common
 import kombu.entity
@@ -90,7 +90,10 @@ class VerifierTestCase(unittest.TestCase):
             "enable_notifications": False,
         }
         self.pool = self.mox.CreateMockAnything()
-        self.verifier = dbverifier.Verifier(self.config, pool=self.pool)
+        self.reconciler = self.mox.CreateMockAnything()
+        self.verifier = dbverifier.Verifier(self.config,
+                                            pool=self.pool,
+                                            rec=self.reconciler)
 
         self.config_notif = {
             "tick_time": 30,
@@ -109,8 +112,10 @@ class VerifierTestCase(unittest.TestCase):
             }
         }
         self.pool_notif = self.mox.CreateMockAnything()
+        self.reconciler_notif = self.mox.CreateMockAnything()
         self.verifier_notif = dbverifier.Verifier(self.config_notif,
-                                                  pool=self.pool_notif)
+                                                  pool=self.pool_notif,
+                                                  rec=self.reconciler)
 
     def tearDown(self):
         self.mox.UnsetStubs()
@@ -638,9 +643,103 @@ class VerifierTestCase(unittest.TestCase):
         self.assertEqual(exist2.status, 'verifying')
         self.mox.VerifyAll()
 
+    def test_clean_results_full(self):
+        self.verifier.reconcile = True
+        result_not_ready = self.mox.CreateMockAnything()
+        result_not_ready.ready().AndReturn(False)
+        result_unsuccessful = self.mox.CreateMockAnything()
+        result_unsuccessful.ready().AndReturn(True)
+        result_unsuccessful.successful().AndReturn(False)
+        result_successful = self.mox.CreateMockAnything()
+        result_successful.ready().AndReturn(True)
+        result_successful.successful().AndReturn(True)
+        result_successful.get().AndReturn((True, None))
+        result_failed_verification = self.mox.CreateMockAnything()
+        result_failed_verification.ready().AndReturn(True)
+        result_failed_verification.successful().AndReturn(True)
+        failed_exists = self.mox.CreateMockAnything()
+        result_failed_verification.get().AndReturn((False, failed_exists))
+        self.verifier.results = [result_not_ready,
+                                 result_unsuccessful,
+                                 result_successful,
+                                 result_failed_verification]
+        self.mox.ReplayAll()
+        (result_count, success_count, errored) = self.verifier.clean_results()
+        self.assertEqual(result_count, 1)
+        self.assertEqual(success_count, 2)
+        self.assertEqual(errored, 1)
+        self.assertEqual(len(self.verifier.results), 1)
+        self.assertEqual(self.verifier.results[0], result_not_ready)
+        self.assertEqual(len(self.verifier.failed), 1)
+        self.assertEqual(self.verifier.failed[0], result_failed_verification)
+        self.mox.VerifyAll()
+
+    def test_clean_results_pending(self):
+        self.verifier.reconcile = True
+        result_not_ready = self.mox.CreateMockAnything()
+        result_not_ready.ready().AndReturn(False)
+        self.verifier.results = [result_not_ready]
+        self.mox.ReplayAll()
+        (result_count, success_count, errored) = self.verifier.clean_results()
+        self.assertEqual(result_count, 1)
+        self.assertEqual(success_count, 0)
+        self.assertEqual(errored, 0)
+        self.assertEqual(len(self.verifier.results), 1)
+        self.assertEqual(self.verifier.results[0], result_not_ready)
+        self.assertEqual(len(self.verifier.failed), 0)
+        self.mox.VerifyAll()
+
+    def test_clean_results_successful(self):
+        self.verifier.reconcile = True
+        result_successful = self.mox.CreateMockAnything()
+        result_successful.ready().AndReturn(True)
+        result_successful.successful().AndReturn(True)
+        result_successful.get().AndReturn((True, None))
+        self.verifier.results = [result_successful]
+        self.mox.ReplayAll()
+        (result_count, success_count, errored) = self.verifier.clean_results()
+        self.assertEqual(result_count, 0)
+        self.assertEqual(success_count, 1)
+        self.assertEqual(errored, 0)
+        self.assertEqual(len(self.verifier.results), 0)
+        self.assertEqual(len(self.verifier.failed), 0)
+        self.mox.VerifyAll()
+
+    def test_clean_results_unsuccessful(self):
+        self.verifier.reconcile = True
+        result_unsuccessful = self.mox.CreateMockAnything()
+        result_unsuccessful.ready().AndReturn(True)
+        result_unsuccessful.successful().AndReturn(False)
+        self.verifier.results = [result_unsuccessful]
+        self.mox.ReplayAll()
+        (result_count, success_count, errored) = self.verifier.clean_results()
+        self.assertEqual(result_count, 0)
+        self.assertEqual(success_count, 0)
+        self.assertEqual(errored, 1)
+        self.assertEqual(len(self.verifier.results), 0)
+        self.assertEqual(len(self.verifier.failed), 0)
+        self.mox.VerifyAll()
+
+    def test_clean_results_fail_verification(self):
+        self.verifier.reconcile = True
+        result_failed_verification = self.mox.CreateMockAnything()
+        result_failed_verification.ready().AndReturn(True)
+        result_failed_verification.successful().AndReturn(True)
+        failed_exists = self.mox.CreateMockAnything()
+        result_failed_verification.get().AndReturn((False, failed_exists))
+        self.verifier.results = [result_failed_verification]
+        self.mox.ReplayAll()
+        (result_count, success_count, errored) = self.verifier.clean_results()
+        self.assertEqual(result_count, 0)
+        self.assertEqual(success_count, 1)
+        self.assertEqual(errored, 0)
+        self.assertEqual(len(self.verifier.results), 0)
+        self.assertEqual(len(self.verifier.failed), 1)
+        self.assertEqual(self.verifier.failed[0], failed_exists)
+        self.mox.VerifyAll()
+
     def test_verify_for_range_with_callback(self):
         callback = self.mox.CreateMockAnything()
-        pool = self.mox.CreateMockAnything()
         when_max = datetime.datetime.utcnow()
         results = self.mox.CreateMockAnything()
         models.InstanceExists.objects.select_related().AndReturn(results)
@@ -667,6 +766,18 @@ class VerifierTestCase(unittest.TestCase):
         self.verifier.verify_for_range(when_max, callback=callback)
         self.assertEqual(exist1.status, 'verifying')
         self.assertEqual(exist2.status, 'verifying')
+        self.mox.VerifyAll()
+
+    def test_reconcile_failed(self):
+        self.verifier.reconcile = True
+        exists1 = self.mox.CreateMockAnything()
+        exists2 = self.mox.CreateMockAnything()
+        self.verifier.failed = [exists1, exists2]
+        self.reconciler.failed_validation(exists1)
+        self.reconciler.failed_validation(exists2)
+        self.mox.ReplayAll()
+        self.verifier.reconcile_failed()
+        self.assertEqual(len(self.verifier.failed), 0)
         self.mox.VerifyAll()
 
     def test_send_verified_notification_default_routing_key(self):
@@ -750,7 +861,7 @@ class VerifierTestCase(unittest.TestCase):
         dbverifier._create_connection(self.config_notif).AndReturn(conn)
         conn.__enter__().AndReturn(conn)
         self.mox.StubOutWithMock(self.verifier_notif, '_run')
-        self.verifier_notif._run(callback=mox.IgnoreArg())
+        self.verifier_notif._run(callback=mox.Not(mox.Is(None)))
         conn.__exit__(None, None, None)
         self.mox.ReplayAll()
         self.verifier_notif.run()
@@ -766,7 +877,7 @@ class VerifierTestCase(unittest.TestCase):
         dbverifier._create_connection(self.config_notif).AndReturn(conn)
         conn.__enter__().AndReturn(conn)
         self.mox.StubOutWithMock(self.verifier_notif, '_run')
-        self.verifier_notif._run(callback=mox.IgnoreArg())
+        self.verifier_notif._run(callback=mox.Not(mox.Is(None)))
         conn.__exit__(None, None, None)
         self.mox.ReplayAll()
         self.verifier_notif.run()
@@ -789,7 +900,7 @@ class VerifierTestCase(unittest.TestCase):
         dbverifier._create_connection(self.config_notif).AndReturn(conn)
         conn.__enter__().AndReturn(conn)
         self.mox.StubOutWithMock(self.verifier_notif, '_run_once')
-        self.verifier_notif._run_once(callback=mox.IgnoreArg())
+        self.verifier_notif._run_once(callback=mox.Not(mox.Is(None)))
         conn.__exit__(None, None, None)
         self.mox.ReplayAll()
         self.verifier_notif.run_once()
@@ -800,4 +911,124 @@ class VerifierTestCase(unittest.TestCase):
         self.verifier._run_once()
         self.mox.ReplayAll()
         self.verifier.run_once()
+        self.mox.VerifyAll()
+
+    def test_run_full_no_notifications(self):
+        self.verifier.reconcile = True
+        self.mox.StubOutWithMock(self.verifier, '_keep_running')
+        self.verifier._keep_running().AndReturn(True)
+        start = datetime.datetime.utcnow()
+        self.mox.StubOutWithMock(self.verifier, '_utcnow')
+        self.verifier._utcnow().AndReturn(start)
+        settle_time = self.config['settle_time']
+        settle_units = self.config['settle_units']
+        settle_offset = {settle_units: settle_time}
+        ending_max = start - datetime.timedelta(**settle_offset)
+        self.mox.StubOutWithMock(self.verifier, 'verify_for_range')
+        self.verifier.verify_for_range(ending_max, callback=None)
+        self.mox.StubOutWithMock(self.verifier, 'reconcile_failed')
+        result1 = self.mox.CreateMockAnything()
+        result2 = self.mox.CreateMockAnything()
+        self.verifier.results = [result1, result2]
+        result1.ready().AndReturn(True)
+        result1.successful().AndReturn(True)
+        result1.get().AndReturn((True, None))
+        result2.ready().AndReturn(True)
+        result2.successful().AndReturn(True)
+        result2.get().AndReturn((True, None))
+        self.verifier.reconcile_failed()
+        self.mox.StubOutWithMock(time, 'sleep', use_mock_anything=True)
+        time.sleep(self.config['tick_time'])
+        self.verifier._keep_running().AndReturn(False)
+        self.mox.ReplayAll()
+        self.verifier.run()
+        self.mox.VerifyAll()
+
+    def test_run_full(self):
+        self.verifier_notif.reconcile = True
+        self.mox.StubOutWithMock(self.verifier_notif, '_keep_running')
+        self.verifier_notif._keep_running().AndReturn(True)
+        start = datetime.datetime.utcnow()
+        self.mox.StubOutWithMock(self.verifier_notif, '_utcnow')
+        self.verifier_notif._utcnow().AndReturn(start)
+        settle_time = self.config['settle_time']
+        settle_units = self.config['settle_units']
+        settle_offset = {settle_units: settle_time}
+        ending_max = start - datetime.timedelta(**settle_offset)
+        self.mox.StubOutWithMock(self.verifier_notif, 'verify_for_range')
+        self.verifier_notif.verify_for_range(ending_max,
+                                             callback=mox.Not(mox.Is(None)))
+        self.mox.StubOutWithMock(self.verifier_notif, 'reconcile_failed')
+        result1 = self.mox.CreateMockAnything()
+        result2 = self.mox.CreateMockAnything()
+        self.verifier_notif.results = [result1, result2]
+        result1.ready().AndReturn(True)
+        result1.successful().AndReturn(True)
+        result1.get().AndReturn((True, None))
+        result2.ready().AndReturn(True)
+        result2.successful().AndReturn(True)
+        result2.get().AndReturn((True, None))
+        self.verifier_notif.reconcile_failed()
+        self.mox.StubOutWithMock(time, 'sleep', use_mock_anything=True)
+        time.sleep(self.config['tick_time'])
+        self.verifier_notif._keep_running().AndReturn(False)
+        self.mox.ReplayAll()
+        self.verifier_notif.run()
+        self.mox.VerifyAll()
+
+    def test_run_once_full_no_notifications(self):
+        self.verifier.reconcile = True
+        start = datetime.datetime.utcnow()
+        self.mox.StubOutWithMock(self.verifier, '_utcnow')
+        self.verifier._utcnow().AndReturn(start)
+        settle_time = self.config['settle_time']
+        settle_units = self.config['settle_units']
+        settle_offset = {settle_units: settle_time}
+        ending_max = start - datetime.timedelta(**settle_offset)
+        self.mox.StubOutWithMock(self.verifier, 'verify_for_range')
+        self.verifier.verify_for_range(ending_max, callback=None)
+        result1 = self.mox.CreateMockAnything()
+        result2 = self.mox.CreateMockAnything()
+        self.verifier.results = [result1, result2]
+        result1.ready().AndReturn(True)
+        result1.successful().AndReturn(True)
+        result1.get().AndReturn((True, None))
+        result2.ready().AndReturn(True)
+        result2.successful().AndReturn(True)
+        result2.get().AndReturn((True, None))
+        self.mox.StubOutWithMock(self.verifier, 'reconcile_failed')
+        self.verifier.reconcile_failed()
+        self.mox.StubOutWithMock(time, 'sleep', use_mock_anything=True)
+        time.sleep(self.config['tick_time'])
+        self.mox.ReplayAll()
+        self.verifier.run_once()
+        self.mox.VerifyAll()
+
+    def test_run_once_full(self):
+        self.verifier_notif.reconcile = True
+        start = datetime.datetime.utcnow()
+        self.mox.StubOutWithMock(self.verifier_notif, '_utcnow')
+        self.verifier_notif._utcnow().AndReturn(start)
+        settle_time = self.config['settle_time']
+        settle_units = self.config['settle_units']
+        settle_offset = {settle_units: settle_time}
+        ending_max = start - datetime.timedelta(**settle_offset)
+        self.mox.StubOutWithMock(self.verifier_notif, 'verify_for_range')
+        self.verifier_notif.verify_for_range(ending_max,
+                                             callback=mox.Not(mox.Is(None)))
+        result1 = self.mox.CreateMockAnything()
+        result2 = self.mox.CreateMockAnything()
+        self.verifier_notif.results = [result1, result2]
+        result1.ready().AndReturn(True)
+        result1.successful().AndReturn(True)
+        result1.get().AndReturn((True, None))
+        result2.ready().AndReturn(True)
+        result2.successful().AndReturn(True)
+        result2.get().AndReturn((True, None))
+        self.mox.StubOutWithMock(self.verifier_notif, 'reconcile_failed')
+        self.verifier_notif.reconcile_failed()
+        self.mox.StubOutWithMock(time, 'sleep', use_mock_anything=True)
+        time.sleep(self.config['tick_time'])
+        self.mox.ReplayAll()
+        self.verifier_notif.run_once()
         self.mox.VerifyAll()
