@@ -487,6 +487,6 @@ if __name__ == '__main__':
 
     verifier = Verifier(config)
     if args.run_once:
-        verifier.run_once(config)
+        verifier.run_once()
     else:
-        verifier.run(config)
+        verifier.run()
