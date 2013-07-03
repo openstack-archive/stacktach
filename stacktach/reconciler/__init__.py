@@ -23,6 +23,7 @@ import json
 from stacktach import models
 from stacktach.reconciler import exceptions
 from stacktach.reconciler import nova
+from stacktach import datetime_to_decimal as dt
 
 DEFAULT_CLIENT = nova.JSONBridgeClient
 
@@ -61,8 +62,8 @@ class Reconciler(object):
         with open(config['region_mapping_loc']) as f:
             return json.load(f)
 
-    def _region_for_launch(self, launch):
-        deployment = launch.deployment()
+    def _region_for_usage(self, usage):
+        deployment = usage.deployment()
         if deployment:
             deployment_name = str(deployment.name)
             if deployment_name in self.region_mapping:
@@ -72,14 +73,14 @@ class Reconciler(object):
         else:
             return False
 
-    def _reconcile_instance(self, launch, src,
+    def _reconcile_instance(self, usage, src,
                             launched_at=None, deleted_at=None,
                             instance_type_id=None):
         values = {
-            'instance': launch.instance,
-            'launched_at': (launched_at or launch.launched_at),
+            'instance': usage.instance,
+            'launched_at': (launched_at or usage.launched_at),
             'deleted_at': deleted_at,
-            'instance_type_id': (instance_type_id or launch.instance_type_id),
+            'instance_type_id': (instance_type_id or usage.instance_type_id),
             'source': 'reconciler:%s' % src,
         }
         models.InstanceReconcile(**values).save()
@@ -88,7 +89,7 @@ class Reconciler(object):
                                     period_beginning):
         reconciled = False
         launch = models.InstanceUsage.objects.get(id=launched_id)
-        region = self._region_for_launch(launch)
+        region = self._region_for_usage(launch)
         try:
             instance = self.client.get_instance(region, launch.instance)
             if instance['deleted'] and instance['deleted_at'] is not None:
@@ -105,3 +106,26 @@ class Reconciler(object):
             reconciled = False
 
         return reconciled
+
+    def failed_validation(self, exists):
+        reconcilable = False
+        region = self._region_for_usage(exists)
+        deleted_at = None
+        try:
+            instance = self.client.get_instance(region, exists.instance)
+            if (instance['launched_at'] == exists.launched_at and
+                    instance['instance_type_id'] == exists.instance_type_id):
+                if instance['deleted'] and exists.deleted_at is not None:
+                    if instance['deleted_at'] == exists.deleted_at:
+                        deleted_at = exists.deleted_at
+                        reconcilable = True
+                elif not instance['deleted'] and exists.deleted_at is None:
+                    reconcilable = True
+        except exceptions.NotFound:
+            reconcilable = False
+
+        if reconcilable:
+            self._reconcile_instance(exists, self.client.src_str,
+                                     deleted_at=deleted_at)
+
+        return reconcilable

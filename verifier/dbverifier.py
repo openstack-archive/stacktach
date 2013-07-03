@@ -23,7 +23,7 @@ import datetime
 import json
 import os
 import sys
-from time import sleep
+import time
 import uuid
 
 from django.db import transaction
@@ -44,6 +44,7 @@ LOG = stacklog.get_logger()
 
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
+from stacktach import reconciler
 from verifier import AmbiguousResults
 from verifier import FieldMismatch
 from verifier import NotFound
@@ -341,10 +342,25 @@ def _create_connection(config):
 
 
 class Verifier(object):
-    def __init__(self, config, pool=None):
+
+    def __init__(self, config, pool=None, rec=None):
         self.config = config
         self.pool = pool or multiprocessing.Pool(self.config['pool_size'])
+        self.reconcile = self.config.get('reconcile', False)
+        self.reconciler = self._load_reconciler(config, rec=rec)
         self.results = []
+        self.failed = []
+
+    def _load_reconciler(self, config, rec=None):
+        if rec:
+            return rec
+
+        if self.reconcile:
+            config_loc = config.get('reconciler_config',
+                                    '/etc/stacktach/reconciler_config.json')
+            with open(config_loc, 'r') as rec_config_file:
+                rec_config = json.load(rec_config_file)
+                return reconciler.Reconciler(rec_config)
 
     def clean_results(self):
         pending = []
@@ -355,6 +371,9 @@ class Verifier(object):
             if result.ready():
                 finished += 1
                 if result.successful():
+                    (verified, exists) = result.get()
+                    if self.reconcile and not verified:
+                        self.failed.append(exists)
                     successful += 1
             else:
                 pending.append(result)
@@ -386,22 +405,34 @@ class Verifier(object):
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
 
+    def reconcile_failed(self):
+        for failed_exist in self.failed:
+            self.reconciler.failed_validation(failed_exist)
+        self.failed = []
+
+    def _keep_running(self):
+        return True
+
+    def _utcnow(self):
+        return datetime.datetime.utcnow()
+
     def _run(self, callback=None):
         tick_time = self.config['tick_time']
         settle_units = self.config['settle_units']
         settle_time = self.config['settle_time']
-        while True:
+        while self._keep_running():
             with transaction.commit_on_success():
-                now = datetime.datetime.utcnow()
+                now = self._utcnow()
                 kwargs = {settle_units: settle_time}
                 ending_max = now - datetime.timedelta(**kwargs)
                 new = self.verify_for_range(ending_max,
                                             callback=callback)
-
                 values = ((new,) + self.clean_results())
+                if self.reconcile:
+                    self.reconcile_failed()
                 msg = "N: %s, P: %s, S: %s, E: %s" % values
                 LOG.info(msg)
-            sleep(tick_time)
+            time.sleep(tick_time)
 
     def run(self):
         if self.config['enable_notifications']:
@@ -427,7 +458,7 @@ class Verifier(object):
         tick_time = self.config['tick_time']
         settle_units = self.config['settle_units']
         settle_time = self.config['settle_time']
-        now = datetime.datetime.utcnow()
+        now = self._utcnow()
         kwargs = {settle_units: settle_time}
         ending_max = now - datetime.timedelta(**kwargs)
         new = self.verify_for_range(ending_max, callback=callback)
@@ -435,7 +466,9 @@ class Verifier(object):
         LOG.info("Verifying %s exist events" % new)
         while len(self.results) > 0:
             LOG.info("P: %s, F: %s, E: %s" % self.clean_results())
-            sleep(tick_time)
+            if self.reconcile:
+                self.reconcile_failed()
+            time.sleep(tick_time)
 
     def run_once(self):
         if self.config['enable_notifications']:

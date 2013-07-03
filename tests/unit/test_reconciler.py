@@ -116,7 +116,7 @@ class ReconcilerTestCase(unittest.TestCase):
         deployment.name = 'RegionOne.prod.cell1'
         launch.deployment().AndReturn(deployment)
         self.mox.ReplayAll()
-        region = self.reconciler._region_for_launch(launch)
+        region = self.reconciler._region_for_usage(launch)
         self.assertEqual('RegionOne', region)
         self.mox.VerifyAll()
 
@@ -126,7 +126,7 @@ class ReconcilerTestCase(unittest.TestCase):
         deployment.name = 'RegionOne.prod.cell2'
         launch.deployment().AndReturn(deployment)
         self.mox.ReplayAll()
-        region = self.reconciler._region_for_launch(launch)
+        region = self.reconciler._region_for_usage(launch)
         self.assertFalse(region)
         self.mox.VerifyAll()
 
@@ -134,7 +134,7 @@ class ReconcilerTestCase(unittest.TestCase):
         launch = self.mox.CreateMockAnything()
         launch.deployment()
         self.mox.ReplayAll()
-        region = self.reconciler._region_for_launch(launch)
+        region = self.reconciler._region_for_usage(launch)
         self.assertFalse(region)
         self.mox.VerifyAll()
 
@@ -185,6 +185,120 @@ class ReconcilerTestCase(unittest.TestCase):
         self.mox.ReplayAll()
         result = self.reconciler.missing_exists_for_instance(launch_id,
                                                              beginning_d)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = None
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        reconcile_vals = {
+            'instance': exists.instance,
+            'launched_at': exists.launched_at,
+            'deleted_at': exists.deleted_at,
+            'instance_type_id': exists.instance_type_id,
+            'source': 'reconciler:mocked_client'
+        }
+        result = self.mox.CreateMockAnything()
+        models.InstanceReconcile(**reconcile_vals).AndReturn(result)
+        result.save()
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertTrue(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_deleted(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = beginning_d
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at,
+                                                  deleted=True,
+                                                  deleted_at=beginning_d)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        reconcile_vals = {
+            'instance': exists.instance,
+            'launched_at': exists.launched_at,
+            'deleted_at': exists.deleted_at,
+            'instance_type_id': exists.instance_type_id,
+            'source': 'reconciler:mocked_client'
+        }
+        result = self.mox.CreateMockAnything()
+        models.InstanceReconcile(**reconcile_vals).AndReturn(result)
+        result.save()
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertTrue(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_deleted_not_matching(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = beginning_d
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at,
+                                                  deleted=True,
+                                                  deleted_at=beginning_d+1)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_deleted_not_deleted_from_client(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = beginning_d
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_not_found(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = None
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        ex = exceptions.NotFound()
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndRaise(ex)
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
         self.assertFalse(result)
         self.mox.VerifyAll()
 
