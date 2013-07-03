@@ -355,7 +355,7 @@ class NovaJSONBridgeClientTestCase(unittest.TestCase):
         instance = self.client.get_instance('RegionOne', INSTANCE_ID_1)
         self.assertIsNotNone(instance)
         self.assertEqual(instance['id'], INSTANCE_ID_1)
-        self.assertEqual(instance['instance_type_id'], 1)
+        self.assertEqual(instance['instance_type_id'], '1')
         launched_at_dec = stackutils.str_time_to_unix(launched_at)
         self.assertEqual(instance['launched_at'], launched_at_dec)
         terminated_at_dec = stackutils.str_time_to_unix(terminated_at)

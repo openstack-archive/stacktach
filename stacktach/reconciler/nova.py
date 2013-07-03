@@ -29,7 +29,7 @@ class JSONBridgeClient(object):
         r_instance = empty_reconciler_instance()
         r_instance.update({
             'id': instance['uuid'],
-            'instance_type_id': instance['instance_type_id'],
+            'instance_type_id': str(instance['instance_type_id']),
         })
 
         if instance['launched_at'] is not None:
