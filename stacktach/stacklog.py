@@ -36,31 +36,33 @@ def set_default_logger_name(name):
     default_logger_name = name
 
 
-def _make_logger(name):
-    log = logging.getLogger(__name__)
-    log.setLevel(logging.DEBUG)
-    handler = logging.handlers.TimedRotatingFileHandler(default_logger_location % name,
-                                            when='midnight', interval=1, backupCount=3)
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    handler.setFormatter(formatter)
-    log.addHandler(handler)
-    log.handlers[0].doRollover()
+def _logger_factory(exchange, name):
+    if exchange:
+        return ExchangeLogger(exchange, name)
+    else:
+        logger = logging.getLogger(__name__)
+        _configure(logger, name)
+        return logger
+
+
+def _make_logger(name, exchange=None):
+    log = _logger_factory(exchange, name)
     return log
 
 
-def init_logger(name=None):
+def init_logger(name=None, exchange=None):
     global LOGGERS
     if name is None:
         name = default_logger_name
     if name not in LOGGERS:
-        LOGGERS[name] = _make_logger(name)
+        LOGGERS[name] = _make_logger(name, exchange)
 
 
-def get_logger(name=None):
+def get_logger(name=None, exchange=None):
     global LOGGERS
     if name is None:
         name = default_logger_name
-    init_logger(name=name)
+    init_logger(name=name, exchange=exchange)
     return LOGGERS[name]
 
 
@@ -80,3 +82,38 @@ def info(msg, name=None):
     if name is None:
         name = default_logger_name
     get_logger(name=name).info(msg)
+
+
+def _configure(logger, name):
+        logger.setLevel(logging.DEBUG)
+        handler = logging.handlers.TimedRotatingFileHandler(
+            default_logger_location % name,
+            when='midnight', interval=1, backupCount=3)
+        formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.handlers[0].doRollover()
+
+
+class ExchangeLogger():
+    def __init__(self, exchange, name='stacktach-default'):
+        self.logger = logging.getLogger(name)
+        _configure(self.logger, name)
+        self.exchange = exchange
+
+    def info(self, msg, *args, **kwargs):
+        msg = self.exchange + ': ' + msg
+        self.logger.info(msg, *args, **kwargs)
+
+    def warn(self, msg, *args, **kwargs):
+        msg = self.exchange + ': ' + msg
+        self.logger.warn(msg, *args, **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        msg = self.exchange + ': ' + msg
+        self.logger.error(msg, *args, **kwargs)
+
+    def exception(self, msg, *args, **kwargs):
+        msg = self.exchange + ': ' + msg
+        self.logger.error(msg, *args, **kwargs)
