@@ -5,7 +5,7 @@ from stacktach import image_type
 class Notification(object):
     def __init__(self, body):
         self.body = body
-        self.request_id = body['_context_request_id']
+        self.request_id = body.get('_context_request_id', "")
         self.payload = body.get('payload', {})
         self.state = self.payload.get('state', "")
         self.old_state = self.payload.get('old_state', "")
