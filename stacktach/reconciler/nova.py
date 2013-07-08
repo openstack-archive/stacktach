@@ -1,8 +1,4 @@
-import os, sys
-
 import requests
-
-sys.path.append('/home/andrewmelton/publicgit/stacktach_app')
 
 from stacktach import utils as stackutils
 from stacktach.reconciler import exceptions
@@ -90,17 +86,3 @@ class JSONBridgeClient(object):
         else:
             msg = "Couldn't find instance (%s) using JSON Bridge in region (%s)"
             raise exceptions.NotFound(msg % (uuid, region))
-
-if __name__ == '__main__':
-    json_bridge_config = {
-        'url': 'http://devstack.ceilo-dev.ord.ohthree.com:8080/query/',
-        'username': '',
-        'password': '',
-        'databases': {
-            'RegionOne': 'nova',
-        }
-    }
-    client = JSONBridgeClient(json_bridge_config)
-    print client.get_instance('RegionOne',
-                              'e23ff37f-a02d-4c63-b11e-cc15fdced2cf',
-                              get_metadata=True)
