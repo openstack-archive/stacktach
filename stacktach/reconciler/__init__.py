@@ -23,7 +23,6 @@ import json
 from stacktach import models
 from stacktach.reconciler import exceptions
 from stacktach.reconciler import nova
-from stacktach import datetime_to_decimal as dt
 
 DEFAULT_CLIENT = nova.JSONBridgeClient
 
@@ -73,17 +72,47 @@ class Reconciler(object):
         else:
             return False
 
-    def _reconcile_instance(self, usage, src,
-                            launched_at=None, deleted_at=None,
-                            instance_type_id=None):
+    def _reconcile_instance(self, usage, src, deleted_at=None):
         values = {
             'instance': usage.instance,
-            'launched_at': (launched_at or usage.launched_at),
+            'launched_at': usage.launched_at,
             'deleted_at': deleted_at,
-            'instance_type_id': (instance_type_id or usage.instance_type_id),
+            'instance_type_id': usage.instance_type_id,
             'source': 'reconciler:%s' % src,
+            'tenant': usage.tenant,
+            'os_architecture': usage.os_architecture,
+            'os_distro': usage.os_distro,
+            'os_version': usage.os_version,
+            'rax_options': usage.rax_options,
         }
         models.InstanceReconcile(**values).save()
+
+    def _fields_match(self, exists, instance):
+        match = True
+
+        if (exists.launched_at != instance['launched_at'] or
+                exists.instance_type_id != instance['instance_type_id'] or
+                exists.tenant != instance['tenant'] or
+                exists.os_architecture != instance['os_architecture'] or
+                exists.os_distro != instance['os_distro'] or
+                exists.os_version != instance['os_version'] or
+                exists.rax_options != instance['rax_options']):
+            match = False
+
+        if exists.deleted_at is not None:
+            # Exists says deleted
+            if (instance['deleted'] and
+                    exists.deleted_at != instance['deleted_at']):
+                # Nova says deleted, but times don't match
+                match = False
+            elif not instance['deleted']:
+                # Nova says not deleted
+                match = False
+        elif exists.deleted_at is None and instance['deleted']:
+            # Exists says not deleted, but Nova says not deleted
+            match = False
+
+        return match
 
     def missing_exists_for_instance(self, launched_id,
                                     period_beginning):
@@ -108,24 +137,15 @@ class Reconciler(object):
         return reconciled
 
     def failed_validation(self, exists):
-        reconcilable = False
+        reconciled = False
         region = self._region_for_usage(exists)
-        deleted_at = None
         try:
             instance = self.client.get_instance(region, exists.instance)
-            if (instance['launched_at'] == exists.launched_at and
-                    instance['instance_type_id'] == exists.instance_type_id):
-                if instance['deleted'] and exists.deleted_at is not None:
-                    if instance['deleted_at'] == exists.deleted_at:
-                        deleted_at = exists.deleted_at
-                        reconcilable = True
-                elif not instance['deleted'] and exists.deleted_at is None:
-                    reconcilable = True
+            if self._fields_match(exists, instance):
+                self._reconcile_instance(exists, self.client.src_str,
+                                         deleted_at=exists.deleted_at)
+                reconciled = True
         except exceptions.NotFound:
-            reconcilable = False
+            pass
 
-        if reconcilable:
-            self._reconcile_instance(exists, self.client.src_str,
-                                     deleted_at=deleted_at)
-
-        return reconcilable
+        return reconciled
