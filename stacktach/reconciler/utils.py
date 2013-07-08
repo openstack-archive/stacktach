@@ -5,10 +5,10 @@ def empty_reconciler_instance():
         'launched_at': None,
         'deleted': False,
         'deleted_at': None,
-        'instance_type_ud': None,
-        'os_architecture': None,
-        'os_distro': None,
-        'os_version': None,
-        'rax_options': None,
+        'instance_type_id': None,
+        'os_architecture': '',
+        'os_distro': '',
+        'os_version': '',
+        'rax_options': '',
     }
     return r_instance
