@@ -260,7 +260,10 @@ def _verify_with_reconciled_data(exist, ex):
 
     _verify_for_launch(exist, launch=reconcile,
                        launch_type="InstanceReconcile")
-    _verify_for_delete(exist, delete=reconcile,
+    delete = None
+    if reconcile.deleted_at is not None:
+        delete = reconcile
+    _verify_for_delete(exist, delete=delete,
                        delete_type="InstanceReconcile")
 
 
