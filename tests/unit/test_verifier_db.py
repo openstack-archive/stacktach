@@ -481,6 +481,157 @@ class VerifierTestCase(unittest.TestCase):
             self.assertEqual(fm.actual, decimal.Decimal('6.1'))
         self.mox.VerifyAll()
 
+    def test_verify_with_reconciled_data(self):
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = decimal.Decimal('1.1')
+        exists.launched_at = launched_at
+        results = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(instance=INSTANCE_ID_1)\
+                                        .AndReturn(results)
+        results.count().AndReturn(1)
+        launched_min = decimal.Decimal('1')
+        launched_max = decimal.Decimal('1.999999')
+        filter = {
+            'instance': INSTANCE_ID_1,
+            'launched_at__gte': launched_min,
+            'launched_at__lte': launched_max
+        }
+        recs = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(**filter).AndReturn(recs)
+        recs.count().AndReturn(1)
+        reconcile = self.mox.CreateMockAnything()
+        reconcile.deleted_at = None
+        recs[0].AndReturn(reconcile)
+        self.mox.StubOutWithMock(dbverifier, '_verify_for_launch')
+        dbverifier._verify_for_launch(exists, launch=reconcile,
+                                      launch_type='InstanceReconcile')
+        self.mox.StubOutWithMock(dbverifier, '_verify_for_delete')
+        dbverifier._verify_for_delete(exists, delete=None,
+                                      delete_type='InstanceReconcile')
+        self.mox.ReplayAll()
+        dbverifier._verify_with_reconciled_data(exists)
+        self.mox.VerifyAll()
+
+    def test_verify_with_reconciled_data_deleted(self):
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = decimal.Decimal('1.1')
+        deleted_at = decimal.Decimal('2.1')
+        exists.launched_at = launched_at
+        exists.deleted_at = deleted_at
+        results = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(instance=INSTANCE_ID_1)\
+                                        .AndReturn(results)
+        results.count().AndReturn(1)
+        launched_min = decimal.Decimal('1')
+        launched_max = decimal.Decimal('1.999999')
+        filter = {
+            'instance': INSTANCE_ID_1,
+            'launched_at__gte': launched_min,
+            'launched_at__lte': launched_max
+        }
+        recs = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(**filter).AndReturn(recs)
+        recs.count().AndReturn(1)
+        reconcile = self.mox.CreateMockAnything()
+        reconcile.deleted_at = deleted_at
+        recs[0].AndReturn(reconcile)
+        self.mox.StubOutWithMock(dbverifier, '_verify_for_launch')
+        dbverifier._verify_for_launch(exists, launch=reconcile,
+                                      launch_type='InstanceReconcile')
+        self.mox.StubOutWithMock(dbverifier, '_verify_for_delete')
+        dbverifier._verify_for_delete(exists, delete=reconcile,
+                                      delete_type='InstanceReconcile')
+        self.mox.ReplayAll()
+        dbverifier._verify_with_reconciled_data(exists)
+        self.mox.VerifyAll()
+
+    def test_verify_with_reconciled_data_not_launched(self):
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        exists.launched_at = None
+        self.mox.ReplayAll()
+        with self.assertRaises(VerificationException) as cm:
+            dbverifier._verify_with_reconciled_data(exists)
+        exception = cm.exception
+        self.assertEquals(exception.reason, 'Exists without a launched_at')
+        self.mox.VerifyAll()
+
+    def test_verify_with_reconciled_data_ambiguous_results(self):
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = decimal.Decimal('1.1')
+        deleted_at = decimal.Decimal('2.1')
+        exists.launched_at = launched_at
+        exists.deleted_at = deleted_at
+        results = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(instance=INSTANCE_ID_1)\
+                                        .AndReturn(results)
+        results.count().AndReturn(1)
+        launched_min = decimal.Decimal('1')
+        launched_max = decimal.Decimal('1.999999')
+        filter = {
+            'instance': INSTANCE_ID_1,
+            'launched_at__gte': launched_min,
+            'launched_at__lte': launched_max
+        }
+        recs = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(**filter).AndReturn(recs)
+        recs.count().AndReturn(2)
+        self.mox.ReplayAll()
+        with self.assertRaises(AmbiguousResults) as cm:
+            dbverifier._verify_with_reconciled_data(exists)
+        exception = cm.exception
+        self.assertEquals(exception.object_type, 'InstanceReconcile')
+        self.mox.VerifyAll()
+
+    def test_verify_with_reconciled_data_instance_not_found(self):
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = decimal.Decimal('1.1')
+        deleted_at = decimal.Decimal('2.1')
+        exists.launched_at = launched_at
+        exists.deleted_at = deleted_at
+        results = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(instance=INSTANCE_ID_1)\
+                                        .AndReturn(results)
+        results.count().AndReturn(0)
+        self.mox.ReplayAll()
+        with self.assertRaises(NotFound) as cm:
+            dbverifier._verify_with_reconciled_data(exists)
+        exception = cm.exception
+        self.assertEquals(exception.object_type, 'InstanceReconcile')
+        self.mox.VerifyAll()
+
+    def test_verify_with_reconciled_data_reconcile_not_found(self):
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = decimal.Decimal('1.1')
+        deleted_at = decimal.Decimal('2.1')
+        exists.launched_at = launched_at
+        exists.deleted_at = deleted_at
+        results = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(instance=INSTANCE_ID_1)\
+                                        .AndReturn(results)
+        results.count().AndReturn(1)
+        launched_min = decimal.Decimal('1')
+        launched_max = decimal.Decimal('1.999999')
+        filter = {
+            'instance': INSTANCE_ID_1,
+            'launched_at__gte': launched_min,
+            'launched_at__lte': launched_max
+        }
+        recs = self.mox.CreateMockAnything()
+        models.InstanceReconcile.objects.filter(**filter).AndReturn(recs)
+        recs.count().AndReturn(0)
+        self.mox.ReplayAll()
+        with self.assertRaises(NotFound) as cm:
+            dbverifier._verify_with_reconciled_data(exists)
+        exception = cm.exception
+        self.assertEquals(exception.object_type, 'InstanceReconcile')
+        self.mox.VerifyAll()
+
     def test_verify_pass(self):
         exist = self.mox.CreateMockAnything()
         exist.launched_at = decimal.Decimal('1.1')
@@ -506,8 +657,25 @@ class VerifierTestCase(unittest.TestCase):
         dbverifier._mark_exist_failed(exist,
                                       reason="Exists without a launched_at")
         self.mox.StubOutWithMock(dbverifier, '_verify_with_reconciled_data')
-        dbverifier._verify_with_reconciled_data(exist, mox.IgnoreArg())\
+        dbverifier._verify_with_reconciled_data(exist)\
                   .AndRaise(NotFound('InstanceReconcile', {}))
+        self.mox.ReplayAll()
+        result, exists = dbverifier._verify(exist)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_verify_fails_reconciled_verify_uses_second_exception(self):
+        exist = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(dbverifier, '_verify_for_launch')
+        ex1 = VerificationException('test1')
+        dbverifier._verify_for_launch(exist).AndRaise(ex1)
+        self.mox.StubOutWithMock(dbverifier, '_verify_for_delete')
+        self.mox.StubOutWithMock(dbverifier, '_mark_exist_failed')
+        self.mox.StubOutWithMock(dbverifier, '_mark_exist_verified')
+        self.mox.StubOutWithMock(dbverifier, '_verify_with_reconciled_data')
+        dbverifier._verify_with_reconciled_data(exist)\
+                  .AndRaise(VerificationException('test2'))
+        dbverifier._mark_exist_failed(exist, reason='test2')
         self.mox.ReplayAll()
         result, exists = dbverifier._verify(exist)
         self.assertFalse(result)
@@ -523,7 +691,7 @@ class VerifierTestCase(unittest.TestCase):
         verify_exception = VerificationException('test')
         dbverifier._verify_for_launch(exist).AndRaise(verify_exception)
         self.mox.StubOutWithMock(dbverifier, '_verify_with_reconciled_data')
-        dbverifier._verify_with_reconciled_data(exist, verify_exception)\
+        dbverifier._verify_with_reconciled_data(exist)\
                   .AndRaise(NotFound('InstanceReconcile', {}))
         dbverifier._mark_exist_failed(exist, reason='test')
         self.mox.ReplayAll()
@@ -541,8 +709,8 @@ class VerifierTestCase(unittest.TestCase):
         verify_exception = VerificationException('test')
         dbverifier._verify_for_launch(exist).AndRaise(verify_exception)
         self.mox.StubOutWithMock(dbverifier, '_verify_with_reconciled_data')
-        dbverifier._verify_with_reconciled_data(exist, verify_exception)
-        dbverifier._mark_exist_verified(exist)
+        dbverifier._verify_with_reconciled_data(exist)
+        dbverifier._mark_exist_verified(exist, reconciled=True)
         self.mox.ReplayAll()
         result, exists = dbverifier._verify(exist)
         self.assertTrue(result)
@@ -558,7 +726,7 @@ class VerifierTestCase(unittest.TestCase):
         verify_exception = VerificationException('test')
         dbverifier._verify_for_launch(exist).AndRaise(verify_exception)
         self.mox.StubOutWithMock(dbverifier, '_verify_with_reconciled_data')
-        dbverifier._verify_with_reconciled_data(exist, verify_exception)\
+        dbverifier._verify_with_reconciled_data(exist)\
                   .AndRaise(Exception())
         dbverifier._mark_exist_failed(exist, reason='Exception')
         self.mox.ReplayAll()
@@ -577,7 +745,7 @@ class VerifierTestCase(unittest.TestCase):
         dbverifier._verify_for_launch(exist)
         dbverifier._verify_for_delete(exist).AndRaise(verify_exception)
         self.mox.StubOutWithMock(dbverifier, '_verify_with_reconciled_data')
-        dbverifier._verify_with_reconciled_data(exist, verify_exception)\
+        dbverifier._verify_with_reconciled_data(exist)\
                   .AndRaise(NotFound('InstanceReconcile', {}))
         dbverifier._mark_exist_failed(exist, reason='test')
         self.mox.ReplayAll()

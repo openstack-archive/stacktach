@@ -239,7 +239,7 @@ def _verify_for_delete(exist, delete=None, delete_type="InstanceDelete"):
                                 delete.deleted_at)
 
 
-def _verify_with_reconciled_data(exist, ex):
+def _verify_with_reconciled_data(exist):
     if not exist.launched_at:
         raise VerificationException("Exists without a launched_at")
 
@@ -271,9 +271,9 @@ def _attempt_reconciled_verify(exist, orig_e):
     verified = False
     try:
         # Attempt to verify against reconciled data
-        _verify_with_reconciled_data(exist, orig_e)
+        _verify_with_reconciled_data(exist)
         verified = True
-        _mark_exist_verified(exist)
+        _mark_exist_verified(exist, reconciled=True)
     except NotFound, rec_e:
         # No reconciled data, just mark it failed
         _mark_exist_failed(exist, reason=str(orig_e))
