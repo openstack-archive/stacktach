@@ -838,50 +838,25 @@ class StacktachImageUsageParsingTestCase(unittest.TestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
-    def test_process_image_usage_for_new_launch(self):
+    def test_save_image_usage(self):
         raw = self.mox.CreateMockAnything()
-        values = {
-            'created_at': str(DUMMY_TIME),
-            'owner': TENANT_ID_1,
-            'uuid': IMAGE_UUID_1,
-            'size': 1234,
-            'last_raw': raw
-        }
         notification = self.mox.CreateMockAnything()
-        notification.created_at = values['created_at']
-        notification.owner = values['owner']
-        notification.uuid = values['uuid']
-        notification.size = values['size']
-        notification.raw = values['last_raw']
-        views.STACKDB.create_image_usage(**values)
+        notification.save_usage(raw)
         self.mox.ReplayAll()
+
         views._process_glance_usage(raw, notification)
         self.mox.VerifyAll()
 
-    def test_process_image_deletes(self):
+    def test_save_image_delete(self):
         raw = self.mox.CreateMockAnything()
-        values = {
-            'uuid': IMAGE_UUID_1,
-            'created_at': str(DUMMY_TIME),
-            'deleted_at': str(DUMMY_TIME),
-            'owner': TENANT_ID_1,
-            'size': 1234,
-            'raw': raw
-        }
-
         notification = self.mox.CreateMockAnything()
-        notification.created_at = values['created_at']
-        notification.deleted_at = values['deleted_at']
-        notification.owner = values['owner']
-        notification.uuid = values['uuid']
-        notification.size = values['size']
-        notification.raw = values['raw']
-        views.STACKDB.create_image_delete(**values)
+        notification.save_delete(raw)
         self.mox.ReplayAll()
+
         views._process_glance_delete(raw, notification)
         self.mox.VerifyAll()
 
-    def test_process_image_exists(self):
+    def test_save_image_exists(self):
         raw = self.mox.CreateMockAnything()
         notification = self.mox.CreateMockAnything()
         notification.save_exists(raw)

@@ -286,26 +286,10 @@ def _process_exists(raw, notification):
 
 
 def _process_glance_usage(raw, notification):
-    values = {
-        'uuid': notification.uuid,
-        'created_at': notification.created_at,
-        'owner': notification.owner,
-        'size': notification.size,
-        'last_raw': raw
-    }
-    STACKDB.create_image_usage(**values)
-
+    notification.save_usage(raw)
 
 def _process_glance_delete(raw, notification):
-    values = {
-        'uuid': notification.uuid,
-        'created_at': notification.created_at,
-        'owner': notification.owner,
-        'size': notification.size,
-        'raw': raw,
-        'deleted_at': notification.deleted_at
-    }
-    STACKDB.create_image_delete(**values)
+    notification.save_delete(raw)
 
 
 def _process_glance_exists(raw, notification):

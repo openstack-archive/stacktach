@@ -161,6 +161,26 @@ class GlanceNotification(Notification):
             stacklog.warn("Ignoring exists without created_at. GlanceRawData(%s)"
                           % raw.id)
 
+    def save_usage(self, raw):
+        values = {
+            'uuid': self.uuid,
+            'created_at': self.created_at,
+            'owner': self.owner,
+            'size': self.size,
+            'last_raw': raw
+        }
+        db.create_image_usage(**values)
+
+    def save_delete(self, raw):
+        values = {
+            'uuid': self.uuid,
+            'created_at': self.created_at,
+            'owner': self.owner,
+            'size': self.size,
+            'raw': raw,
+            'deleted_at': self.deleted_at
+        }
+        db.create_image_delete(**values)
 
 class NovaNotification(Notification):
     def __init__(self, body, deployment, routing_key, json):

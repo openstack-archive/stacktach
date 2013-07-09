@@ -187,7 +187,7 @@ class GlanceNotificationTestCase(unittest.TestCase):
             service="glance-api01-r2961",
             host="global.preprod-ord.ohthree.com",
             instance=INSTANCE_ID_1,
-            request_id=None,
+            request_id='',
             image_type=0,
             status="saving",
             uuid="2df2ccf6-bc1b-4853-aab0-25fda346b3bb").AndReturn(raw)
@@ -199,8 +199,7 @@ class GlanceNotificationTestCase(unittest.TestCase):
         self.assertEquals(notification.save(), raw)
         self.mox.VerifyAll()
 
-    def test_process_image_exists(self):
-        usage = self.mox.CreateMockAnything()
+    def test_save_image_exists(self):
         raw = self.mox.CreateMockAnything()
         audit_period_beginning = "2013-05-20 17:31:57.939614"
         audit_period_ending = "2013-06-20 17:31:57.939614"
@@ -251,9 +250,8 @@ class GlanceNotificationTestCase(unittest.TestCase):
         notification.save_exists(raw)
         self.mox.VerifyAll()
 
-    def test_process_image_exists_with_delete_not_none(self):
+    def test_save_image_exists_with_delete_not_none(self):
         raw = self.mox.CreateMockAnything()
-        usage = self.mox.CreateMockAnything()
         delete = self.mox.CreateMockAnything()
         audit_period_beginning = "2013-05-20 17:31:57.939614"
         audit_period_ending = "2013-06-20 17:31:57.939614"
@@ -311,7 +309,7 @@ class GlanceNotificationTestCase(unittest.TestCase):
         notification.save_exists(raw)
         self.mox.VerifyAll()
 
-    def test_process_image_exists_with_usage_not_none(self):
+    def test_save_image_exists_with_usage_not_none(self):
         raw = self.mox.CreateMockAnything()
         usage = self.mox.CreateMockAnything()
         audit_period_beginning = "2013-05-20 17:31:57.939614"
@@ -363,6 +361,74 @@ class GlanceNotificationTestCase(unittest.TestCase):
                                           json)
         notification.save_exists(raw)
         self.mox.VerifyAll()
+
+    def test_save_usage_should_persist_image_usage(self):
+        raw = self.mox.CreateMockAnything()
+        size = 123
+        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
+        body = {
+            "event_type": "image.upload",
+            "timestamp": "2013-06-20 18:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
+                "created_at": str(DUMMY_TIME),
+                "size": size,
+                "owner": TENANT_ID_1,
+                "id": "2df2ccf6-bc1b-4853-aab0-25fda346b3bb",
+            }
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json = '{["routing_key", {%s}]}' % body
+
+        self.mox.StubOutWithMock(db, 'create_image_usage')
+        db.create_image_usage(
+            created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
+            owner=TENANT_ID_1,
+            last_raw=raw,
+            size=size,
+            uuid=uuid).AndReturn(raw)
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key, json)
+        notification.save_usage(raw)
+        self.mox.VerifyAll()
+
+    def test_save_delete_should_persist_image_delete(self):
+        raw = self.mox.CreateMockAnything()
+        size = 123
+        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
+        deleted_at = "2013-06-20 14:31:57.939614"
+        body = {
+            "event_type": "image.delete",
+            "timestamp": "2013-06-20 18:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
+                "created_at": str(DUMMY_TIME),
+                "size": size,
+                "owner": TENANT_ID_1,
+                "id": "2df2ccf6-bc1b-4853-aab0-25fda346b3bb",
+                "deleted_at": deleted_at
+            }
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json = '{["routing_key", {%s}]}' % body
+
+        self.mox.StubOutWithMock(db, 'create_image_delete')
+        db.create_image_delete(
+            created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
+            owner=TENANT_ID_1,
+            raw=raw,
+            size=size,
+            uuid=uuid,
+            deleted_at=utils.str_time_to_unix(deleted_at)).AndReturn(raw)
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key, json)
+        notification.save_delete(raw)
+        self.mox.VerifyAll()
+
 
 
 class NotificationTestCase(unittest.TestCase):
