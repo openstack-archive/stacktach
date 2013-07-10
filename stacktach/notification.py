@@ -174,9 +174,6 @@ class GlanceNotification(Notification):
     def save_delete(self, raw):
         values = {
             'uuid': self.uuid,
-            'created_at': self.created_at,
-            'owner': self.owner,
-            'size': self.size,
             'raw': raw,
             'deleted_at': self.deleted_at
         }

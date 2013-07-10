@@ -308,19 +308,15 @@ class ImageUsage(models.Model):
                                      decimal_places=6, db_index=True)
     owner = models.CharField(max_length=50, db_index=True)
     size = models.BigIntegerField(max_length=20)
-    last_raw = models.ForeignKey(GlanceRawData)
+    last_raw = models.ForeignKey(GlanceRawData, null=True)
 
 
 class ImageDeletes(models.Model):
     uuid = models.CharField(max_length=50, db_index=True)
-    created_at = models.DecimalField(max_digits=20,
-                                     decimal_places=6, db_index=True)
     deleted_at = models.DecimalField(max_digits=20,
                                      decimal_places=6, db_index=True,
                                      null=True)
-    owner = models.CharField(max_length=50, db_index=True)
-    size = models.BigIntegerField(max_length=20)
-    raw = models.ForeignKey(GlanceRawData)
+    raw = models.ForeignKey(GlanceRawData, null=True)
 
 
 class ImageExists(models.Model):

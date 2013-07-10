@@ -121,9 +121,6 @@ class GlanceTestCase(TransactionTestCase):
         _, rawdata = self._create_glance_rawdata()
         kwargs = {
             'uuid': '1',
-            'created_at': dt_to_decimal(datetime.utcnow()),
-            'owner': 'owner',
-            'size': 12345,
             'raw': rawdata,
             'deleted_at': dt_to_decimal(datetime.utcnow())
         }

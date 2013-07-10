@@ -396,17 +396,12 @@ class GlanceNotificationTestCase(unittest.TestCase):
 
     def test_save_delete_should_persist_image_delete(self):
         raw = self.mox.CreateMockAnything()
-        size = 123
         uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
         deleted_at = "2013-06-20 14:31:57.939614"
         body = {
             "event_type": "image.delete",
-            "timestamp": "2013-06-20 18:31:57.939614",
             "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
             "payload": {
-                "created_at": str(DUMMY_TIME),
-                "size": size,
-                "owner": TENANT_ID_1,
                 "id": "2df2ccf6-bc1b-4853-aab0-25fda346b3bb",
                 "deleted_at": deleted_at
             }
@@ -417,10 +412,7 @@ class GlanceNotificationTestCase(unittest.TestCase):
 
         self.mox.StubOutWithMock(db, 'create_image_delete')
         db.create_image_delete(
-            created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
-            owner=TENANT_ID_1,
             raw=raw,
-            size=size,
             uuid=uuid,
             deleted_at=utils.str_time_to_unix(deleted_at)).AndReturn(raw)
         self.mox.ReplayAll()

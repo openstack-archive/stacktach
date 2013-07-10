@@ -310,7 +310,7 @@ USAGE_PROCESS_MAPPING = {
 }
 
 GLANCE_USAGE_PROCESS_MAPPING = {
-    'image.upload': _process_glance_usage,
+    'image.activate': _process_glance_usage,
     'image.delete': _process_glance_delete,
     'image.exists': _process_glance_exists
 }

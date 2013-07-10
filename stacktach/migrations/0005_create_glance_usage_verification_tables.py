@@ -12,11 +12,8 @@ class Migration(SchemaMigration):
         db.create_table(u'stacktach_imagedeletes', (
             (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('uuid', self.gf('django.db.models.fields.CharField')(max_length=50, db_index=True)),
-            ('created_at', self.gf('django.db.models.fields.DecimalField')(max_digits=20, decimal_places=6, db_index=True)),
             ('deleted_at', self.gf('django.db.models.fields.DecimalField')(null=True, max_digits=20, decimal_places=6, db_index=True)),
-            ('owner', self.gf('django.db.models.fields.CharField')(max_length=50, db_index=True)),
-            ('size', self.gf('django.db.models.fields.BigIntegerField')(max_length=20)),
-            ('raw', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.GlanceRawData'])),
+            ('raw', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.GlanceRawData'], null=True)),
         ))
         db.send_create_signal(u'stacktach', ['ImageDeletes'])
 
@@ -47,27 +44,9 @@ class Migration(SchemaMigration):
             ('created_at', self.gf('django.db.models.fields.DecimalField')(max_digits=20, decimal_places=6, db_index=True)),
             ('owner', self.gf('django.db.models.fields.CharField')(max_length=50, db_index=True)),
             ('size', self.gf('django.db.models.fields.BigIntegerField')(max_length=20)),
-            ('last_raw', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.GlanceRawData'])),
+            ('last_raw', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.GlanceRawData'], null=True)),
         ))
         db.send_create_signal(u'stacktach', ['ImageUsage'])
-
-        # Adding model 'GenericRawData'
-        db.create_table(u'stacktach_genericrawdata', (
-            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
-            ('deployment', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.Deployment'])),
-            ('tenant', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
-            ('json', self.gf('django.db.models.fields.TextField')()),
-            ('routing_key', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
-            ('image_type', self.gf('django.db.models.fields.IntegerField')(default=0, null=True, db_index=True)),
-            ('when', self.gf('django.db.models.fields.DecimalField')(max_digits=20, decimal_places=6, db_index=True)),
-            ('publisher', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
-            ('event', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
-            ('service', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
-            ('host', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
-            ('instance', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
-            ('request_id', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
-        ))
-        db.send_create_signal(u'stacktach', ['GenericRawData'])
 
         # Adding model 'ImageExists'
         db.create_table(u'stacktach_imageexists', (
@@ -88,6 +67,24 @@ class Migration(SchemaMigration):
         ))
         db.send_create_signal(u'stacktach', ['ImageExists'])
 
+        # Adding model 'GenericRawData'
+        db.create_table(u'stacktach_genericrawdata', (
+            (u'id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
+            ('deployment', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['stacktach.Deployment'])),
+            ('tenant', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('json', self.gf('django.db.models.fields.TextField')()),
+            ('routing_key', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('image_type', self.gf('django.db.models.fields.IntegerField')(default=0, null=True, db_index=True)),
+            ('when', self.gf('django.db.models.fields.DecimalField')(max_digits=20, decimal_places=6, db_index=True)),
+            ('publisher', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
+            ('event', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('service', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('host', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=100, null=True, blank=True)),
+            ('instance', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+            ('request_id', self.gf('django.db.models.fields.CharField')(db_index=True, max_length=50, null=True, blank=True)),
+        ))
+        db.send_create_signal(u'stacktach', ['GenericRawData'])
+
 
     def backwards(self, orm):
         # Deleting model 'ImageDeletes'
@@ -99,11 +96,11 @@ class Migration(SchemaMigration):
         # Deleting model 'ImageUsage'
         db.delete_table(u'stacktach_imageusage')
 
-        # Deleting model 'GenericRawData'
-        db.delete_table(u'stacktach_genericrawdata')
-
         # Deleting model 'ImageExists'
         db.delete_table(u'stacktach_imageexists')
+
+        # Deleting model 'GenericRawData'
+        db.delete_table(u'stacktach_genericrawdata')
 
 
     models = {
@@ -148,12 +145,9 @@ class Migration(SchemaMigration):
         },
         u'stacktach.imagedeletes': {
             'Meta': {'object_name': 'ImageDeletes'},
-            'created_at': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
             'deleted_at': ('django.db.models.fields.DecimalField', [], {'null': 'True', 'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'owner': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'}),
-            'raw': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.GlanceRawData']"}),
-            'size': ('django.db.models.fields.BigIntegerField', [], {'max_length': '20'}),
+            'raw': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.GlanceRawData']", 'null': 'True'}),
             'uuid': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'})
         },
         u'stacktach.imageexists': {
@@ -177,7 +171,7 @@ class Migration(SchemaMigration):
             'Meta': {'object_name': 'ImageUsage'},
             'created_at': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'last_raw': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.GlanceRawData']"}),
+            'last_raw': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.GlanceRawData']", 'null': 'True'}),
             'owner': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'}),
             'size': ('django.db.models.fields.BigIntegerField', [], {'max_length': '20'}),
             'uuid': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'})
