@@ -74,3 +74,9 @@ def error(msg, name=None):
     if name is None:
         name = default_logger_name
     get_logger(name=name).error(msg)
+
+
+def info(msg, name=None):
+    if name is None:
+        name = default_logger_name
+    get_logger(name=name).info(msg)

@@ -23,6 +23,7 @@ import json
 from stacktach import models
 from stacktach.reconciler import exceptions
 from stacktach.reconciler import nova
+from stacktach import stacklog
 
 DEFAULT_CLIENT = nova.JSONBridgeClient
 
@@ -88,7 +89,7 @@ class Reconciler(object):
         models.InstanceReconcile(**values).save()
 
     def _fields_match(self, exists, instance):
-        match = True
+        match_code = 0
 
         if (exists.launched_at != instance['launched_at'] or
                 exists.instance_type_id != instance['instance_type_id'] or
@@ -97,22 +98,22 @@ class Reconciler(object):
                 exists.os_distro != instance['os_distro'] or
                 exists.os_version != instance['os_version'] or
                 exists.rax_options != instance['rax_options']):
-            match = False
+            match_code = 1
 
         if exists.deleted_at is not None:
             # Exists says deleted
             if (instance['deleted'] and
                     exists.deleted_at != instance['deleted_at']):
                 # Nova says deleted, but times don't match
-                match = False
+                match_code = 2
             elif not instance['deleted']:
                 # Nova says not deleted
-                match = False
+                match_code = 3
         elif exists.deleted_at is None and instance['deleted']:
-            # Exists says not deleted, but Nova says not deleted
-            match = False
+            # Exists says not deleted, but Nova says deleted
+            match_code = 4
 
-        return match
+        return match_code
 
     def missing_exists_for_instance(self, launched_id,
                                     period_beginning):
@@ -132,7 +133,7 @@ class Reconciler(object):
                                              deleted_at=instance['deleted_at'])
                     reconciled = True
         except exceptions.NotFound:
-            reconciled = False
+            stacklog.info("Couldn't find instance for launch %s" % launched_id)
 
         return reconciled
 
@@ -141,11 +142,16 @@ class Reconciler(object):
         region = self._region_for_usage(exists)
         try:
             instance = self.client.get_instance(region, exists.instance)
-            if self._fields_match(exists, instance):
+            match_code = self._fields_match(exists, instance)
+            if match_code == 0:
                 self._reconcile_instance(exists, self.client.src_str,
                                          deleted_at=exists.deleted_at)
                 reconciled = True
+            else:
+                msg = "Exists %s failed reconciliation with code %s"
+                msg %= (exists.id, match_code)
+                stacklog.info(msg)
         except exceptions.NotFound:
-            pass
+            stacklog.info("Couldn't find instance for exists %s" % exists.id)
 
         return reconciled

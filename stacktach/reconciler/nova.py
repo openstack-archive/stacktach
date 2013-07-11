@@ -5,20 +5,22 @@ from stacktach.reconciler import exceptions
 from stacktach.reconciler.utils import empty_reconciler_instance
 
 GET_INSTANCE_QUERY = "SELECT * FROM instances where uuid ='%s';"
-GET_INSTANCE_SYSTEM_METADATA = """
-SELECT * FROM instance_system_metadata
-    WHERE instance_uuid = '%s' AND
-    deleted = 0 AND `key` IN ('image_org.openstack__1__architecture',
-                              'image_org.openstack__1__os_distro',
-                              'image_org.openstack__1__os_version',
-                              'image_com.rackspace__1__options');
-"""
+
 METADATA_MAPPING = {
     'image_org.openstack__1__architecture': 'os_architecture',
     'image_org.openstack__1__os_distro': 'os_distro',
     'image_org.openstack__1__os_version': 'os_version',
     'image_com.rackspace__1__options': 'rax_options',
 }
+METADATA_FIELDS = ["'%s'" % x for x in METADATA_MAPPING.keys()]
+METADATA_FIELDS = ','.join(METADATA_FIELDS)
+
+GET_INSTANCE_SYSTEM_METADATA = """
+SELECT * FROM instance_system_metadata
+    WHERE instance_uuid = '%s' AND
+    deleted = 0 AND `key` IN (%s);
+"""
+GET_INSTANCE_SYSTEM_METADATA %= ('%s', METADATA_FIELDS)
 
 
 def _json(result):

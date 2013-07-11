@@ -82,7 +82,8 @@ class ReconcilerTestCase(unittest.TestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
-    def _fake_usage(self, is_exists=False, is_deleted=False):
+    def _fake_usage(self, is_exists=False, is_deleted=False,
+                    mock_deployment=False):
         usage = self.mox.CreateMockAnything()
         usage.id = 1
         beginning_d = utils.decimal_utc()
@@ -91,17 +92,18 @@ class ReconcilerTestCase(unittest.TestCase):
         usage.launched_at = launched_at
         usage.instance_type_id = 1
         usage.tenant = TENANT_ID_1
-        if is_exists:
-            usage.deleted_at = None
-        if is_deleted:
-            usage.deleted_at = beginning_d
-        deployment = self.mox.CreateMockAnything()
-        deployment.name = 'RegionOne.prod.cell1'
-        usage.deployment().AndReturn(deployment)
         usage.os_architecture = DEFAULT_OS_ARCH
         usage.os_distro = DEFAULT_OS_DISTRO
         usage.os_version = DEFAULT_OS_VERSION
         usage.rax_options = DEFAULT_RAX_OPTIONS
+        if is_exists:
+            usage.deleted_at = None
+        if is_deleted:
+            usage.deleted_at = beginning_d
+        if mock_deployment:
+            deployment = self.mox.CreateMockAnything()
+            deployment.name = 'RegionOne.prod.cell1'
+            usage.deployment().AndReturn(deployment)
         return usage
 
     def _fake_reconciler_instance(self, uuid=INSTANCE_ID_1, launched_at=None,
@@ -179,7 +181,7 @@ class ReconcilerTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_missing_exists_for_instance(self):
-        launch = self._fake_usage()
+        launch = self._fake_usage(mock_deployment=True)
         launched_at = launch.launched_at
         deleted_at = launched_at + (60*30)
         period_beginning = deleted_at + 1
@@ -228,7 +230,7 @@ class ReconcilerTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_failed_validation(self):
-        exists = self._fake_usage(is_exists=True)
+        exists = self._fake_usage(is_exists=True, mock_deployment=True)
         launched_at = exists.launched_at
         rec_inst = self._fake_reconciler_instance(launched_at=launched_at)
         self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
@@ -253,7 +255,8 @@ class ReconcilerTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_failed_validation_deleted(self):
-        exists = self._fake_usage(is_exists=True, is_deleted=True)
+        exists = self._fake_usage(is_exists=True, is_deleted=True,
+                                  mock_deployment=True)
         launched_at = exists.launched_at
         deleted_at = exists.deleted_at
         rec_inst = self._fake_reconciler_instance(launched_at=launched_at,
@@ -334,6 +337,66 @@ class ReconcilerTestCase(unittest.TestCase):
         self.mox.ReplayAll()
         result = self.reconciler.failed_validation(exists)
         self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_fields_match(self):
+        exists = self._fake_usage(is_exists=True)
+        kwargs = {'launched_at': exists.launched_at}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 0)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_with_deleted(self):
+        exists = self._fake_usage(is_exists=True, is_deleted=True)
+        kwargs = {'launched_at': exists.launched_at,
+                  'deleted': True,
+                  'deleted_at': exists.deleted_at}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 0)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_miss_match(self):
+        exists = self._fake_usage(is_exists=True)
+        kwargs = {'launched_at': exists.launched_at + 1}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 1)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_with_deleted_miss_match(self):
+        exists = self._fake_usage(is_exists=True, is_deleted=True)
+        kwargs = {'launched_at': exists.launched_at,
+                  'deleted': True,
+                  'deleted_at': exists.deleted_at+1}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 2)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_not_deleted_in_nova(self):
+        exists = self._fake_usage(is_exists=True, is_deleted=True)
+        kwargs = {'launched_at': exists.launched_at}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 3)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_not_deleted_in_exists(self):
+        exists = self._fake_usage(is_exists=True)
+        kwargs = {'launched_at': exists.launched_at,
+                  'deleted': True,
+                  'deleted_at': exists.launched_at + 1}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 4)
         self.mox.VerifyAll()
 
 
