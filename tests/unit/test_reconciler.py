@@ -29,13 +29,20 @@ from stacktach import reconciler
 from stacktach import utils as stackutils
 from stacktach.reconciler import exceptions
 from stacktach.reconciler import nova
+from stacktach.reconciler import utils as rec_utils
 from tests.unit import utils
 from tests.unit.utils import INSTANCE_ID_1
+from tests.unit.utils import TENANT_ID_1
 
 region_mapping = {
     'RegionOne.prod.cell1': 'RegionOne',
     'RegionTwo.prod.cell1': 'RegionTwo',
 }
+
+DEFAULT_OS_ARCH = 'os_arch'
+DEFAULT_OS_DISTRO = 'os_dist'
+DEFAULT_OS_VERSION = "1.1"
+DEFAULT_RAX_OPTIONS = "rax_ops"
 
 
 class ReconcilerTestCase(unittest.TestCase):
@@ -75,16 +82,51 @@ class ReconcilerTestCase(unittest.TestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
+    def _fake_usage(self, is_exists=False, is_deleted=False,
+                    mock_deployment=False):
+        usage = self.mox.CreateMockAnything()
+        usage.id = 1
+        beginning_d = utils.decimal_utc()
+        usage.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        usage.launched_at = launched_at
+        usage.instance_type_id = 1
+        usage.tenant = TENANT_ID_1
+        usage.os_architecture = DEFAULT_OS_ARCH
+        usage.os_distro = DEFAULT_OS_DISTRO
+        usage.os_version = DEFAULT_OS_VERSION
+        usage.rax_options = DEFAULT_RAX_OPTIONS
+        if is_exists:
+            usage.deleted_at = None
+        if is_deleted:
+            usage.deleted_at = beginning_d
+        if mock_deployment:
+            deployment = self.mox.CreateMockAnything()
+            deployment.name = 'RegionOne.prod.cell1'
+            usage.deployment().AndReturn(deployment)
+        return usage
+
     def _fake_reconciler_instance(self, uuid=INSTANCE_ID_1, launched_at=None,
                                   deleted_at=None, deleted=False,
-                                  instance_type_id=1):
-        return {
+                                  instance_type_id=1, tenant=TENANT_ID_1,
+                                  os_arch=DEFAULT_OS_ARCH,
+                                  os_distro=DEFAULT_OS_DISTRO,
+                                  os_verison=DEFAULT_OS_VERSION,
+                                  rax_options=DEFAULT_RAX_OPTIONS):
+        instance = rec_utils.empty_reconciler_instance()
+        instance.update({
             'id': uuid,
             'launched_at': launched_at,
             'deleted_at': deleted_at,
             'deleted': deleted,
-            'instance_type_id': instance_type_id
-        }
+            'instance_type_id': instance_type_id,
+            'tenant': tenant,
+            'os_architecture': os_arch,
+            'os_distro': os_distro,
+            'os_version': os_verison,
+            'rax_options': rax_options,
+        })
+        return instance
 
     def test_load_client_json_bridge(self):
         mock_config = self.mox.CreateMockAnything()
@@ -116,7 +158,7 @@ class ReconcilerTestCase(unittest.TestCase):
         deployment.name = 'RegionOne.prod.cell1'
         launch.deployment().AndReturn(deployment)
         self.mox.ReplayAll()
-        region = self.reconciler._region_for_launch(launch)
+        region = self.reconciler._region_for_usage(launch)
         self.assertEqual('RegionOne', region)
         self.mox.VerifyAll()
 
@@ -126,7 +168,7 @@ class ReconcilerTestCase(unittest.TestCase):
         deployment.name = 'RegionOne.prod.cell2'
         launch.deployment().AndReturn(deployment)
         self.mox.ReplayAll()
-        region = self.reconciler._region_for_launch(launch)
+        region = self.reconciler._region_for_usage(launch)
         self.assertFalse(region)
         self.mox.VerifyAll()
 
@@ -134,22 +176,16 @@ class ReconcilerTestCase(unittest.TestCase):
         launch = self.mox.CreateMockAnything()
         launch.deployment()
         self.mox.ReplayAll()
-        region = self.reconciler._region_for_launch(launch)
+        region = self.reconciler._region_for_usage(launch)
         self.assertFalse(region)
         self.mox.VerifyAll()
 
     def test_missing_exists_for_instance(self):
-        launch_id = 1
-        beginning_d = utils.decimal_utc()
-        launch = self.mox.CreateMockAnything()
-        launch.instance = INSTANCE_ID_1
-        launch.launched_at = beginning_d - (60*60)
-        launch.instance_type_id = 1
-        models.InstanceUsage.objects.get(id=launch_id).AndReturn(launch)
-        deployment = self.mox.CreateMockAnything()
-        launch.deployment().AndReturn(deployment)
-        deployment.name = 'RegionOne.prod.cell1'
-        deleted_at = beginning_d - (60*30)
+        launch = self._fake_usage(mock_deployment=True)
+        launched_at = launch.launched_at
+        deleted_at = launched_at + (60*30)
+        period_beginning = deleted_at + 1
+        models.InstanceUsage.objects.get(id=launch.id).AndReturn(launch)
         rec_inst = self._fake_reconciler_instance(deleted=True,
                                                   deleted_at=deleted_at)
         self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
@@ -158,14 +194,19 @@ class ReconcilerTestCase(unittest.TestCase):
             'launched_at': launch.launched_at,
             'deleted_at': deleted_at,
             'instance_type_id': launch.instance_type_id,
-            'source': 'reconciler:mocked_client'
+            'source': 'reconciler:mocked_client',
+            'tenant': TENANT_ID_1,
+            'os_architecture': DEFAULT_OS_ARCH,
+            'os_distro': DEFAULT_OS_DISTRO,
+            'os_version': DEFAULT_OS_VERSION,
+            'rax_options': DEFAULT_RAX_OPTIONS,
         }
         result = self.mox.CreateMockAnything()
         models.InstanceReconcile(**reconcile_vals).AndReturn(result)
         result.save()
         self.mox.ReplayAll()
-        result = self.reconciler.missing_exists_for_instance(launch_id,
-                                                             beginning_d)
+        result = self.reconciler.missing_exists_for_instance(launch.id,
+                                                             period_beginning)
         self.assertTrue(result)
         self.mox.VerifyAll()
 
@@ -186,6 +227,176 @@ class ReconcilerTestCase(unittest.TestCase):
         result = self.reconciler.missing_exists_for_instance(launch_id,
                                                              beginning_d)
         self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation(self):
+        exists = self._fake_usage(is_exists=True, mock_deployment=True)
+        launched_at = exists.launched_at
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        reconcile_vals = {
+            'instance': exists.instance,
+            'launched_at': exists.launched_at,
+            'deleted_at': exists.deleted_at,
+            'instance_type_id': exists.instance_type_id,
+            'source': 'reconciler:mocked_client',
+            'tenant': TENANT_ID_1,
+            'os_architecture': DEFAULT_OS_ARCH,
+            'os_distro': DEFAULT_OS_DISTRO,
+            'os_version': DEFAULT_OS_VERSION,
+            'rax_options': DEFAULT_RAX_OPTIONS,
+        }
+        result = self.mox.CreateMockAnything()
+        models.InstanceReconcile(**reconcile_vals).AndReturn(result)
+        result.save()
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertTrue(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_deleted(self):
+        exists = self._fake_usage(is_exists=True, is_deleted=True,
+                                  mock_deployment=True)
+        launched_at = exists.launched_at
+        deleted_at = exists.deleted_at
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at,
+                                                  deleted=True,
+                                                  deleted_at=deleted_at)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        reconcile_vals = {
+            'instance': exists.instance,
+            'launched_at': exists.launched_at,
+            'deleted_at': exists.deleted_at,
+            'instance_type_id': exists.instance_type_id,
+            'source': 'reconciler:mocked_client',
+            'tenant': TENANT_ID_1,
+            'os_architecture': DEFAULT_OS_ARCH,
+            'os_distro': DEFAULT_OS_DISTRO,
+            'os_version': DEFAULT_OS_VERSION,
+            'rax_options': DEFAULT_RAX_OPTIONS,
+        }
+        result = self.mox.CreateMockAnything()
+        models.InstanceReconcile(**reconcile_vals).AndReturn(result)
+        result.save()
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertTrue(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_deleted_not_matching(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = beginning_d
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at,
+                                                  deleted=True,
+                                                  deleted_at=beginning_d+1)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_deleted_not_deleted_from_client(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = beginning_d
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        rec_inst = self._fake_reconciler_instance(launched_at=launched_at)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_not_found(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = None
+        deployment = self.mox.CreateMockAnything()
+        exists.deployment().AndReturn(deployment)
+        deployment.name = 'RegionOne.prod.cell1'
+        ex = exceptions.NotFound()
+        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndRaise(ex)
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_fields_match(self):
+        exists = self._fake_usage(is_exists=True)
+        kwargs = {'launched_at': exists.launched_at}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 0)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_with_deleted(self):
+        exists = self._fake_usage(is_exists=True, is_deleted=True)
+        kwargs = {'launched_at': exists.launched_at,
+                  'deleted': True,
+                  'deleted_at': exists.deleted_at}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 0)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_miss_match(self):
+        exists = self._fake_usage(is_exists=True)
+        kwargs = {'launched_at': exists.launched_at + 1}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 1)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_with_deleted_miss_match(self):
+        exists = self._fake_usage(is_exists=True, is_deleted=True)
+        kwargs = {'launched_at': exists.launched_at,
+                  'deleted': True,
+                  'deleted_at': exists.deleted_at+1}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 2)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_not_deleted_in_nova(self):
+        exists = self._fake_usage(is_exists=True, is_deleted=True)
+        kwargs = {'launched_at': exists.launched_at}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 3)
+        self.mox.VerifyAll()
+
+    def test_fields_match_field_not_deleted_in_exists(self):
+        exists = self._fake_usage(is_exists=True)
+        kwargs = {'launched_at': exists.launched_at,
+                  'deleted': True,
+                  'deleted_at': exists.launched_at + 1}
+        instance = self._fake_reconciler_instance(**kwargs)
+        self.mox.ReplayAll()
+        match_code = self.reconciler._fields_match(exists, instance)
+        self.assertEqual(match_code, 4)
         self.mox.VerifyAll()
 
 
@@ -219,13 +430,15 @@ class NovaJSONBridgeClientTestCase(unittest.TestCase):
         response.json().AndReturn(result)
 
     def _fake_instance(self, uuid=INSTANCE_ID_1, launched_at=None,
-                      terminated_at=None, deleted=0, instance_type_id=1):
+                      terminated_at=None, deleted=0, instance_type_id=1,
+                      project_id=TENANT_ID_1):
         return {
             'uuid': uuid,
             'launched_at': launched_at,
             'terminated_at': terminated_at,
             'deleted': deleted,
-            'instance_type_id': instance_type_id
+            'instance_type_id': instance_type_id,
+            'project_id': project_id
         }
 
     def test_get_instance(self):
@@ -241,7 +454,7 @@ class NovaJSONBridgeClientTestCase(unittest.TestCase):
         instance = self.client.get_instance('RegionOne', INSTANCE_ID_1)
         self.assertIsNotNone(instance)
         self.assertEqual(instance['id'], INSTANCE_ID_1)
-        self.assertEqual(instance['instance_type_id'], 1)
+        self.assertEqual(instance['instance_type_id'], '1')
         launched_at_dec = stackutils.str_time_to_unix(launched_at)
         self.assertEqual(instance['launched_at'], launched_at_dec)
         terminated_at_dec = stackutils.str_time_to_unix(terminated_at)

@@ -108,6 +108,7 @@ class InstanceUsage(models.Model):
         raw = raws[0]
         return raw.deployment
 
+
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
@@ -116,6 +117,9 @@ class InstanceDeletes(models.Model):
     deleted_at = models.DecimalField(null=True, max_digits=20,
                                      decimal_places=6, db_index=True)
     raw = models.ForeignKey(RawData, null=True)
+
+    def deployment(self):
+        return self.raw.deployment
 
 
 class InstanceReconcile(models.Model):
@@ -131,6 +135,12 @@ class InstanceReconcile(models.Model):
                                         null=True,
                                         blank=True,
                                         db_index=True)
+    tenant = models.CharField(max_length=50, null=True, blank=True,
+                              db_index=True)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
     source = models.CharField(max_length=150, null=True,
                               blank=True, db_index=True)
 
@@ -180,6 +190,9 @@ class InstanceExists(models.Model):
     os_distro = models.TextField(null=True, blank=True)
     os_version = models.TextField(null=True, blank=True)
     rax_options = models.TextField(null=True, blank=True)
+
+    def deployment(self):
+        return self.raw.deployment
 
 
 class Timing(models.Model):

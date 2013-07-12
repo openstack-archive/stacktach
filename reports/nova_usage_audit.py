@@ -105,11 +105,12 @@ def _audit_launches_to_exists(launches, exists, beginning):
 
 def _status_queries(exists_query):
     verified = exists_query.filter(status=models.InstanceExists.VERIFIED)
+    reconciled = exists_query.filter(status=models.InstanceExists.RECONCILED)
     fail = exists_query.filter(status=models.InstanceExists.FAILED)
     pending = exists_query.filter(status=models.InstanceExists.PENDING)
     verifying = exists_query.filter(status=models.InstanceExists.VERIFYING)
 
-    return verified, fail, pending, verifying
+    return verified, reconciled, fail, pending, verifying
 
 
 def _send_status_queries(exists_query):
@@ -126,7 +127,8 @@ def _send_status_queries(exists_query):
 
 
 def _audit_for_exists(exists_query):
-    (verified, fail, pending, verifying) = _status_queries(exists_query)
+    (verified, reconciled,
+     fail, pending, verifying) = _status_queries(exists_query)
 
     (success, unsent, redirect,
      client_error, server_error) = _send_status_queries(verified)
@@ -134,6 +136,7 @@ def _audit_for_exists(exists_query):
     report = {
         'count': exists_query.count(),
         'verified': verified.count(),
+        'reconciled': reconciled.count(),
         'failed': fail.count(),
         'pending': pending.count(),
         'verifying': verifying.count(),
@@ -290,7 +293,7 @@ def store_results(start, end, summary, details):
         'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
         'period_start': start,
         'period_end': end,
-        'version': 3,
+        'version': 4,
         'name': 'nova usage audit'
     }
 
