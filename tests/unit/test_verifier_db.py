@@ -701,7 +701,7 @@ class VerifierTestCase(unittest.TestCase):
         self.assertFalse(result)
         self.mox.VerifyAll()
 
-    def test_verify_fail_reconcile_success(self):
+    def test_verify_fail_reconciled_verify_success(self):
         exist = self.mox.CreateMockAnything()
         exist.launched_at = decimal.Decimal('1.1')
         self.mox.StubOutWithMock(dbverifier, '_verify_for_launch')
@@ -712,7 +712,7 @@ class VerifierTestCase(unittest.TestCase):
         dbverifier._verify_for_launch(exist).AndRaise(verify_exception)
         self.mox.StubOutWithMock(dbverifier, '_verify_with_reconciled_data')
         dbverifier._verify_with_reconciled_data(exist)
-        dbverifier._mark_exist_verified(exist, reconciled=True)
+        dbverifier._mark_exist_verified(exist)
         self.mox.ReplayAll()
         result, exists = dbverifier._verify(exist)
         self.assertTrue(result)
@@ -943,8 +943,10 @@ class VerifierTestCase(unittest.TestCase):
         exists1 = self.mox.CreateMockAnything()
         exists2 = self.mox.CreateMockAnything()
         self.verifier.failed = [exists1, exists2]
-        self.reconciler.failed_validation(exists1)
-        self.reconciler.failed_validation(exists2)
+        self.reconciler.failed_validation(exists1).AndReturn(True)
+        self.reconciler.failed_validation(exists2).AndReturn(False)
+        self.mox.StubOutWithMock(dbverifier, '_mark_exist_verified')
+        dbverifier._mark_exist_verified(exists1, reconciled=True)
         self.mox.ReplayAll()
         self.verifier.reconcile_failed()
         self.assertEqual(len(self.verifier.failed), 0)

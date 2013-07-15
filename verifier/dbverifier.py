@@ -273,7 +273,7 @@ def _attempt_reconciled_verify(exist, orig_e):
         # Attempt to verify against reconciled data
         _verify_with_reconciled_data(exist)
         verified = True
-        _mark_exist_verified(exist, reconciled=True)
+        _mark_exist_verified(exist)
     except NotFound, rec_e:
         # No reconciled data, just mark it failed
         _mark_exist_failed(exist, reason=str(orig_e))
@@ -410,7 +410,8 @@ class Verifier(object):
 
     def reconcile_failed(self):
         for failed_exist in self.failed:
-            self.reconciler.failed_validation(failed_exist)
+            if self.reconciler.failed_validation(failed_exist):
+                _mark_exist_verified(failed_exist, reconciled=True)
         self.failed = []
 
     def _keep_running(self):
