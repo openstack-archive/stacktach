@@ -59,7 +59,13 @@ if __name__ == '__main__':
     with open(config_filename, "r") as f:
         config = json.load(f)
 
-    process = Process(target=dbverifier.run, args=(config, ))
+    def make_and_start_verifier(config):
+        # Gotta create it and run it this way so things don't get
+        # lost when the process is forked.
+        verifier = dbverifier.Verifier(config)
+        verifier.run()
+
+    process = Process(target=make_and_start_verifier, args=(config,))
     process.start()
     signal.signal(signal.SIGINT, kill_time)
     signal.signal(signal.SIGTERM, kill_time)

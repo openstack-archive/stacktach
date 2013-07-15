@@ -9,11 +9,10 @@ from django.shortcuts import render_to_response
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import db as stackdb
-from stacktach import image_type
 from stacktach import models
 from stacktach import stacklog
 from stacktach import utils
-
+from stacktach.notification import Notification
 
 STACKDB = stackdb
 
@@ -26,67 +25,11 @@ def log_warn(msg):
         LOG.warn(msg)
 
 
-def _extract_states(payload):
-    return {
-        'state' : payload.get('state', ""),
-        'old_state' : payload.get('old_state', ""),
-        'old_task' : payload.get('old_task_state', ""),
-        'task' : payload.get('new_task_state', ""),
-        'image_type' : image_type.get_numeric_code(payload)
-    }
-
-
-def _monitor_message(routing_key, body):
-    event = body['event_type']
-    publisher = body['publisher_id']
-    request_id = body['_context_request_id']
-    parts = publisher.split('.')
-    service = parts[0]
-    if len(parts) > 1:
-        host = ".".join(parts[1:])
-    else:
-        host = None
-    payload = body['payload']
-    request_spec = payload.get('request_spec', None)
-
-    # instance UUID's seem to hide in a lot of odd places.
-    instance = payload.get('instance_id', None)
-    instance = payload.get('instance_uuid', instance)
-    if not instance:
-        instance = payload.get('exception', {}).get('kwargs', {}).get('uuid')
-    if not instance:
-        instance = payload.get('instance', {}).get('uuid')
-
-    tenant = body.get('_context_project_id', None)
-    tenant = payload.get('tenant_id', tenant)
-    resp = dict(host=host, instance=instance, publisher=publisher,
-                service=service, event=event, tenant=tenant,
-                request_id=request_id)
-    resp.update(_extract_states(payload))
-    return resp
-
-
-def _compute_update_message(routing_key, body):
-    publisher = None
-    instance = None
-    args = body['args']
-    host = args['host']
-    request_id = body['_context_request_id']
-    service = args['service_name']
-    event = body['method']
-    tenant = args.get('_context_project_id', None)
-    resp = dict(host=host, instance=instance, publisher=publisher,
-                service=service, event=event, tenant=tenant,
-                request_id=request_id)
-    payload = body.get('payload', {})
-    resp.update(_extract_states(payload))
-    return resp
-
-
 # routing_key : handler
-HANDLERS = {'monitor.info':_monitor_message,
-            'monitor.error':_monitor_message,
-            '':_compute_update_message}
+
+NOTIFICATIONS = {
+    'monitor.info': Notification,
+    'monitor.error': Notification}
 
 
 def start_kpi_tracking(lifecycle, raw):
@@ -250,6 +193,12 @@ def _process_usage_for_new_launch(raw, body):
         usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
 
     usage.tenant = payload['tenant_id']
+    image_meta = payload.get('image_meta', {})
+    usage.rax_options = image_meta.get('com.rackspace__1__options', '')
+    usage.os_architecture = image_meta.get('org.openstack__1__architecture',
+                                           '')
+    usage.os_version = image_meta.get('org.openstack__1__os_version', '')
+    usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
     STACKDB.save(usage)
 
 
@@ -277,6 +226,13 @@ def _process_usage_for_updates(raw, body):
         usage.instance_type_id = payload['new_instance_type_id']
 
     usage.tenant = payload['tenant_id']
+    image_meta = payload.get('image_meta', {})
+    usage.rax_options = image_meta.get('com.rackspace__1__options', '')
+    usage.os_architecture = image_meta.get('org.openstack__1__architecture',
+                                           '')
+    usage.os_version = image_meta.get('org.openstack__1__os_version', '')
+    usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
+
     STACKDB.save(usage)
 
 
@@ -321,6 +277,13 @@ def _process_exists(raw, body):
             values['usage'] = usage
         values['raw'] = raw
         values['tenant'] = payload['tenant_id']
+        image_meta = payload.get('image_meta', {})
+        values['rax_options'] = image_meta.get('com.rackspace__1__options', '')
+        os_arch = image_meta.get('org.openstack__1__architecture', '')
+        values['os_architecture'] = os_arch
+        os_version = image_meta.get('org.openstack__1__os_version', '')
+        values['os_version'] = os_version
+        values['os_distro'] = image_meta.get('org.openstack__1__os_distro', '')
 
         deleted_at = payload.get('deleted_at')
         if deleted_at and deleted_at != '':
@@ -370,22 +333,12 @@ def process_raw_data(deployment, args, json_args):
 
     routing_key, body = args
     record = None
-    handler = HANDLERS.get(routing_key, None)
-    if handler:
-        values = handler(routing_key, body)
+    notification = NOTIFICATIONS[routing_key](body)
+    if notification:
+        values = notification.rawdata_kwargs(deployment, routing_key, json_args)
         if not values:
             return record
-
-        values['deployment'] = deployment
-        try:
-            when = body['timestamp']
-        except KeyError:
-            when = body['_context_timestamp']  # Old way of doing it
-        values['when'] = utils.str_time_to_unix(when)
-        values['routing_key'] = routing_key
-        values['json'] = json_args
         record = STACKDB.create_rawdata(**values)
-        STACKDB.save(record)
     return record
 
 

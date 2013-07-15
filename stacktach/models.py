@@ -59,6 +59,14 @@ class RawData(models.Model):
         return "%s %s %s" % (self.event, self.instance, self.state)
 
 
+class RawDataImageMeta(models.Model):
+    raw = models.ForeignKey(RawData, null=False)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
+
+
 class Lifecycle(models.Model):
     """The Lifecycle table is the Master for a group of
     Timing detail records. There is one Lifecycle row for
@@ -88,6 +96,18 @@ class InstanceUsage(models.Model):
                                          db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
+
+    def deployment(self):
+        raws = RawData.objects.filter(request_id=self.request_id)
+        if raws.count() == 0:
+            return False
+        raw = raws[0]
+        return raw.deployment
+
 
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
@@ -98,16 +118,44 @@ class InstanceDeletes(models.Model):
                                      decimal_places=6, db_index=True)
     raw = models.ForeignKey(RawData, null=True)
 
+    def deployment(self):
+        return self.raw.deployment
+
+
+class InstanceReconcile(models.Model):
+    row_created = models.DateTimeField(auto_now_add=True)
+    row_updated = models.DateTimeField(auto_now=True)
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    launched_at = models.DecimalField(null=True, max_digits=20,
+                                      decimal_places=6, db_index=True)
+    deleted_at = models.DecimalField(null=True, max_digits=20,
+                                     decimal_places=6, db_index=True)
+    instance_type_id = models.CharField(max_length=50,
+                                        null=True,
+                                        blank=True,
+                                        db_index=True)
+    tenant = models.CharField(max_length=50, null=True, blank=True,
+                              db_index=True)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
+    source = models.CharField(max_length=150, null=True,
+                              blank=True, db_index=True)
+
 
 class InstanceExists(models.Model):
     PENDING = 'pending'
     VERIFYING = 'verifying'
     VERIFIED = 'verified'
+    RECONCILED = 'reconciled'
     FAILED = 'failed'
     STATUS_CHOICES = [
         (PENDING, 'Pending Verification'),
         (VERIFYING, 'Currently Being Verified'),
         (VERIFIED, 'Passed Verification'),
+        (RECONCILED, 'Passed Verification After Reconciliation'),
         (FAILED, 'Failed Verification'),
     ]
     instance = models.CharField(max_length=50, null=True,
@@ -138,6 +186,13 @@ class InstanceExists(models.Model):
     send_status = models.IntegerField(null=True, default=0, db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
+
+    def deployment(self):
+        return self.raw.deployment
 
 
 class Timing(models.Model):
@@ -181,3 +236,7 @@ class JsonReport(models.Model):
     name = models.CharField(max_length=50, db_index=True)
     version = models.IntegerField(default=1)
     json = models.TextField()
+
+
+def get_model_fields(model):
+    return model._meta.fields
