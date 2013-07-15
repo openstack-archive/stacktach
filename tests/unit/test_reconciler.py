@@ -233,7 +233,8 @@ class ReconcilerTestCase(unittest.TestCase):
         exists = self._fake_usage(is_exists=True, mock_deployment=True)
         launched_at = exists.launched_at
         rec_inst = self._fake_reconciler_instance(launched_at=launched_at)
-        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1,
+                                 get_metadata=True).AndReturn(rec_inst)
         reconcile_vals = {
             'instance': exists.instance,
             'launched_at': exists.launched_at,
@@ -262,7 +263,8 @@ class ReconcilerTestCase(unittest.TestCase):
         rec_inst = self._fake_reconciler_instance(launched_at=launched_at,
                                                   deleted=True,
                                                   deleted_at=deleted_at)
-        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1,
+                                 get_metadata=True).AndReturn(rec_inst)
         reconcile_vals = {
             'instance': exists.instance,
             'launched_at': exists.launched_at,
@@ -297,7 +299,8 @@ class ReconcilerTestCase(unittest.TestCase):
         rec_inst = self._fake_reconciler_instance(launched_at=launched_at,
                                                   deleted=True,
                                                   deleted_at=beginning_d+1)
-        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1,
+                                 get_metadata=True).AndReturn(rec_inst)
         self.mox.ReplayAll()
         result = self.reconciler.failed_validation(exists)
         self.assertFalse(result)
@@ -315,7 +318,8 @@ class ReconcilerTestCase(unittest.TestCase):
         exists.deployment().AndReturn(deployment)
         deployment.name = 'RegionOne.prod.cell1'
         rec_inst = self._fake_reconciler_instance(launched_at=launched_at)
-        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndReturn(rec_inst)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1,
+                                 get_metadata=True).AndReturn(rec_inst)
         self.mox.ReplayAll()
         result = self.reconciler.failed_validation(exists)
         self.assertFalse(result)
@@ -333,7 +337,8 @@ class ReconcilerTestCase(unittest.TestCase):
         exists.deployment().AndReturn(deployment)
         deployment.name = 'RegionOne.prod.cell1'
         ex = exceptions.NotFound()
-        self.client.get_instance('RegionOne', INSTANCE_ID_1).AndRaise(ex)
+        self.client.get_instance('RegionOne', INSTANCE_ID_1,
+                                 get_metadata=True).AndRaise(ex)
         self.mox.ReplayAll()
         result = self.reconciler.failed_validation(exists)
         self.assertFalse(result)
@@ -452,6 +457,45 @@ class NovaJSONBridgeClientTestCase(unittest.TestCase):
                             results)
         self.mox.ReplayAll()
         instance = self.client.get_instance('RegionOne', INSTANCE_ID_1)
+        self.assertIsNotNone(instance)
+        self.assertEqual(instance['id'], INSTANCE_ID_1)
+        self.assertEqual(instance['instance_type_id'], '1')
+        launched_at_dec = stackutils.str_time_to_unix(launched_at)
+        self.assertEqual(instance['launched_at'], launched_at_dec)
+        terminated_at_dec = stackutils.str_time_to_unix(terminated_at)
+        self.assertEqual(instance['deleted_at'], terminated_at_dec)
+        self.assertTrue(instance['deleted'])
+        self.mox.VerifyAll()
+
+    def _fake_metadata(self):
+        metadata = [
+            {'key': 'image_org.openstack__1__architecture',
+             'value': DEFAULT_OS_ARCH},
+            {'key': 'image_org.openstack__1__os_distro',
+             'value': DEFAULT_OS_DISTRO},
+            {'key': 'image_org.openstack__1__os_version',
+             'value': DEFAULT_OS_VERSION},
+            {'key': 'image_com.rackspace__1__options',
+             'value': DEFAULT_RAX_OPTIONS},
+        ]
+        return metadata
+
+    def test_get_instance_with_metadata(self):
+        launched_at = datetime.datetime.utcnow() - datetime.timedelta(minutes=5)
+        launched_at = str(launched_at)
+        terminated_at = str(datetime.datetime.utcnow())
+        results = [self._fake_instance(launched_at=launched_at,
+                                       terminated_at=terminated_at,
+                                       deleted=True)]
+        metadata_results = self._fake_metadata()
+        self.mock_for_query('nova', nova.GET_INSTANCE_QUERY % INSTANCE_ID_1,
+                            results)
+        self.mock_for_query('nova',
+                            nova.GET_INSTANCE_SYSTEM_METADATA % INSTANCE_ID_1,
+                            metadata_results)
+        self.mox.ReplayAll()
+        instance = self.client.get_instance('RegionOne', INSTANCE_ID_1,
+                                            get_metadata=True)
         self.assertIsNotNone(instance)
         self.assertEqual(instance['id'], INSTANCE_ID_1)
         self.assertEqual(instance['instance_type_id'], '1')

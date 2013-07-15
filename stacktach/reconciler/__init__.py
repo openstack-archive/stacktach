@@ -141,7 +141,8 @@ class Reconciler(object):
         reconciled = False
         region = self._region_for_usage(exists)
         try:
-            instance = self.client.get_instance(region, exists.instance)
+            instance = self.client.get_instance(region, exists.instance,
+                                                get_metadata=True)
             match_code = self._fields_match(exists, instance)
             if match_code == 0:
                 self._reconcile_instance(exists, self.client.src_str,

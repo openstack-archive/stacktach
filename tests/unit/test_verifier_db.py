@@ -25,6 +25,8 @@ import time
 import unittest
 import uuid
 
+
+from django.db import transaction
 import kombu.common
 import kombu.entity
 import kombu.pools
@@ -1085,6 +1087,10 @@ class VerifierTestCase(unittest.TestCase):
         self.verifier.reconcile = True
         self.mox.StubOutWithMock(self.verifier, '_keep_running')
         self.verifier._keep_running().AndReturn(True)
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        fake_transaction = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(fake_transaction)
+        fake_transaction.__enter__()
         start = datetime.datetime.utcnow()
         self.mox.StubOutWithMock(self.verifier, '_utcnow')
         self.verifier._utcnow().AndReturn(start)
@@ -1105,6 +1111,7 @@ class VerifierTestCase(unittest.TestCase):
         result2.successful().AndReturn(True)
         result2.get().AndReturn((True, None))
         self.verifier.reconcile_failed()
+        fake_transaction.__exit__(None, None, None)
         self.mox.StubOutWithMock(time, 'sleep', use_mock_anything=True)
         time.sleep(self.config['tick_time'])
         self.verifier._keep_running().AndReturn(False)
@@ -1116,6 +1123,10 @@ class VerifierTestCase(unittest.TestCase):
         self.verifier_notif.reconcile = True
         self.mox.StubOutWithMock(self.verifier_notif, '_keep_running')
         self.verifier_notif._keep_running().AndReturn(True)
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        fake_transaction = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(fake_transaction)
+        fake_transaction.__enter__()
         start = datetime.datetime.utcnow()
         self.mox.StubOutWithMock(self.verifier_notif, '_utcnow')
         self.verifier_notif._utcnow().AndReturn(start)
@@ -1137,6 +1148,7 @@ class VerifierTestCase(unittest.TestCase):
         result2.successful().AndReturn(True)
         result2.get().AndReturn((True, None))
         self.verifier_notif.reconcile_failed()
+        fake_transaction.__exit__(None, None, None)
         self.mox.StubOutWithMock(time, 'sleep', use_mock_anything=True)
         time.sleep(self.config['tick_time'])
         self.verifier_notif._keep_running().AndReturn(False)
