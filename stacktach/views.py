@@ -349,7 +349,7 @@ def post_process_glancerawdata(raw, notification):
     aggregate_glance_usage(raw, notification)
 
 
-def post_process_genericrawdata(raw, body, notification):
+def post_process_genericrawdata(raw, notification):
     pass
 
 

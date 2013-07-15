@@ -35,6 +35,7 @@ from tests.unit.utils import DUMMY_TIME
 from tests.unit.utils import TIMESTAMP_1
 from tests.unit.utils import TENANT_ID_1
 from tests.unit.utils import INSTANCE_ID_1
+from tests.unit.utils import MESSAGE_ID_1
 
 
 class NovaNotificationTestCase(unittest.TestCase):
@@ -422,7 +423,6 @@ class GlanceNotificationTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
 
-
 class NotificationTestCase(unittest.TestCase):
     def setUp(self):
         self.mox = mox.Mox()
@@ -437,14 +437,12 @@ class NotificationTestCase(unittest.TestCase):
             '_context_project_id': TENANT_ID_1,
             "timestamp": TIMESTAMP_1,
             "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "message_id": MESSAGE_ID_1,
             "payload": {
                 'instance_id': INSTANCE_ID_1,
                 "status": "saving",
                 "container_format": "ovf",
-                "properties": {
-                    "image_type": "snapshot",
-                },
-                "tenant": "5877054",
+                "tenant": "5877054"
             }
         }
         deployment = "1"
@@ -463,7 +461,8 @@ class NotificationTestCase(unittest.TestCase):
             service="glance-api01-r2961",
             host="global.preprod-ord.ohthree.com",
             instance=INSTANCE_ID_1,
-            request_id=REQUEST_ID_1).AndReturn(raw)
+            request_id=REQUEST_ID_1,
+            message_id=MESSAGE_ID_1).AndReturn(raw)
 
         self.mox.ReplayAll()
 

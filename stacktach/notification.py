@@ -72,18 +72,23 @@ class Notification(object):
             instance = self.payload.get('instance', {}).get('uuid')
         return instance
 
+    @property
+    def message_id(self):
+        return self.body.get('message_id', None)
+
     def save(self):
         return db.create_generic_rawdata(deployment=self.deployment,
-                                      routing_key=self.routing_key,
-                                      tenant=self.tenant,
-                                      json=self.json,
-                                      when=self.when,
-                                      publisher=self.publisher,
-                                      event=self.event,
-                                      service=self.service,
-                                      host=self.host,
-                                      instance=self.instance,
-                                      request_id=self.request_id)
+                                         routing_key=self.routing_key,
+                                         tenant=self.tenant,
+                                         json=self.json,
+                                         when=self.when,
+                                         publisher=self.publisher,
+                                         event=self.event,
+                                         service=self.service,
+                                         host=self.host,
+                                         instance=self.instance,
+                                         request_id=self.request_id,
+                                         message_id=self.message_id)
 
 
 class GlanceNotification(Notification):
@@ -179,6 +184,7 @@ class GlanceNotification(Notification):
         }
         db.create_image_delete(**values)
 
+
 class NovaNotification(Notification):
     def __init__(self, body, deployment, routing_key, json):
         super(NovaNotification, self).__init__(body, deployment, routing_key,
@@ -203,8 +209,6 @@ class NovaNotification(Notification):
             'audit_period_beginning', None)
         self.audit_period_ending = self.payload.get(
             'audit_period_ending', None)
-        self.message = self.payload.get('message', None)
-        self.message_id = self.body.get('message_id', None)
 
     @property
     def host(self):

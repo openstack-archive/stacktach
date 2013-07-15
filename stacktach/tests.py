@@ -142,13 +142,13 @@ class GenericRawDataTestCase(TransactionTestCase):
             'tenant': '1234567',
             'json': '{}',
             'routing_key': 'monitor.info',
-            'image_type': 1,
             'publisher': 'publisher',
             'event': 'event',
             'service': 'service',
             'host': 'host',
             'instance': '1234-5678-9012-3456',
-            'request_id': '1234'}
+            'request_id': '1234',
+            'message_id': 'message_id'}
 
         db.create_generic_rawdata(**kwargs)
         rawdata = GenericRawData.objects.all()[0]
