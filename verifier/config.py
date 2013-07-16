@@ -1,4 +1,4 @@
-# Copyright (c) 2012 - Rackspace Inc.
+# Copyright (c) 2013 - Rackspace Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -17,21 +17,11 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-
 import json
 import os
-import signal
-import sys
 
-from multiprocessing import Process
-
-POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir, os.pardir))
-if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
-    sys.path.insert(0, POSSIBLE_TOPDIR)
-
-from verifier import dbverifier
-import verifier.config as verifier_config
+config_filename = os.environ.get('STACKTACH_VERIFIER_CONFIG',
+                                 'stacktach_verifier_config.json')
 
 try:
     from local_settings import *
@@ -39,30 +29,67 @@ try:
 except ImportError:
     pass
 
-process = None
+config = None
+with open(config_filename, "r") as f:
+    config = json.load(f)
 
 
-def kill_time(signal, frame):
-    print "dying ..."
-    if process:
-        process.terminate()
-    print "rose"
-    if process:
-        process.join()
-    print "bud"
-    sys.exit(0)
+def enable_notifications():
+    return config['enable_notifications']
 
 
-if __name__ == '__main__':
-    def make_and_start_verifier(exchange):
-        # Gotta create it and run it this way so things don't get
-        # lost when the process is forked.
-        verifier = dbverifier.Verifier(exchange)
-        verifier.run()
+def source_topics():
+    return config['rabbit']['source_topics']
 
-    for exchange in verifier_config.source_topics().keys():
-        process = Process(target=make_and_start_verifier, args=(exchange,))
-        process.start()
-        signal.signal(signal.SIGINT, kill_time)
-        signal.signal(signal.SIGTERM, kill_time)
-        signal.pause()
+
+def tick_time():
+    return config['tick_time']
+
+
+def settle_units():
+    return config['settle_units']
+
+
+def settle_time():
+    return config['settle_time']
+
+
+def reconcile():
+    return config.get('reconcile', False)
+
+
+def reconciler_config():
+    return config.get(
+        'reconciler_config', '/etc/stacktach/reconciler_config.json')
+
+
+def source_topics():
+    return config['rabbit']['source_topics']
+
+
+def pool_size():
+    return config['pool_size']
+
+
+def durable_queue():
+    return config['rabbit']['durable_queue']
+
+
+def host():
+    return config['rabbit']['host']
+
+
+def port():
+    return config['rabbit']['port']
+
+
+def userid():
+    return config['rabbit']['userid']
+
+
+def password():
+    return config['rabbit']['password']
+
+
+def virtual_host():
+    return config['rabbit']['virtual_host']

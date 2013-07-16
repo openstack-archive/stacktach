@@ -56,6 +56,10 @@ OS_VERSION_1 = "1"
 OS_VERSION_2 = "2"
 
 TIMESTAMP_1 = "2013-06-20 17:31:57.939614"
+SETTLE_TIME = 5
+SETTLE_UNITS = "minutes"
+TICK_TIME = 10
+
 
 def decimal_utc(t = datetime.datetime.utcnow()):
     return dt.dt_to_decimal(t)

@@ -38,6 +38,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from stacktach import stacklog
+from verifier import config as verifier_config
 
 stacklog.set_default_logger_name('verifier')
 LOG = stacklog.get_logger()
@@ -333,34 +334,32 @@ def _create_exchange(name, type, exclusive=False, auto_delete=False,
                                  auto_delete=exclusive, durable=durable)
 
 
-def _create_connection(config):
-    rabbit = config['rabbit']
-    conn_params = dict(hostname=rabbit['host'],
-                       port=rabbit['port'],
-                       userid=rabbit['userid'],
-                       password=rabbit['password'],
+def _create_connection():
+    conn_params = dict(hostname=verifier_config.host(),
+                       port=verifier_config.port(),
+                       userid=verifier_config.userid(),
+                       password=verifier_config.password(),
                        transport="librabbitmq",
-                       virtual_host=rabbit['virtual_host'])
+                       virtual_host=verifier_config.virtual_host())
     return kombu.connection.BrokerConnection(**conn_params)
 
 
 class Verifier(object):
 
-    def __init__(self, config, pool=None, rec=None):
-        self.config = config
-        self.pool = pool or multiprocessing.Pool(self.config['pool_size'])
-        self.reconcile = self.config.get('reconcile', False)
-        self.reconciler = self._load_reconciler(config, rec=rec)
+    def __init__(self, exchange, pool=None, rec=None):
+        self.pool = pool or multiprocessing.Pool(verifier_config.pool_size())
+        self.reconcile = verifier_config.reconcile()
+        self.reconciler = self._load_reconciler(rec=rec)
         self.results = []
         self.failed = []
+        self.exchange = exchange
 
-    def _load_reconciler(self, config, rec=None):
+    def _load_reconciler(self, rec=None):
         if rec:
             return rec
 
         if self.reconcile:
-            config_loc = config.get('reconciler_config',
-                                    '/etc/stacktach/reconciler_config.json')
+            config_loc = verifier_config.reconciler_config()
             with open(config_loc, 'r') as rec_config_file:
                 rec_config = json.load(rec_config_file)
                 return reconciler.Reconciler(rec_config)
@@ -421,9 +420,9 @@ class Verifier(object):
         return datetime.datetime.utcnow()
 
     def _run(self, callback=None):
-        tick_time = self.config['tick_time']
-        settle_units = self.config['settle_units']
-        settle_time = self.config['settle_time']
+        tick_time = verifier_config.tick_time()
+        settle_units = verifier_config.settle_units()
+        settle_time = verifier_config.settle_time()
         while self._keep_running():
             with transaction.commit_on_success():
                 now = self._utcnow()
@@ -439,15 +438,13 @@ class Verifier(object):
             time.sleep(tick_time)
 
     def run(self):
-        if self.config['enable_notifications']:
-            exchange = _create_exchange(self.config['rabbit']['exchange_name'],
-                                        'topic',
-                                        durable=self.config['rabbit']['durable_queue'])
-            routing_keys = None
-            if self.config['rabbit'].get('routing_keys') is not None:
-                routing_keys = self.config['rabbit']['routing_keys']
+        if verifier_config.enable_notifications():
+            exchange = _create_exchange(
+                self.exchange, 'topic',
+                durable=verifier_config.durable_queue())
+            routing_keys = verifier_config.source_topics()
 
-            with _create_connection(self.config) as conn:
+            with _create_connection() as conn:
                 def callback(result):
                     (verified, exist) = result
                     if verified:
@@ -459,9 +456,9 @@ class Verifier(object):
             self._run()
 
     def _run_once(self, callback=None):
-        tick_time = self.config['tick_time']
-        settle_units = self.config['settle_units']
-        settle_time = self.config['settle_time']
+        tick_time = verifier_config.tick_time()
+        settle_units = verifier_config.settle_units()
+        settle_time = verifier_config.settle_time()
         now = self._utcnow()
         kwargs = {settle_units: settle_time}
         ending_max = now - datetime.timedelta(**kwargs)
@@ -475,15 +472,13 @@ class Verifier(object):
             time.sleep(tick_time)
 
     def run_once(self):
-        if self.config['enable_notifications']:
-            exchange = _create_exchange(self.config['rabbit']['exchange_name'],
-                                        'topic',
-                                        durable=self.config['rabbit']['durable_queue'])
-            routing_keys = None
-            if self.config['rabbit'].get('routing_keys') is not None:
-                routing_keys = self.config['rabbit']['routing_keys']
+        if verifier_config.enable_notifications():
+            exchange = _create_exchange(
+                self.exchange, 'topic',
+                durable=verifier_config.durable_queue())
+            routing_keys = verifier_config.source_topics()[self.exchange]
 
-            with _create_connection(self.config) as conn:
+            with _create_connection() as conn:
                 def callback(result):
                     (verified, exist) = result
                     if verified:
@@ -522,7 +517,7 @@ if __name__ == '__main__':
     config = {'tick_time': args.tick_time, 'settle_time': args.settle_time,
               'settle_units': args.settle_units, 'pool_size': args.pool_size}
 
-    verifier = Verifier(config)
+    verifier = Verifier('nova')
     if args.run_once:
         verifier.run_once()
     else:
