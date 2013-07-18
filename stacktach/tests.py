@@ -27,6 +27,8 @@ from stacktach.models import GenericRawData
 from stacktach.models import GlanceRawData
 from stacktach.models import RawData
 from stacktach.models import get_model_fields
+from stacktach import datetime_to_decimal as dt
+
 
 
 class RawDataImageMetaDbTestCase(TransactionTestCase):
@@ -157,3 +159,84 @@ class GenericRawDataTestCase(TransactionTestCase):
             if field.name != 'id':
                 self.assertEquals(getattr(rawdata, field.name),
                                   kwargs[field.name])
+
+
+class NovaRawDataSearchTestCase(TransactionTestCase):
+    def test_search_results_for_nova(self):
+        expected_result = [['#', '?', 'When', 'Deployment', 'Event', 'Host',
+                            'State', "State'", "Task'"], [1L, ' ',
+                            '2013-07-17 10:16:10.717219', 'depl', 'event',
+                            'host', 'state', 'old_state', 'old_task']]
+        depl = db.get_or_create_deployment('depl')[0]
+        when = dt.dt_to_decimal(datetime.utcnow())
+        raw = db.create_nova_rawdata(deployment=depl,
+                      routing_key='routing_key',
+                                      tenant='tenant',
+                                      json='json',
+                                      when=when,
+                                      publisher='publisher',
+                                      event='event',
+                                      service='nova',
+                                      host='host',
+                                      instance='instance',
+                                      request_id='req-1234',
+                                      state='state',
+                                      old_state='old_state',
+                                      task='task',
+                                      old_task='old_task',
+                                      os_architecture='arch',
+                                      os_distro='distro',
+                                      os_version='version',
+                                      rax_options=1)
+
+        results = raw.search_results({}, "2013-07-17 10:16:10.717219", ' ')
+        self.assertEqual(results,expected_result)
+
+    def test_search_results_for_glance(self):
+        expected_result = [['#', '?', 'When', 'Deployment', 'Event', 'Host',
+                            'Status'], [1L, ' ',
+                            '2013-07-17 10:16:10.717219', 'depl', 'event',
+                            'host', 'status']]
+        depl = db.get_or_create_deployment('depl')[0]
+        when = dt.dt_to_decimal(datetime.utcnow())
+
+        glance_raw = db.create_glance_rawdata(deployment=depl,
+                                              routing_key='routing_key',
+                                              json='json',
+                                              when=when,
+                                              publisher='publisher',
+                                              event='event',
+                                              service='glance',
+                                              host='host',
+                                              uuid='instance',
+                                              request_id='req-1234',
+                                              status='status',
+                                              image_type=1)
+
+        results = glance_raw.search_results({}, "2013-07-17 10:16:10.717219",
+                                                ' ')
+        self.assertEqual(results,expected_result)
+
+    def test_search_results_for_generic(self):
+        expected_result = [['#', '?', 'When', 'Deployment', 'Event', 'Host',
+                            'Instance', 'Request id'], [1L, ' ',
+                            '2013-07-17 10:16:10.717219', 'depl', 'event',
+                            'host', 'instance', 'req-1234']]
+        depl = db.get_or_create_deployment('depl')[0]
+        when = dt.dt_to_decimal(datetime.utcnow())
+
+        generic_raw = db.create_generic_rawdata(deployment=depl,
+                                              routing_key='routing_key',
+                                              json='json',
+                                              when=when,
+                                              publisher='publisher',
+                                              event='event',
+                                              service='glance',
+                                              host='host',
+                                              instance='instance',
+                                              request_id='req-1234',
+                                              tenant='tenant')
+
+        results = generic_raw.search_results({}, "2013-07-17 10:16:10.717219",
+                                                ' ')
+        self.assertEqual(results,expected_result)

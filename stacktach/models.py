@@ -13,9 +13,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from django import forms
+import copy
 from django.db import models
 
+
+def routing_key_type(key):
+    if key.endswith('error'):
+        return 'E'
+    return ' '
 
 class Deployment(models.Model):
     name = models.CharField(max_length=50)
@@ -25,6 +30,8 @@ class Deployment(models.Model):
 
 
 class GenericRawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "Instance", "Request id"]]
     deployment = models.ForeignKey(Deployment)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
@@ -52,8 +59,17 @@ class GenericRawData(models.Model):
     def get_name():
         return GenericRawData.__name__
 
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                        self.deployment.name, self.event, self.host,
+                        self.instance, self.request_id])
+        return results
 
 class RawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "State", "State'", "Task'"]]
     deployment = models.ForeignKey(Deployment)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
@@ -87,9 +103,21 @@ class RawData(models.Model):
     def __repr__(self):
         return "%s %s %s" % (self.event, self.instance, self.state)
 
+    @property
+    def uuid(self):
+        return self.instance
+
     @staticmethod
     def get_name():
         return RawData.__name__
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                        self.deployment.name, self.event, self.host, self.state,
+                        self.old_state, self.old_task])
+        return results
 
 
 class RawDataImageMeta(models.Model):
@@ -273,6 +301,8 @@ class JsonReport(models.Model):
 
 
 class GlanceRawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "Status"]]
     ACTIVE = 'active'
     DELETED = 'deleted'
     KILLED = 'killed'
@@ -316,6 +346,14 @@ class GlanceRawData(models.Model):
     @staticmethod
     def get_name():
         return GlanceRawData.__name__
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                            self.deployment.name, self.event, self.host,
+                            self.status])
+        return results
 
 
 class ImageUsage(models.Model):
