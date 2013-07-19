@@ -150,14 +150,11 @@ class GlanceNotification(Notification):
                 'size': self.size,
                 'raw': raw
             }
-            created_at_range = (self.created_at, self.created_at+1)
-            usage = db.get_image_usage(
-                uuid=self.uuid, created_at__range=created_at_range)
+            usage = db.get_image_usage(uuid=self.uuid)
             values['usage'] = usage
             values['created_at'] = self.created_at
             if self.deleted_at:
-                delete = db.get_image_delete(
-                    uuid=self.uuid, created_at__range=created_at_range)
+                delete = db.get_image_delete(uuid=self.uuid)
                 values['delete'] = delete
                 values['deleted_at'] = self.deleted_at
 
