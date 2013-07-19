@@ -38,8 +38,8 @@ def enable_notifications():
     return config['enable_notifications']
 
 
-def source_topics():
-    return config['rabbit']['source_topics']
+def topics():
+    return config['rabbit']['topics']
 
 
 def tick_time():
@@ -61,11 +61,6 @@ def reconcile():
 def reconciler_config():
     return config.get(
         'reconciler_config', '/etc/stacktach/reconciler_config.json')
-
-
-def source_topics():
-    return config['rabbit']['source_topics']
-
 
 def pool_size():
     return config['pool_size']

@@ -34,7 +34,7 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
-from stacktach import db
+from stacktach import db, message_service
 from stacktach import stacklog
 from stacktach import views
 
@@ -59,16 +59,16 @@ class Consumer(kombu.mixins.ConsumerMixin):
         self.queue_name_prefix = queue_name_prefix
 
     def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
-        return kombu.entity.Exchange(name, type=type, exclusive=exclusive,
+        return message_service.create_exchange(name, exchange_type=type, exclusive=exclusive,
                                      durable=self.durable,
                                      auto_delete=auto_delete)
 
     def _create_queue(self, name, nova_exchange, routing_key, exclusive=False,
                      auto_delete=False):
-        return kombu.Queue(name, nova_exchange, durable=self.durable,
-                           auto_delete=exclusive, exclusive=auto_delete,
-                           queue_arguments=self.queue_arguments,
-                           routing_key=routing_key)
+        return message_service.create_queue(
+            name, nova_exchange, durable=self.durable, auto_delete=exclusive,
+            exclusive=auto_delete, queue_arguments=self.queue_arguments,
+            routing_key=routing_key)
 
     def get_consumers(self, Consumer, channel):
         exchange = self._create_exchange(self.exchange, "topic")

@@ -4,7 +4,6 @@ import os
 from unittest import TestCase
 import mox
 from stacktach import stacklog
-import __builtin__
 from stacktach.stacklog import ExchangeLogger
 
 
