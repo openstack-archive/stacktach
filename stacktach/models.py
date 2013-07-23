@@ -59,6 +59,10 @@ class GenericRawData(models.Model):
     def get_name():
         return GenericRawData.__name__
 
+    @property
+    def uuid(self):
+        return self.instance
+
     def search_results(self, results, when, routing_key_status):
         if not results:
             results = copy.deepcopy(self.result_titles)

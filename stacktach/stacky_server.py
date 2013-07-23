@@ -111,7 +111,7 @@ def do_uuid(request, service='nova'):
         msg = "%s is not uuid-like" % uuid
         return error_response(400, 'Bad Request', msg)
     model = _model_factory(service)
-    result = {}
+    result = []
     param = {}
     if service == 'nova' or service == 'generic':
         param = {'instance': uuid}
@@ -333,7 +333,7 @@ def do_watch(request, deployment_id, service='nova'):
     results = []
 
     for raw in events:
-        uuid = raw.instance
+        uuid = raw.uuid
         if not uuid:
             uuid = "-"
         typ = routing_key_type(raw.routing_key)
@@ -493,7 +493,7 @@ def search(request, service):
     limit = int(limit)
     model = _model_factory(service)
     filter_para = {field: value}
-    results = {}
+    results = []
     try:
         events = model.filter(**filter_para)
         event_len = len(events)
@@ -505,4 +505,4 @@ def search(request, service):
             results = event.search_results(results, when, routing_key_status)
         return rsp(json.dumps(results))
     except ObjectDoesNotExist or FieldError:
-        return rsp({})
+        return rsp([])
