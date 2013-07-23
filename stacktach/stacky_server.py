@@ -9,13 +9,14 @@ from django.shortcuts import get_object_or_404
 import datetime_to_decimal as dt
 import models
 import utils
+from django.core.exceptions import ObjectDoesNotExist, FieldError
 
 SECS_PER_HOUR = 60 * 60
 SECS_PER_DAY = SECS_PER_HOUR * 24
 
 
-def get_event_names():
-    return models.RawData.objects.values('event').distinct()
+def get_event_names(service='nova'):
+    return _model_factory(service).values('event').distinct()
 
 
 def get_host_names():
@@ -104,22 +105,25 @@ def do_hosts(request):
     return rsp(json.dumps(results))
 
 
-def do_uuid(request):
+def do_uuid(request, service='nova'):
     uuid = str(request.GET['uuid'])
     if not utils.is_uuid_like(uuid):
         msg = "%s is not uuid-like" % uuid
         return error_response(400, 'Bad Request', msg)
+    model = _model_factory(service)
+    result = []
+    param = {}
+    if service == 'nova' or service == 'generic':
+        param = {'instance': uuid}
+    if service == 'glance':
+        param = {'uuid': uuid}
 
-    related = models.RawData.objects.select_related().filter(instance=uuid)\
-                                                     .order_by('when')
-    results = [["#", "?", "When", "Deployment", "Event", "Host", "State",
-                "State'", "Task'"]]
-    for e in related:
-        when = dt.dt_from_decimal(e.when)
-        results.append([e.id, routing_key_type(e.routing_key), str(when),
-                        e.deployment.name, e.event, e.host, e.state,
-                        e.old_state, e.old_task])
-    return rsp(json.dumps(results))
+    related = model.select_related().filter(**param).order_by('when')
+    for event in related:
+        when = dt.dt_from_decimal(event.when)
+        routing_key_status = routing_key_type(event.routing_key)
+        result = event.search_results(result, when, routing_key_status)
+    return rsp(json.dumps(result))
 
 
 def do_timings_uuid(request):
@@ -202,15 +206,7 @@ def do_request(request):
     return rsp(json.dumps(results))
 
 
-def do_show(request, event_id):
-    event_id = int(event_id)
-    results = []
-    event = None
-    try:
-        event = models.RawData.objects.get(id=event_id)
-    except models.RawData.ObjectDoesNotExist:
-        return results
-
+def append_nova_raw_attributes(event, results):
     results.append(["Key", "Value"])
     results.append(["#", event.id])
     when = dt.dt_from_decimal(event.when)
@@ -224,16 +220,77 @@ def do_show(request, event_id):
     results.append(["Host", event.host])
     results.append(["UUID", event.instance])
     results.append(["Req ID", event.request_id])
-
-    final = [results, ]
-    j = json.loads(event.json)
-    final.append(json.dumps(j, indent=2))
-    final.append(event.instance)
-
-    return rsp(json.dumps(final))
+    return results
 
 
-def do_watch(request, deployment_id):
+def append_glance_raw_attributes(event, results):
+    results.append(["Key", "Value"])
+    results.append(["#", event.id])
+    when = dt.dt_from_decimal(event.when)
+    results.append(["When", str(when)])
+    results.append(["Deployment", event.deployment.name])
+    results.append(["Category", event.routing_key])
+    results.append(["Publisher", event.publisher])
+    results.append(["Status", event.status])
+    results.append(["Event", event.event])
+    results.append(["Service", event.service])
+    results.append(["Host", event.host])
+    results.append(["UUID", event.uuid])
+    results.append(["Req ID", event.request_id])
+    return results
+
+
+def append_generic_raw_attributes(event, results):
+    results.append(["Key", "Value"])
+    results.append(["#", event.id])
+    when = dt.dt_from_decimal(event.when)
+    results.append(["When", str(when)])
+    results.append(["Deployment", event.deployment.name])
+    results.append(["Category", event.routing_key])
+    results.append(["Publisher", event.publisher])
+    results.append(["State", event.state])
+    results.append(["Event", event.event])
+    results.append(["Service", event.service])
+    results.append(["Host", event.host])
+    results.append(["UUID", event.instance])
+    results.append(["Req ID", event.request_id])
+    return results
+
+def _append_raw_attributes(event, results, service):
+    if service == 'nova':
+        return append_nova_raw_attributes(event, results)
+    if service == 'glance':
+        return append_glance_raw_attributes(event, results)
+    if service == 'generic':
+        return append_generic_raw_attributes(event, results)
+
+def do_show(request, event_id, service='nova'):
+    event_id = int(event_id)
+    results = []
+    model = _model_factory(service)
+    try:
+        event = model.get(id=event_id)
+        results = _append_raw_attributes(event, results, service)
+        final = [results, ]
+        j = json.loads(event.json)
+        final.append(json.dumps(j, indent=2))
+        final.append(event.uuid)
+        return rsp(json.dumps(final))
+    except ObjectDoesNotExist:
+        return rsp({})
+
+
+def _model_factory(service):
+    if service == 'glance':
+        return models.GlanceRawData.objects
+    elif service == 'nova':
+        return models.RawData.objects
+    elif service == 'generic':
+        return models.GenericRawData.objects
+
+
+def do_watch(request, deployment_id, service='nova'):
+    model = _model_factory(service)
     deployment_id = int(deployment_id)
     since = request.GET.get('since')
     event_name = request.GET.get('event_name')
@@ -244,7 +301,7 @@ def do_watch(request, deployment_id):
     events = get_event_names()
     max_event_width = max([len(event['event']) for event in events])
 
-    base_events = models.RawData.objects.order_by('when')
+    base_events = model.order_by('when')
     if deployment_id > 0:
         base_events = base_events.filter(deployment=deployment_id)
 
@@ -276,7 +333,7 @@ def do_watch(request, deployment_id):
     results = []
 
     for raw in events:
-        uuid = raw.instance
+        uuid = raw.uuid
         if not uuid:
             uuid = "-"
         typ = routing_key_type(raw.routing_key)
@@ -426,3 +483,26 @@ def do_jsonreport(request, report_id):
     report_id = int(report_id)
     report = get_object_or_404(models.JsonReport, pk=report_id)
     return rsp(report.json)
+
+
+def search(request, service):
+    DEFAULT = 1000
+    field = request.GET.get('field')
+    value = request.GET.get('value')
+    limit = request.GET.get('limit', DEFAULT)
+    limit = int(limit)
+    model = _model_factory(service)
+    filter_para = {field: value}
+    results = []
+    try:
+        events = model.filter(**filter_para)
+        event_len = len(events)
+        if event_len > limit:
+            events = events[0:limit]
+        for event in events:
+            when = dt.dt_from_decimal(event.when)
+            routing_key_status = routing_key_type(event.routing_key)
+            results = event.search_results(results, when, routing_key_status)
+        return rsp(json.dumps(results))
+    except ObjectDoesNotExist or FieldError:
+        return rsp([])

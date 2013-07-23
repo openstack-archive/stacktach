@@ -12,7 +12,7 @@ from stacktach import db as stackdb
 from stacktach import models
 from stacktach import stacklog
 from stacktach import utils
-from stacktach.notification import Notification
+from stacktach import notification
 
 STACKDB = stackdb
 
@@ -23,13 +23,6 @@ def log_warn(msg):
         LOG = stacklog.get_logger()
     if LOG is not None:
         LOG.warn(msg)
-
-
-# routing_key : handler
-
-NOTIFICATIONS = {
-    'monitor.info': Notification,
-    'monitor.error': Notification}
 
 
 def start_kpi_tracking(lifecycle, raw):
@@ -170,17 +163,16 @@ INSTANCE_EVENT = {
 }
 
 
-def _process_usage_for_new_launch(raw, body):
-    payload = body['payload']
+def _process_usage_for_new_launch(raw, notification):
     values = {}
-    values['instance'] = payload['instance_id']
-    values['request_id'] = body['_context_request_id']
+    values['instance'] = notification.instance
+    values['request_id'] = notification.request_id
 
     (usage, new) = STACKDB.get_or_create_instance_usage(**values)
 
     if raw.event in [INSTANCE_EVENT['create_start'],
                      INSTANCE_EVENT['rebuild_start']]:
-        usage.instance_type_id = payload['instance_type_id']
+        usage.instance_type_id = notification.instance_type_id
 
     if raw.event in [INSTANCE_EVENT['rebuild_start'],
                      INSTANCE_EVENT['resize_prep_start'],
@@ -190,27 +182,23 @@ def _process_usage_for_new_launch(raw, body):
         #     we will have a launch record corresponding to the exists.
         #     We don't want to override a launched_at if it is already set
         #     though, because we may have already received the end event
-        usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
+        usage.launched_at = utils.str_time_to_unix(notification.launched_at)
 
-    usage.tenant = payload['tenant_id']
-    image_meta = payload.get('image_meta', {})
-    usage.rax_options = image_meta.get('com.rackspace__1__options', '')
-    usage.os_architecture = image_meta.get('org.openstack__1__architecture',
-                                           '')
-    usage.os_version = image_meta.get('org.openstack__1__os_version', '')
-    usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
+    usage.tenant = notification.tenant
+    usage.rax_options = notification.rax_options
+    usage.os_architecture = notification.os_architecture
+    usage.os_version = notification.os_version
+    usage.os_distro = notification.os_distro
     STACKDB.save(usage)
 
 
-def _process_usage_for_updates(raw, body):
-    payload = body['payload']
-
+def _process_usage_for_updates(raw, notification):
     if raw.event == INSTANCE_EVENT['create_end']:
-        if 'message' in payload and payload['message'] != 'Success':
+        if notification.message and notification.message != 'Success':
             return
 
-    instance_id = payload['instance_id']
-    request_id = body['_context_request_id']
+    instance_id = notification.instance
+    request_id = notification.request_id
     (usage, new) = STACKDB.get_or_create_instance_usage(instance=instance_id,
                                                         request_id=request_id)
 
@@ -218,28 +206,25 @@ def _process_usage_for_updates(raw, body):
                      INSTANCE_EVENT['rebuild_end'],
                      INSTANCE_EVENT['resize_finish_end'],
                      INSTANCE_EVENT['resize_revert_end']]:
-        usage.launched_at = utils.str_time_to_unix(payload['launched_at'])
+        usage.launched_at = utils.str_time_to_unix(notification.launched_at)
 
     if raw.event == INSTANCE_EVENT['resize_revert_end']:
-        usage.instance_type_id = payload['instance_type_id']
+        usage.instance_type_id = notification.instance_type_id
     elif raw.event == INSTANCE_EVENT['resize_prep_end']:
-        usage.instance_type_id = payload['new_instance_type_id']
+        usage.instance_type_id = notification.new_instance_type_id
 
-    usage.tenant = payload['tenant_id']
-    image_meta = payload.get('image_meta', {})
-    usage.rax_options = image_meta.get('com.rackspace__1__options', '')
-    usage.os_architecture = image_meta.get('org.openstack__1__architecture',
-                                           '')
-    usage.os_version = image_meta.get('org.openstack__1__os_version', '')
-    usage.os_distro = image_meta.get('org.openstack__1__os_distro', '')
+    usage.tenant = notification.tenant
+    usage.rax_options = notification.rax_options
+    usage.os_architecture = notification.os_architecture
+    usage.os_version = notification.os_version
+    usage.os_distro = notification.os_distro
 
     STACKDB.save(usage)
 
 
-def _process_delete(raw, body):
-    payload = body['payload']
-    instance_id = payload['instance_id']
-    deleted_at = utils.str_time_to_unix(payload['deleted_at'])
+def _process_delete(raw, notification):
+    instance_id = notification.instance
+    deleted_at = utils.str_time_to_unix(notification.deleted_at)
     values = {
         'instance': instance_id,
         'deleted_at': deleted_at,
@@ -247,7 +232,7 @@ def _process_delete(raw, body):
     (delete, new) = STACKDB.get_or_create_instance_delete(**values)
     delete.raw = raw
 
-    launched_at = payload.get('launched_at')
+    launched_at = notification.launched_at
     if launched_at and launched_at != '':
         launched_at = utils.str_time_to_unix(launched_at)
         delete.launched_at = launched_at
@@ -255,37 +240,33 @@ def _process_delete(raw, body):
     STACKDB.save(delete)
 
 
-def _process_exists(raw, body):
-    payload = body['payload']
-    instance_id = payload['instance_id']
-    launched_at_str = payload.get('launched_at')
+def _process_exists(raw, notification):
+    instance_id = notification.instance
+    launched_at_str = notification.launched_at
     if launched_at_str is not None and launched_at_str != '':
-        launched_at = utils.str_time_to_unix(payload['launched_at'])
+        launched_at = utils.str_time_to_unix(notification.launched_at)
         launched_range = (launched_at, launched_at+1)
         usage = STACKDB.get_instance_usage(instance=instance_id,
                                            launched_at__range=launched_range)
         values = {}
-        values['message_id'] = body['message_id']
+        values['message_id'] = notification.message_id
         values['instance'] = instance_id
         values['launched_at'] = launched_at
-        beginning = utils.str_time_to_unix(payload['audit_period_beginning'])
+        beginning = utils.str_time_to_unix(notification.audit_period_beginning)
         values['audit_period_beginning'] = beginning
-        ending = utils.str_time_to_unix(payload['audit_period_ending'])
+        ending = utils.str_time_to_unix(notification.audit_period_ending)
         values['audit_period_ending'] = ending
-        values['instance_type_id'] = payload['instance_type_id']
+        values['instance_type_id'] = notification.instance_type_id
         if usage:
             values['usage'] = usage
         values['raw'] = raw
-        values['tenant'] = payload['tenant_id']
-        image_meta = payload.get('image_meta', {})
-        values['rax_options'] = image_meta.get('com.rackspace__1__options', '')
-        os_arch = image_meta.get('org.openstack__1__architecture', '')
-        values['os_architecture'] = os_arch
-        os_version = image_meta.get('org.openstack__1__os_version', '')
-        values['os_version'] = os_version
-        values['os_distro'] = image_meta.get('org.openstack__1__os_distro', '')
+        values['tenant'] = notification.tenant
+        values['rax_options'] = notification.rax_options
+        values['os_architecture'] = notification.os_architecture
+        values['os_version'] = notification.os_version
+        values['os_distro'] = notification.os_distro
 
-        deleted_at = payload.get('deleted_at')
+        deleted_at = notification.deleted_at
         if deleted_at and deleted_at != '':
             # We only want to pre-populate the 'delete' if we know this is in
             #     fact an exist event for a deleted instance. Otherwise, there
@@ -304,6 +285,16 @@ def _process_exists(raw, body):
         stacklog.warn("Ignoring exists without launched_at. RawData(%s)" % raw.id)
 
 
+def _process_glance_usage(raw, notification):
+    notification.save_usage(raw)
+
+def _process_glance_delete(raw, notification):
+    notification.save_delete(raw)
+
+
+def _process_glance_exists(raw, notification):
+    notification.save_exists(raw)
+
 USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['create_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['rebuild_start']: _process_usage_for_new_launch,
@@ -315,36 +306,51 @@ USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
     INSTANCE_EVENT['delete_end']: _process_delete,
-    INSTANCE_EVENT['exists']: _process_exists,
-} 
+    INSTANCE_EVENT['exists']: _process_exists
+}
+
+GLANCE_USAGE_PROCESS_MAPPING = {
+    'image.activate': _process_glance_usage,
+    'image.delete': _process_glance_delete,
+    'image.exists': _process_glance_exists
+}
 
 
-def aggregate_usage(raw, body):
+def aggregate_usage(raw, notification):
     if not raw.instance:
         return
 
     if raw.event in USAGE_PROCESS_MAPPING:
-        USAGE_PROCESS_MAPPING[raw.event](raw, body)
+        USAGE_PROCESS_MAPPING[raw.event](raw, notification)
 
 
-def process_raw_data(deployment, args, json_args):
+def aggregate_glance_usage(raw, body):
+    if raw.event in GLANCE_USAGE_PROCESS_MAPPING.keys():
+        GLANCE_USAGE_PROCESS_MAPPING[raw.event](raw, body)
+
+
+def process_raw_data(deployment, args, json_args, exchange):
     """This is called directly by the worker to add the event to the db."""
     db.reset_queries()
 
     routing_key, body = args
-    record = None
-    notification = NOTIFICATIONS[routing_key](body)
-    if notification:
-        values = notification.rawdata_kwargs(deployment, routing_key, json_args)
-        if not values:
-            return record
-        record = STACKDB.create_rawdata(**values)
-    return record
+    notif = notification.notification_factory(body, deployment, routing_key,
+                                              json_args, exchange)
+    raw = notif.save()
+    return raw, notif
 
 
-def post_process(raw, body):
+def post_process_rawdata(raw, notification):
     aggregate_lifecycle(raw)
-    aggregate_usage(raw, body)
+    aggregate_usage(raw, notification)
+
+
+def post_process_glancerawdata(raw, notification):
+    aggregate_glance_usage(raw, notification)
+
+
+def post_process_genericrawdata(raw, notification):
+    pass
 
 
 def _post_process_raw_data(rows, highlight=None):

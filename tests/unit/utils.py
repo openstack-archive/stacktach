@@ -25,6 +25,8 @@ TENANT_ID_2 = 'testtenantid2'
 
 from stacktach import datetime_to_decimal as dt
 
+IMAGE_UUID_1 = "1"
+
 INSTANCE_ID_1 = "08f685d9-6352-4dbc-8271-96cc54bf14cd"
 INSTANCE_ID_2 = "515adf96-41d3-b86d-5467-e584edc61dab"
 
@@ -32,6 +34,7 @@ INSTANCE_TYPE_ID_1 = "12345"
 INSTANCE_TYPE_ID_2 = '54321'
 
 DUMMY_TIME = datetime.datetime.utcnow()
+DECIMAL_DUMMY_TIME = dt.dt_to_decimal(DUMMY_TIME)
 
 MESSAGE_ID_1 = "7f28f81b-29a2-43f2-9ba1-ccb3e53ab6c8"
 MESSAGE_ID_2 = "4d596126-0f04-4329-865f-7b9a7bd69bcf"
@@ -52,6 +55,7 @@ OS_ARCH_2 = "x64"
 OS_VERSION_1 = "1"
 OS_VERSION_2 = "2"
 
+TIMESTAMP_1 = "2013-06-20 17:31:57.939614"
 
 def decimal_utc(t = datetime.datetime.utcnow()):
     return dt.dt_to_decimal(t)

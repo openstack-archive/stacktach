@@ -140,6 +140,8 @@ INSTALLED_APPS = (
     'south'
 )
 
+SOUTH_TESTS_MIGRATE = False
+
 ALLOWED_HOSTS = ['*']
 
 # A sample logging configuration. The only tangible logging

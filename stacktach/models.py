@@ -13,9 +13,14 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from django import forms
+import copy
 from django.db import models
 
+
+def routing_key_type(key):
+    if key.endswith('error'):
+        return 'E'
+    return ' '
 
 class Deployment(models.Model):
     name = models.CharField(max_length=50)
@@ -24,7 +29,51 @@ class Deployment(models.Model):
         return self.name
 
 
+class GenericRawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "Instance", "Request id"]]
+    deployment = models.ForeignKey(Deployment)
+    tenant = models.CharField(max_length=50, null=True, blank=True,
+                              db_index=True)
+    json = models.TextField()
+    routing_key = models.CharField(max_length=50, null=True,
+                                   blank=True, db_index=True)
+    when = models.DecimalField(max_digits=20, decimal_places=6,
+                                               db_index=True)
+    publisher = models.CharField(max_length=100, null=True,
+                                 blank=True, db_index=True)
+    event = models.CharField(max_length=50, null=True,
+                                 blank=True, db_index=True)
+    service = models.CharField(max_length=50, null=True,
+                                 blank=True, db_index=True)
+    host = models.CharField(max_length=100, null=True,
+                                 blank=True, db_index=True)
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    request_id = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    message_id = models.CharField(max_length=50, null=True,
+                                  blank=True, db_index=True)
+
+    @staticmethod
+    def get_name():
+        return GenericRawData.__name__
+
+    @property
+    def uuid(self):
+        return self.instance
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                        self.deployment.name, self.event, self.host,
+                        self.instance, self.request_id])
+        return results
+
 class RawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "State", "State'", "Task'"]]
     deployment = models.ForeignKey(Deployment)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
@@ -57,6 +106,22 @@ class RawData(models.Model):
 
     def __repr__(self):
         return "%s %s %s" % (self.event, self.instance, self.state)
+
+    @property
+    def uuid(self):
+        return self.instance
+
+    @staticmethod
+    def get_name():
+        return RawData.__name__
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                        self.deployment.name, self.event, self.host, self.state,
+                        self.old_state, self.old_task])
+        return results
 
 
 class RawDataImageMeta(models.Model):
@@ -158,6 +223,7 @@ class InstanceExists(models.Model):
         (RECONCILED, 'Passed Verification After Reconciliation'),
         (FAILED, 'Failed Verification'),
     ]
+
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
@@ -236,6 +302,115 @@ class JsonReport(models.Model):
     name = models.CharField(max_length=50, db_index=True)
     version = models.IntegerField(default=1)
     json = models.TextField()
+
+
+class GlanceRawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "Status"]]
+    ACTIVE = 'active'
+    DELETED = 'deleted'
+    KILLED = 'killed'
+    PENDING_DELETE = 'pending_delete'
+    QUEUED = 'queued'
+    SAVING = 'saving'
+    STATUS_CHOICES = [
+        (ACTIVE, 'Active'),
+        (DELETED, 'Deleted'),
+        (KILLED, 'Killed'),
+        (PENDING_DELETE, 'Pending delete'),
+        (QUEUED, 'Queued'),
+        (SAVING, 'Saving'),
+    ]
+
+    deployment = models.ForeignKey(Deployment)
+    owner = models.CharField(max_length=255, null=True, blank=True,
+                             db_index=True)
+    json = models.TextField()
+    routing_key = models.CharField(max_length=50, null=True, blank=True,
+                                   db_index=True)
+    when = models.DecimalField(max_digits=20, decimal_places=6, db_index=True)
+    publisher = models.CharField(max_length=100, null=True,
+                                 blank=True, db_index=True)
+    event = models.CharField(max_length=50, null=True, blank=True,
+                             db_index=True)
+    service = models.CharField(max_length=50, null=True, blank=True,
+                               db_index=True)
+    host = models.CharField(max_length=100, null=True, blank=True,
+                            db_index=True)
+    instance = models.CharField(max_length=50, null=True, blank=True,
+                                db_index=True)
+    request_id = models.CharField(max_length=50, null=True, blank=True,
+                                  db_index=True)
+    uuid = models.CharField(max_length=36, null=True, blank=True,
+                            db_index=True)
+    status = models.CharField(max_length=30, db_index=True,
+                              choices=STATUS_CHOICES, null=True)
+    image_type = models.IntegerField(null=True, default=0, db_index=True)
+
+    @staticmethod
+    def get_name():
+        return GlanceRawData.__name__
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                            self.deployment.name, self.event, self.host,
+                            self.status])
+        return results
+
+
+class ImageUsage(models.Model):
+    uuid = models.CharField(max_length=50, db_index=True)
+    created_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True)
+    owner = models.CharField(max_length=50, db_index=True)
+    size = models.BigIntegerField(max_length=20)
+    last_raw = models.ForeignKey(GlanceRawData, null=True)
+
+
+class ImageDeletes(models.Model):
+    uuid = models.CharField(max_length=50, db_index=True)
+    deleted_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True,
+                                     null=True)
+    raw = models.ForeignKey(GlanceRawData, null=True)
+
+
+class ImageExists(models.Model):
+    PENDING = 'pending'
+    VERIFYING = 'verifying'
+    VERIFIED = 'verified'
+    FAILED = 'failed'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending Verification'),
+        (VERIFYING, 'Currently Being Verified'),
+        (VERIFIED, 'Passed Verification'),
+        (FAILED, 'Failed Verification'),
+    ]
+
+    uuid = models.CharField(max_length=50, db_index=True)
+    created_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True,
+                                     null=True)
+    deleted_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True,
+                                     null=True)
+    audit_period_beginning = models.DecimalField(max_digits=20,
+                                                 decimal_places=6,
+                                                 db_index=True)
+    audit_period_ending = models.DecimalField(max_digits=20,
+                                              decimal_places=6, db_index=True)
+    status = models.CharField(max_length=50, db_index=True,
+                              choices=STATUS_CHOICES,
+                              default=PENDING)
+    fail_reason = models.CharField(max_length=300, null=True)
+    raw = models.ForeignKey(GlanceRawData, related_name='+')
+    usage = models.ForeignKey(ImageUsage, related_name='+', null=True)
+    delete = models.ForeignKey(ImageDeletes, related_name='+', null=True)
+    send_status = models.IntegerField(default=0, db_index=True)
+    owner = models.CharField(max_length=255, db_index=True)
+    size = models.BigIntegerField(max_length=20)
 
 
 def get_model_fields(model):

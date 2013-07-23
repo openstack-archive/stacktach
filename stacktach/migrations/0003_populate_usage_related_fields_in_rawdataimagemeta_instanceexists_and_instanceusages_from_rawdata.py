@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import copy
 from south.v2 import DataMigration
-from stacktach.notification import Notification
-from stacktach.views import NOTIFICATIONS
+from stacktach.notification import notification_factory
 
 try:
     import ujson as json
@@ -43,8 +42,8 @@ class Migration(DataMigration):
         json_dict = json.loads(json_message)
         routing_key = json_dict[0]
         body = json_dict[1]
-        notification = NOTIFICATIONS[routing_key](body)
-        return notification
+        return notification_factory(body, None, routing_key, json_message,
+                                    'nova')
 
     def forwards(self, orm):
         # Note: Don't use "from appname.models import ModelName".
@@ -79,7 +78,7 @@ class Migration(DataMigration):
             exists_update_count += 1
         print "Updated %s records in InstanceExists" % exists_update_count
 
-        print "\nStarted updating records in InstacnceUsages"
+        print "\nStarted updating records in InstanceUsages"
         usages = orm.InstanceUsage.objects.all().values('request_id')
         usages_update_count = 0
         for usage in usages:
