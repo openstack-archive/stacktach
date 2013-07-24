@@ -209,6 +209,7 @@ class NovaNotification(Notification):
             'audit_period_beginning', None)
         self.audit_period_ending = self.payload.get(
             'audit_period_ending', None)
+        self.message = self.payload.get('message', None)
 
     @property
     def host(self):
