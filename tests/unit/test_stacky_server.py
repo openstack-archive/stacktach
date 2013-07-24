@@ -273,7 +273,7 @@ class StackyServerTestCase(unittest.TestCase):
         result.order_by('when').AndReturn(result)
         raw = self._create_raw()
         result.__iter__().AndReturn([raw].__iter__())
-        raw.search_results({}, mox.IgnoreArg(), ' ').AndReturn(search_result)
+        raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
 
         resp = stacky_server.do_uuid(fake_request)
@@ -303,7 +303,7 @@ class StackyServerTestCase(unittest.TestCase):
         result.order_by('when').AndReturn(result)
         raw = self._create_raw()
         result.__iter__().AndReturn([raw].__iter__())
-        raw.search_results({}, mox.IgnoreArg(), ' ').AndReturn(search_result)
+        raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
 
         resp = stacky_server.do_uuid(fake_request,'glance')
@@ -670,7 +670,7 @@ class StackyServerTestCase(unittest.TestCase):
         datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S.%f")
         self.assertEqual(json_resp[1][0][4], u'dep1')
         self.assertEqual(json_resp[1][0][5], u'test.start')
-        self.assertEqual(json_resp[1][0][6], u'%s' % INSTANCE_ID_1)
+        self.assertEqual(json_resp[1][0][6], u'%s' % 'uuid')
         self.mox.VerifyAll()
 
     def test_do_watch(self):
@@ -706,7 +706,7 @@ class StackyServerTestCase(unittest.TestCase):
         datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S.%f")
         self.assertEqual(json_resp[1][0][4], u'dep1')
         self.assertEqual(json_resp[1][0][5], u'test.start')
-        self.assertEqual(json_resp[1][0][6], u'%s' % INSTANCE_ID_1)
+        self.assertEqual(json_resp[1][0][6], u'%s' % 'uuid')
         self.mox.VerifyAll()
 
     def test_do_watch_with_deployment(self):
@@ -744,7 +744,7 @@ class StackyServerTestCase(unittest.TestCase):
         datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S.%f")
         self.assertEqual(json_resp[1][0][4], u'dep1')
         self.assertEqual(json_resp[1][0][5], u'test.start')
-        self.assertEqual(json_resp[1][0][6], u'%s' % INSTANCE_ID_1)
+        self.assertEqual(json_resp[1][0][6], u'%s' % 'uuid')
         self.mox.VerifyAll()
 
     def test_do_watch_with_event_name(self):
@@ -767,7 +767,7 @@ class StackyServerTestCase(unittest.TestCase):
         results.__iter__().AndReturn([self._create_raw()].__iter__())
         self.mox.ReplayAll()
 
-        resp = stacky_server.do_watch(fake_request, 0)
+        resp = stacky_server.do_watch(fake_request, 0, 'nova')
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
@@ -778,7 +778,7 @@ class StackyServerTestCase(unittest.TestCase):
         datetime.datetime.strptime(time_str, "%Y-%m-%d %H:%M:%S.%f")
         self.assertEqual(json_resp[1][0][4], u'dep1')
         self.assertEqual(json_resp[1][0][5], u'test.start')
-        self.assertEqual(json_resp[1][0][6], u'%s' % INSTANCE_ID_1)
+        self.assertEqual(json_resp[1][0][6], u'%s' % 'uuid')
         self.mox.VerifyAll()
 
     def test_do_kpi(self):
@@ -1141,7 +1141,7 @@ class StackyServerTestCase(unittest.TestCase):
         fake_request.GET = {'field': 'tenant', 'value': 'tenant'}
         raw = self._create_raw()
         models.RawData.objects.filter(tenant='tenant').AndReturn([raw])
-        raw.search_results({}, mox.IgnoreArg(), ' ').AndReturn(search_result)
+        raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
 
         resp = stacky_server.search(fake_request, 'nova')
@@ -1171,7 +1171,7 @@ class StackyServerTestCase(unittest.TestCase):
         raw3.id = 3
         models.RawData.objects.filter(tenant='tenant').AndReturn([raw1, raw2,
                                                                    raw3])
-        raw1.search_results({}, mox.IgnoreArg(), ' ').AndReturn(search_result)
+        raw1.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         raw2.search_results(search_result, mox.IgnoreArg(),' ').AndReturn(search_result_2)
         self.mox.ReplayAll()
 
