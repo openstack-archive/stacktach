@@ -50,14 +50,14 @@ class ConsumerTestCase(unittest.TestCase):
         self.mox.StubOutWithMock(worker.Consumer, '_create_queue')
         consumer = worker.Consumer('test', None, None, True, {}, "nova",
                                    ["monitor.info", "monitor.error"],
-                                   "stacktach")
+                                   "stacktach_")
         exchange = self.mox.CreateMockAnything()
         consumer._create_exchange('nova', 'topic').AndReturn(exchange)
         info_queue = self.mox.CreateMockAnything()
         error_queue = self.mox.CreateMockAnything()
-        consumer._create_queue('stacktach', exchange, 'monitor.info')\
+        consumer._create_queue('stacktach_nova', exchange, 'monitor.info')\
                 .AndReturn(info_queue)
-        consumer._create_queue('stacktach', exchange, 'monitor.error')\
+        consumer._create_queue('stacktach_nova', exchange, 'monitor.error')\
                 .AndReturn(error_queue)
         self.mox.ReplayAll()
         consumers = consumer.get_consumers(Consumer, None)
@@ -74,7 +74,7 @@ class ConsumerTestCase(unittest.TestCase):
         args = {'key': 'value'}
         consumer = worker.Consumer('test', None, None, True, args, 'nova',
                                    ["monitor.info", "monitor.error"],
-                                   "stacktach")
+                                   "stacktach_")
 
         self.mox.StubOutClassWithMocks(kombu.entity, 'Exchange')
         exchange = kombu.entity.Exchange('nova', type='topic', exclusive=False,
@@ -92,7 +92,7 @@ class ConsumerTestCase(unittest.TestCase):
                             queue_arguments={})
         consumer = worker.Consumer('test', None, None, True, {}, 'nova',
                                    ["monitor.info", "monitor.error"],
-                                   "stacktach")
+                                   "stacktach_")
         self.mox.ReplayAll()
         actual_queue = consumer._create_queue('name', exchange, 'routing.key',
                                               exclusive=False,
@@ -110,7 +110,7 @@ class ConsumerTestCase(unittest.TestCase):
                             queue_arguments=queue_args)
         consumer = worker.Consumer('test', None, None, True, queue_args,
                                    'nova', ["monitor.info", "monitor.error"],
-                                   "stacktach")
+                                   "stacktach_")
         self.mox.ReplayAll()
         actual_queue = consumer._create_queue('name', exchange, 'routing.key',
                                               exclusive=False,
@@ -127,7 +127,7 @@ class ConsumerTestCase(unittest.TestCase):
         exchange = 'nova'
         consumer = worker.Consumer('test', None, deployment, True, {},
                                    exchange, ["monitor.info", "monitor.error"],
-                                   "stacktach")
+                                   "stacktach_")
         routing_key = 'monitor.info'
         message.delivery_info = {'routing_key': routing_key}
         body_dict = {u'key': u'value'}
@@ -189,7 +189,7 @@ class ConsumerTestCase(unittest.TestCase):
         consumer = worker.Consumer(config['name'], conn, deployment,
                                    config['durable_queue'], {}, exchange,
                                    ["monitor.info", "monitor.error"],
-                                   "stacktach")
+                                   "stacktach_")
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
@@ -206,7 +206,7 @@ class ConsumerTestCase(unittest.TestCase):
             'rabbit_password': 'rabbit',
             'rabbit_virtual_host': '/',
             'queue_arguments': {'x-ha-policy': 'all'},
-            'queue_name': "test_name",
+            'queue_name_prefix': "test_name_",
             "services": ["nova"],
             "topics": {"nova": ["monitor.info", "monitor.error"]}
         }
@@ -233,7 +233,7 @@ class ConsumerTestCase(unittest.TestCase):
                                    config['durable_queue'],
                                    config['queue_arguments'], exchange,
                                    ["monitor.info", "monitor.error"],
-                                   "test_name")
+                                   "test_name_")
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
