@@ -44,7 +44,7 @@ LOG = stacklog.get_logger()
 
 class Consumer(kombu.mixins.ConsumerMixin):
     def __init__(self, name, connection, deployment, durable, queue_arguments,
-                 exchange, topics):
+                 exchange, topics, queue_name):
         self.connection = connection
         self.deployment = deployment
         self.durable = durable
@@ -56,6 +56,7 @@ class Consumer(kombu.mixins.ConsumerMixin):
         self.total_processed = 0
         self.topics = topics
         self.exchange = exchange
+        self.queue_name = queue_name
 
     def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
         return kombu.entity.Exchange(name, type=type, exclusive=exclusive,
@@ -72,7 +73,7 @@ class Consumer(kombu.mixins.ConsumerMixin):
     def get_consumers(self, Consumer, channel):
         exchange = self._create_exchange(self.exchange, "topic")
 
-        queues = [self._create_queue(topic, exchange, topic)
+        queues = [self._create_queue(self.queue_name, exchange, topic)
                   for topic in self.topics]
 
         return [Consumer(queues=queues, callbacks=[self.on_nova])]
@@ -152,6 +153,7 @@ def run(deployment_config, exchange):
     queue_arguments = deployment_config.get('queue_arguments', {})
     exit_on_exception = deployment_config.get('exit_on_exception', False)
     topics = deployment_config.get('topics', {})
+    queue_name = deployment_config.get('queue_name', 'stacktach')
 
     deployment, new = db.get_or_create_deployment(name)
 
@@ -174,7 +176,8 @@ def run(deployment_config, exchange):
                 try:
                     consumer = Consumer(name, conn, deployment, durable,
                                         queue_arguments, exchange,
-                                        topics[exchange])
+                                        topics[exchange],
+                                        queue_name)
                     consumer.run()
                 except Exception as e:
                     LOG.error("!!!!Exception!!!!")

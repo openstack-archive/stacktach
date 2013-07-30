@@ -8,6 +8,7 @@
         "rabbit_password": "rabbit",
         "rabbit_virtual_host": "/",
         "exit_on_exception": true,
+        "queue_name": "stacktach",
         "topics": {
             "nova": ["monitor.info", "monitor.error"],
             "glance": ["monitor_glance.info", "monitor_glance.error"]
@@ -22,6 +23,7 @@
         "rabbit_password": "rabbit",
         "rabbit_virtual_host": "/",
         "exit_on_exception": false,
+        "queue_name": "stacktach",
         "topics": {
             "nova": ["monitor.info", "monitor.error"],
             "glance": ["monitor_glance.info", "monitor_glance.error"]
