@@ -40,7 +40,7 @@ class ExchangeLoggerTestCase(TestCase):
     def _setup_logger_mocks(self, name='name'):
         mock_logger = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(logging, 'getLogger')
-        logging.getLogger(name).AndReturn(mock_logger)
+        logging.getLogger(stacklog.__name__).AndReturn(mock_logger)
         mock_logger.setLevel(logging.DEBUG)
         self.mox.StubOutClassWithMocks(logging.handlers,
                                        'TimedRotatingFileHandler')
