@@ -195,7 +195,7 @@ class DBAPITestCase(unittest.TestCase):
     def test_get_db_objects_limit(self):
         fake_model = self.make_fake_model()
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'limit': 1}
+        fake_request.GET = {'limit': '1'}
         self.mox.StubOutWithMock(dbapi, '_get_filter_args')
         dbapi._get_filter_args(fake_model, fake_request,
                                custom_filters=None).AndReturn({})
@@ -215,7 +215,7 @@ class DBAPITestCase(unittest.TestCase):
     def test_get_db_objects_hard_limit(self):
         fake_model = self.make_fake_model()
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'limit': dbapi.HARD_LIMIT + 1}
+        fake_request.GET = {'limit': str(dbapi.HARD_LIMIT + 1)}
         self.mox.StubOutWithMock(dbapi, '_get_filter_args')
         dbapi._get_filter_args(fake_model, fake_request,
                                custom_filters=None).AndReturn({})
@@ -236,7 +236,7 @@ class DBAPITestCase(unittest.TestCase):
     def test_get_db_objects_offset(self):
         fake_model = self.make_fake_model()
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'offset': 1}
+        fake_request.GET = {'offset': '1'}
         self.mox.StubOutWithMock(dbapi, '_get_filter_args')
         dbapi._get_filter_args(fake_model, fake_request,
                                custom_filters=None).AndReturn({})
@@ -256,7 +256,7 @@ class DBAPITestCase(unittest.TestCase):
     def test_get_db_objects_offset_and_limit(self):
         fake_model = self.make_fake_model()
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'offset': 2, 'limit': 2}
+        fake_request.GET = {'offset': '2', 'limit': '2'}
         self.mox.StubOutWithMock(dbapi, '_get_filter_args')
         dbapi._get_filter_args(fake_model, fake_request,
                                custom_filters=None).AndReturn({})
