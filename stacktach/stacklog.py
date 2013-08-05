@@ -98,7 +98,7 @@ def _configure(logger, name):
 
 class ExchangeLogger():
     def __init__(self, exchange, name='stacktach-default'):
-        self.logger = logging.getLogger(name)
+        self.logger = logging.getLogger(__name__)
         _configure(self.logger, name)
         self.exchange = exchange
 
