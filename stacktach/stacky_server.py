@@ -69,6 +69,16 @@ def model_search(request, model, filters,
     return query
 
 
+def _add_when_filters(request, filters):
+    when_max = request.GET.get('when_max')
+    if when_max:
+        filters['when__lte'] = decimal.Decimal(when_max)
+
+    when_min = request.GET.get('when_min')
+    if when_min:
+        filters['when__gte'] = decimal.Decimal(when_min)
+
+
 def get_event_names(service='nova'):
     return _model_factory(service).values('event').distinct()
 
@@ -168,13 +178,16 @@ def do_uuid(request, service='nova'):
         return error_response(400, 'Bad Request', msg)
     model = _model_factory(service)
     result = []
-    param = {}
-    if service == 'nova' or service == 'generic':
-        param = {'instance': uuid}
-    if service == 'glance':
-        param = {'uuid': uuid}
+    filters = {}
 
-    related = model_search(request, model, param,
+    if service == 'nova' or service == 'generic':
+        filters = {'instance': uuid}
+    if service == 'glance':
+        filters = {'uuid': uuid}
+
+    _add_when_filters(request, filters)
+
+    related = model_search(request, model, filters,
                            related=True, order_by='when')
     for event in related:
         when = dt.dt_from_decimal(event.when)
@@ -266,6 +279,7 @@ def do_request(request):
 
     model = models.RawData.objects
     filters = {'request_id': request_id}
+    _add_when_filters(request, filters)
     events = model_search(request, model, filters, order_by='when')
     results = [["#", "?", "When", "Deployment", "Event", "Host",
                 "State", "State'", "Task'"]]
@@ -567,11 +581,12 @@ def search(request, service):
     field = request.GET.get('field')
     value = request.GET.get('value')
     model = _model_factory(service)
-    filter_para = {field: value}
+    filters = {field: value}
+    _add_when_filters(request, filters)
     results = []
     try:
 
-        events = model_search(request, model, filter_para)
+        events = model_search(request, model, filters)
         for event in events:
             when = dt.dt_from_decimal(event.when)
             routing_key_status = routing_key_type(event.routing_key)
