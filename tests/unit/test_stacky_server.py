@@ -131,10 +131,13 @@ class StackyServerTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_get_timings_for_uuid_start_only(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
         lc_result = self.mox.CreateMockAnything()
         lifecycle = self.mox.CreateMockAnything()
         models.Lifecycle.objects.filter(instance=INSTANCE_ID_1)\
                                 .AndReturn(lc_result)
+        lc_result[None:50].AndReturn(lc_result)
         lc_result.__iter__().AndReturn([lifecycle].__iter__())
         t_result = self.mox.CreateMockAnything()
         timing = self.mox.CreateMockAnything()
@@ -146,7 +149,8 @@ class StackyServerTestCase(unittest.TestCase):
         timing.diff = None
         self.mox.ReplayAll()
 
-        event_names = stacky_server.get_timings_for_uuid(INSTANCE_ID_1)
+        event_names = stacky_server.get_timings_for_uuid(fake_request,
+                                                         INSTANCE_ID_1)
 
         self.assertEqual(len(event_names), 2)
         self.assertEqual(event_names[0], ['?', 'Event', 'Time (secs)'])
@@ -154,10 +158,13 @@ class StackyServerTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_get_timings_for_uuid_end_only(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
         lc_result = self.mox.CreateMockAnything()
         lifecycle = self.mox.CreateMockAnything()
         models.Lifecycle.objects.filter(instance=INSTANCE_ID_1) \
                                 .AndReturn(lc_result)
+        lc_result[None:50].AndReturn(lc_result)
         lc_result.__iter__().AndReturn([lifecycle].__iter__())
         t_result = self.mox.CreateMockAnything()
         timing = self.mox.CreateMockAnything()
@@ -169,7 +176,8 @@ class StackyServerTestCase(unittest.TestCase):
         timing.diff = None
         self.mox.ReplayAll()
 
-        event_names = stacky_server.get_timings_for_uuid(INSTANCE_ID_1)
+        event_names = stacky_server.get_timings_for_uuid(fake_request,
+                                                         INSTANCE_ID_1)
 
         self.assertEqual(len(event_names), 2)
         self.assertEqual(event_names[0], ['?', 'Event', 'Time (secs)'])
@@ -177,10 +185,13 @@ class StackyServerTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_get_timings_for_uuid(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
         lc_result = self.mox.CreateMockAnything()
         lifecycle = self.mox.CreateMockAnything()
         models.Lifecycle.objects.filter(instance=INSTANCE_ID_1) \
             .AndReturn(lc_result)
+        lc_result[None:50].AndReturn(lc_result)
         lc_result.__iter__().AndReturn([lifecycle].__iter__())
         t_result = self.mox.CreateMockAnything()
         timing = self.mox.CreateMockAnything()
@@ -191,7 +202,8 @@ class StackyServerTestCase(unittest.TestCase):
         timing.end_raw = self.mox.CreateMockAnything()
         timing.diff = 20
         self.mox.ReplayAll()
-        event_names = stacky_server.get_timings_for_uuid(INSTANCE_ID_1)
+        event_names = stacky_server.get_timings_for_uuid(fake_request,
+                                                         INSTANCE_ID_1)
 
         self.assertEqual(len(event_names), 2)
         self.assertEqual(event_names[0], ['?', 'Event', 'Time (secs)'])
@@ -272,6 +284,7 @@ class StackyServerTestCase(unittest.TestCase):
         result.filter(instance=INSTANCE_ID_1).AndReturn(result)
         result.order_by('when').AndReturn(result)
         raw = self._create_raw()
+        result[None:50].AndReturn(result)
         result.__iter__().AndReturn([raw].__iter__())
         raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
@@ -302,6 +315,7 @@ class StackyServerTestCase(unittest.TestCase):
         result.filter(uuid=INSTANCE_ID_1).AndReturn(result)
         result.order_by('when').AndReturn(result)
         raw = self._create_raw()
+        result[None:50].AndReturn(result)
         result.__iter__().AndReturn([raw].__iter__())
         raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
@@ -366,6 +380,7 @@ class StackyServerTestCase(unittest.TestCase):
         timing2.lifecycle = self.mox.CreateMockAnything()
         timing2.lifecycle.instance = INSTANCE_ID_2
         timing2.diff = 20
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([timing1, timing2].__iter__())
         self.mox.ReplayAll()
 
@@ -385,9 +400,9 @@ class StackyServerTestCase(unittest.TestCase):
         fake_request.GET = {'name': 'test.event', 'end_when_min': '1.1'}
         results = self.mox.CreateMockAnything()
         models.Timing.objects.select_related().AndReturn(results)
-        results.filter(name='test.event').AndReturn(results)
+        results.filter(name='test.event',
+                       end_when__gte=decimal.Decimal('1.1')).AndReturn(results)
         results.exclude(mox.IgnoreArg()).AndReturn(results)
-        results.filter(end_when__gte=decimal.Decimal('1.1')).AndReturn(results)
         results.order_by('diff').AndReturn(results)
         timing1 = self.mox.CreateMockAnything()
         timing1.lifecycle = self.mox.CreateMockAnything()
@@ -397,6 +412,7 @@ class StackyServerTestCase(unittest.TestCase):
         timing2.lifecycle = self.mox.CreateMockAnything()
         timing2.lifecycle.instance = INSTANCE_ID_2
         timing2.diff = 20
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([timing1, timing2].__iter__())
         self.mox.ReplayAll()
 
@@ -416,9 +432,9 @@ class StackyServerTestCase(unittest.TestCase):
         fake_request.GET = {'name': 'test.event', 'end_when_max': '1.1'}
         results = self.mox.CreateMockAnything()
         models.Timing.objects.select_related().AndReturn(results)
-        results.filter(name='test.event').AndReturn(results)
+        results.filter(name='test.event',
+                       end_when__lte=decimal.Decimal('1.1')).AndReturn(results)
         results.exclude(mox.IgnoreArg()).AndReturn(results)
-        results.filter(end_when__lte=decimal.Decimal('1.1')).AndReturn(results)
         results.order_by('diff').AndReturn(results)
         timing1 = self.mox.CreateMockAnything()
         timing1.lifecycle = self.mox.CreateMockAnything()
@@ -428,6 +444,7 @@ class StackyServerTestCase(unittest.TestCase):
         timing2.lifecycle = self.mox.CreateMockAnything()
         timing2.lifecycle.instance = INSTANCE_ID_2
         timing2.diff = 20
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([timing1, timing2].__iter__())
         self.mox.ReplayAll()
 
@@ -449,10 +466,10 @@ class StackyServerTestCase(unittest.TestCase):
                             'end_when_max': '2.1'}
         results = self.mox.CreateMockAnything()
         models.Timing.objects.select_related().AndReturn(results)
-        results.filter(name='test.event').AndReturn(results)
+        results.filter(name='test.event',
+                       end_when__gte=decimal.Decimal('1.1'),
+                       end_when__lte=decimal.Decimal('2.1')).AndReturn(results)
         results.exclude(mox.IgnoreArg()).AndReturn(results)
-        results.filter(end_when__gte=decimal.Decimal('1.1')).AndReturn(results)
-        results.filter(end_when__lte=decimal.Decimal('2.1')).AndReturn(results)
         results.order_by('diff').AndReturn(results)
         timing1 = self.mox.CreateMockAnything()
         timing1.lifecycle = self.mox.CreateMockAnything()
@@ -462,6 +479,7 @@ class StackyServerTestCase(unittest.TestCase):
         timing2.lifecycle = self.mox.CreateMockAnything()
         timing2.lifecycle.instance = INSTANCE_ID_2
         timing2.diff = 20
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([timing1, timing2].__iter__())
         self.mox.ReplayAll()
 
@@ -494,6 +512,7 @@ class StackyServerTestCase(unittest.TestCase):
         timing2.lifecycle = self.mox.CreateMockAnything()
         timing2.lifecycle.instance = INSTANCE_ID_2
         timing2.diff = 20
+        results[None:50].AndReturn(results)
         results.__len__().AndReturn(2)
         results.__iter__().AndReturn([timing1, timing2].__iter__())
         self.mox.ReplayAll()
@@ -515,6 +534,7 @@ class StackyServerTestCase(unittest.TestCase):
         results = self.mox.CreateMockAnything()
         models.RawData.objects.filter(request_id=REQUEST_ID_1).AndReturn(results)
         results.order_by('when').AndReturn(results)
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([raw].__iter__())
         self.mox.ReplayAll()
 
@@ -906,6 +926,7 @@ class StackyServerTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
         usage.instance_type_id = 1
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
 
@@ -932,6 +953,7 @@ class StackyServerTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
         usage.instance_type_id = 1
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
 
@@ -972,6 +994,7 @@ class StackyServerTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
         usage.deleted_at = usage.launched_at + 10
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
 
@@ -998,6 +1021,7 @@ class StackyServerTestCase(unittest.TestCase):
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
         usage.deleted_at = usage.launched_at + 10
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
 
@@ -1041,6 +1065,7 @@ class StackyServerTestCase(unittest.TestCase):
         usage.instance_type_id = 1
         usage.message_id = 'someid'
         usage.status = 'pending'
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
 
@@ -1071,6 +1096,7 @@ class StackyServerTestCase(unittest.TestCase):
         usage.instance_type_id = 1
         usage.message_id = 'someid'
         usage.status = 'pending'
+        results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
 
@@ -1181,4 +1207,91 @@ class StackyServerTestCase(unittest.TestCase):
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
         self._assert_on_search_nova(json_resp, raw1)
+        self.mox.VerifyAll()
+
+    def test_model_search_default_limit(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
+        fake_model = self.mox.CreateMockAnything()
+        filters = {'field': 'value'}
+        results = self.mox.CreateMockAnything()
+        fake_model.filter(**filters).AndReturn(results)
+        results[None:50].AndReturn(results)
+        self.mox.ReplayAll()
+        actual_results = stacky_server.model_search(fake_request, fake_model,
+                                                    filters)
+        self.assertEqual(actual_results, results)
+        self.mox.VerifyAll()
+
+    def test_model_search_default_limit_with_offset(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'offset': '1'}
+        fake_model = self.mox.CreateMockAnything()
+        filters = {'field': 'value'}
+        results = self.mox.CreateMockAnything()
+        fake_model.filter(**filters).AndReturn(results)
+        results[1:51].AndReturn(results)
+        self.mox.ReplayAll()
+        actual_results = stacky_server.model_search(fake_request, fake_model,
+                                                    filters)
+        self.assertEqual(actual_results, results)
+        self.mox.VerifyAll()
+
+    def test_model_search_default_with_limit(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'limit': '1'}
+        fake_model = self.mox.CreateMockAnything()
+        filters = {'field': 'value'}
+        results = self.mox.CreateMockAnything()
+        fake_model.filter(**filters).AndReturn(results)
+        results[None:1].AndReturn(results)
+        self.mox.ReplayAll()
+        actual_results = stacky_server.model_search(fake_request, fake_model,
+                                                    filters)
+        self.assertEqual(actual_results, results)
+        self.mox.VerifyAll()
+
+    def test_model_search_default_with_limit_and_offset(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'limit': '5',
+                            'offset': '10'}
+        fake_model = self.mox.CreateMockAnything()
+        filters = {'field': 'value'}
+        results = self.mox.CreateMockAnything()
+        fake_model.filter(**filters).AndReturn(results)
+        results[10:15].AndReturn(results)
+        self.mox.ReplayAll()
+        actual_results = stacky_server.model_search(fake_request, fake_model,
+                                                    filters)
+        self.assertEqual(actual_results, results)
+        self.mox.VerifyAll()
+
+    def test_model_search_related(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
+        fake_model = self.mox.CreateMockAnything()
+        filters = {'field': 'value'}
+        results = self.mox.CreateMockAnything()
+        fake_model.select_related().AndReturn(results)
+        results.filter(**filters).AndReturn(results)
+        results[None:50].AndReturn(results)
+        self.mox.ReplayAll()
+        actual_results = stacky_server.model_search(fake_request, fake_model,
+                                                    filters, related=True)
+        self.assertEqual(actual_results, results)
+        self.mox.VerifyAll()
+
+    def test_model_order_by(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
+        fake_model = self.mox.CreateMockAnything()
+        filters = {'field': 'value'}
+        results = self.mox.CreateMockAnything()
+        fake_model.filter(**filters).AndReturn(results)
+        results.order_by('when').AndReturn(results)
+        results[None:50].AndReturn(results)
+        self.mox.ReplayAll()
+        actual_results = stacky_server.model_search(fake_request, fake_model,
+                                                    filters, order_by='when')
+        self.assertEqual(actual_results, results)
         self.mox.VerifyAll()
