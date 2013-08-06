@@ -59,6 +59,14 @@ class RawData(models.Model):
         return "%s %s %s" % (self.event, self.instance, self.state)
 
 
+class RawDataImageMeta(models.Model):
+    raw = models.ForeignKey(RawData, null=False)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
+
+
 class Lifecycle(models.Model):
     """The Lifecycle table is the Master for a group of
     Timing detail records. There is one Lifecycle row for
@@ -88,6 +96,10 @@ class InstanceUsage(models.Model):
                                          db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
 
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
@@ -138,6 +150,10 @@ class InstanceExists(models.Model):
     send_status = models.IntegerField(null=True, default=0, db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
+    os_architecture = models.TextField(null=True, blank=True)
+    os_distro = models.TextField(null=True, blank=True)
+    os_version = models.TextField(null=True, blank=True)
+    rax_options = models.TextField(null=True, blank=True)
 
 
 class Timing(models.Model):
@@ -181,3 +197,7 @@ class JsonReport(models.Model):
     name = models.CharField(max_length=50, db_index=True)
     version = models.IntegerField(default=1)
     json = models.TextField()
+
+
+def get_model_fields(model):
+    return model._meta.fields

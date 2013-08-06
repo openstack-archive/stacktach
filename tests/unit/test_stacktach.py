@@ -26,6 +26,10 @@ import mox
 
 import utils
 from utils import INSTANCE_ID_1
+from utils import OS_VERSION_1
+from utils import OS_ARCH_1
+from utils import OS_DISTRO_1
+from utils import RAX_OPTIONS_1
 from utils import MESSAGE_ID_1
 from utils import REQUEST_ID_1
 from utils import TENANT_ID_1
@@ -49,124 +53,6 @@ class StacktachRawParsingTestCase(unittest.TestCase):
             self.assertTrue(key in resp, msg='%s not in response' % key)
             self.assertEqual(resp[key], kwargs[key])
 
-    def test_monitor_message(self):
-        body = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute.cpu1-n01.example.com',
-            '_context_request_id': REQUEST_ID_1,
-            '_context_project_id': TENANT_ID_1,
-            'payload': {
-                'instance_id': INSTANCE_ID_1,
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-            },
-        }
-        resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponse(resp, host='cpu1-n01.example.com',
-                                     instance=INSTANCE_ID_1,
-                                     publisher=body['publisher_id'],
-                                     service='compute',
-                                     event=body['event_type'],
-                                     tenant=TENANT_ID_1,
-                                     request_id=REQUEST_ID_1,
-                                     state='active',
-                                     old_state='building',
-                                     old_task='build')
-
-    def test_monitor_message_no_host(self):
-        body = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute',
-            '_context_request_id': REQUEST_ID_1,
-            '_context_project_id': TENANT_ID_1,
-            'payload': {
-                'instance_id': INSTANCE_ID_1,
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                },
-            }
-        resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponse(resp, host=None, instance=INSTANCE_ID_1,
-                                     publisher=body['publisher_id'],
-                                     service='compute',
-                                     event=body['event_type'],
-                                     tenant=TENANT_ID_1,
-                                     request_id=REQUEST_ID_1, state='active',
-                                     old_state='building', old_task='build')
-
-    def test_monitor_message_exception(self):
-        body = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute.cpu1-n01.example.com',
-            '_context_request_id': REQUEST_ID_1,
-            '_context_project_id': TENANT_ID_1,
-            'payload': {
-                'exception': {'kwargs':{'uuid': INSTANCE_ID_1}},
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                },
-            }
-        resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponse(resp, host='cpu1-n01.example.com',
-                                     instance=INSTANCE_ID_1,
-                                     publisher=body['publisher_id'],
-                                     service='compute',
-                                     event=body['event_type'],
-                                     tenant=TENANT_ID_1,
-                                     request_id=REQUEST_ID_1,
-                                     state='active', old_state='building',
-                                     old_task='build')
-
-    def test_monitor_message_exception(self):
-        body = {
-            'event_type': 'compute.instance.create.start',
-            'publisher_id': 'compute.cpu1-n01.example.com',
-            '_context_request_id': REQUEST_ID_1,
-            '_context_project_id': TENANT_ID_1,
-            'payload': {
-                'instance': {'uuid': INSTANCE_ID_1},
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                },
-            }
-        resp = views._monitor_message(None, body)
-        self.assertOnHandlerResponse(resp, host='cpu1-n01.example.com',
-                                    instance=INSTANCE_ID_1,
-                                    publisher=body['publisher_id'],
-                                    service='compute',
-                                    event=body['event_type'],
-                                    tenant=TENANT_ID_1,
-                                    request_id=REQUEST_ID_1,
-                                    state='active', old_state='building',
-                                    old_task='build')
-
-    def test_compute_update_message(self):
-        body = {
-            '_context_request_id': REQUEST_ID_1,
-            'method': 'some_method',
-            'args': {
-                'host': 'compute',
-                'service_name': 'compute',
-                '_context_project_id': TENANT_ID_1
-            },
-            'payload': {
-                'state': 'active',
-                'old_state': 'building',
-                'old_task_state': 'build',
-                }
-        }
-        resp = views._compute_update_message(None, body)
-        print resp
-        self.assertOnHandlerResponse(resp, publisher=None, instance=None,
-                                     host='compute', tenant=TENANT_ID_1,
-                                     event='some_method',
-                                     request_id=REQUEST_ID_1, state='active',
-                                     old_state='building', old_task='build')
-
     def test_process_raw_data(self):
         deployment = self.mox.CreateMockAnything()
         when = '2013-1-25 13:38:23.123'
@@ -175,22 +61,25 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         }
         args = ('monitor.info', dict)
         json_args = json.dumps(args)
-        old_info_handler = views.HANDLERS['monitor.info']
-        views.HANDLERS['monitor.info'] = lambda key, mess: {'host': 'api'}
         raw_values = {
             'deployment': deployment,
-            'when': utils.decimal_utc(datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")),
+            'when': utils.decimal_utc(datetime.datetime.strptime(when, '%Y-%m-%d %H:%M:%S.%f')),
             'host': 'api',
             'routing_key': 'monitor.info',
             'json': json_args
         }
-        raw = self.mox.CreateMockAnything()
-        views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
-        views.STACKDB.save(raw)
+
+        old_info_handler = views.NOTIFICATIONS['monitor.info']
+        mock_notification = self.mox.CreateMockAnything()
+        mock_notification.rawdata_kwargs(deployment, 'monitor.info', json_args).AndReturn(raw_values)
+        views.NOTIFICATIONS['monitor.info'] = lambda message_body: mock_notification
+
+        views.STACKDB.create_rawdata(**raw_values)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
-        views.HANDLERS['monitor.info'] = old_info_handler
+
+        views.NOTIFICATIONS['monitor.info'] = old_info_handler
 
     def test_process_raw_data_old_timestamp(self):
         deployment = self.mox.CreateMockAnything()
@@ -199,24 +88,25 @@ class StacktachRawParsingTestCase(unittest.TestCase):
             '_context_timestamp': when,
             }
         args = ('monitor.info', dict)
-        json_args = json.dumps(args)
-        old_info_handler = views.HANDLERS['monitor.info']
-        views.HANDLERS['monitor.info'] = lambda key, mess: {'host': 'api'}
+        json_args = json.dumps(args[1])
         raw_values = {
             'deployment': deployment,
-            'when': utils.decimal_utc(datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")),
+            'when': utils.decimal_utc(datetime.datetime.strptime(when, '%Y-%m-%dT%H:%M:%S.%f')),
             'host': 'api',
             'routing_key': 'monitor.info',
             'json': json_args
         }
-        raw = self.mox.CreateMockAnything()
-        views.STACKDB.create_rawdata(**raw_values).AndReturn(raw)
-        views.STACKDB.save(raw)
+        old_info_handler = views.NOTIFICATIONS['monitor.info']
+        mock_notification = self.mox.CreateMockAnything()
+        mock_notification.rawdata_kwargs(deployment, 'monitor.info', json_args).AndReturn(raw_values)
+        views.NOTIFICATIONS['monitor.info'] = lambda message_body: mock_notification
+
+        views.STACKDB.create_rawdata(**raw_values)
         self.mox.ReplayAll()
         views.process_raw_data(deployment, args, json_args)
         self.mox.VerifyAll()
-        views.HANDLERS['monitor.info'] = old_info_handler
 
+        views.NOTIFICATIONS['monitor.info'] = old_info_handler
 
 class StacktachLifecycleTestCase(unittest.TestCase):
     def setUp(self):
@@ -421,7 +311,8 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
             stacklog.get_logger(name=name).AndReturn(self.log)
 
     def test_process_usage_for_new_launch_create_start(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1, 'os_distro': OS_DISTRO_1 }
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
         event = 'compute.instance.create.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -430,11 +321,16 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEquals(usage.instance_type_id, '1')
         self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_new_launch_rebuild_start(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1, 'os_distro': OS_DISTRO_1 }
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
         event = 'compute.instance.rebuild.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -443,11 +339,15 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEquals(usage.instance_type_id, '1')
         self.assertEquals(usage.tenant, TENANT_ID_1)
-
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
         self.mox.VerifyAll()
 
     def test_process_usage_for_new_launch_rebuild_start_when_no_launched_at_in_db(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1, 'os_distro': OS_DISTRO_1 }
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
         event = 'compute.instance.rebuild.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -457,11 +357,16 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_new_launch_resize_prep_start_when_no_launched_at_in_db(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1, 'os_distro': OS_DISTRO_1 }
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
         event = 'compute.instance.resize.prep.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -471,11 +376,16 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_new_launch_resize_revert_start_when_no_launched_at_in_db(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1,'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1, 'os_distro': OS_DISTRO_1 }
         notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
         event = 'compute.instance.resize.revert.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -485,12 +395,19 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEquals(usage.tenant, TENANT_ID_1)
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_new_launch_resize_prep_start_when_launched_at_in_db(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
-        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1,
+                  'rax_options': RAX_OPTIONS_1, 'os_architecture': OS_ARCH_1,
+                  'os_version': OS_VERSION_1, 'os_distro': OS_DISTRO_1 }
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                               **kwargs)
         event = 'compute.instance.resize.prep.start'
         raw, usage = self._setup_process_usage_mocks(event, notification)
         orig_launched_at = utils.decimal_utc(DUMMY_TIME - datetime.timedelta(days=1))
@@ -500,12 +417,20 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEqual(usage.launched_at, orig_launched_at)
         self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_updates_create_end(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
-        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        kwargs = {'launched': str(DUMMY_TIME),
+                  'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1,
+                  'os_distro': OS_DISTRO_1 }
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                               **kwargs)
         event = 'compute.instance.create.end'
         raw, usage = self._setup_process_usage_mocks(event, notification)
 
@@ -513,12 +438,20 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_updates_create_end_success_message(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
-        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        kwargs = {'launched': str(DUMMY_TIME),
+                  'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1,
+                  'os_distro': OS_DISTRO_1 }
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                               **kwargs)
         notification[1]['payload']['message'] = "Success"
         event = 'compute.instance.create.end'
         raw, usage = self._setup_process_usage_mocks(event, notification)
@@ -527,12 +460,20 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_updates_create_end_error_message(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'tenant_id': TENANT_ID_1}
-        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        kwargs = {'launched': str(DUMMY_TIME),
+                  'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1,
+                  'os_distro': OS_DISTRO_1 }
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                               **kwargs)
         notification[1]['payload']['message'] = "Error"
         event = 'compute.instance.create.end'
         when_time = DUMMY_TIME
@@ -547,8 +488,13 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
     def test_process_usage_for_updates_revert_end(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'type_id': INSTANCE_TYPE_ID_1, 'tenant_id': TENANT_ID_1}
-        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        kwargs = {'launched': str(DUMMY_TIME),
+                  'type_id': INSTANCE_TYPE_ID_1,
+                  'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1,
+                  'os_distro': OS_DISTRO_1 }
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                               **kwargs)
         event = 'compute.instance.resize.revert.end'
         raw, usage = self._setup_process_usage_mocks(event, notification)
 
@@ -557,12 +503,21 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
     def test_process_usage_for_updates_prep_end(self):
-        kwargs = {'launched': str(DUMMY_TIME), 'new_type_id': INSTANCE_TYPE_ID_2, 'tenant_id': TENANT_ID_1}
-        notification = utils.create_nova_notif(request_id=REQUEST_ID_1, **kwargs)
+        kwargs = {'launched': str(DUMMY_TIME),
+                  'new_type_id': INSTANCE_TYPE_ID_2,
+                  'tenant_id': TENANT_ID_1, 'rax_options': RAX_OPTIONS_1,
+                  'os_architecture': OS_ARCH_1, 'os_version': OS_VERSION_1,
+                  'os_distro': OS_DISTRO_1 }
+        notification = utils.create_nova_notif(request_id=REQUEST_ID_1,
+                                               **kwargs)
         event = 'compute.instance.resize.prep.end'
         raw, usage = self._setup_process_usage_mocks(event, notification)
 
@@ -570,6 +525,10 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
 
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_2)
         self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -649,7 +608,11 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         notif = utils.create_nova_notif(launched=str(launch_time),
                                         audit_period_beginning=str(audit_beginning),
                                         audit_period_ending=str(current_time),
-                                        tenant_id=TENANT_ID_1)
+                                        tenant_id=TENANT_ID_1,
+                                        os_architecture=OS_ARCH_1,
+                                        os_version=OS_VERSION_1,
+                                        os_distro=OS_DISTRO_1,
+                                        rax_options=RAX_OPTIONS_1)
         json_str = json.dumps(notif)
         event = 'compute.instance.exists'
         raw = utils.create_raw(self.mox, current_decimal, event=event,
@@ -668,7 +631,11 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
             'instance_type_id': '1',
             'usage': usage,
             'raw': raw,
-            'tenant': TENANT_ID_1
+            'tenant': TENANT_ID_1,
+            'rax_options': RAX_OPTIONS_1,
+            'os_architecture': OS_ARCH_1,
+            'os_version': OS_VERSION_1,
+            'os_distro': OS_DISTRO_1
         }
         exists = self.mox.CreateMockAnything()
         views.STACKDB.create_instance_exists(**exists_values).AndReturn(exists)
@@ -709,7 +676,11 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
                                         deleted=str(deleted_time),
                                         audit_period_beginning=str(audit_beginning),
                                         audit_period_ending=str(current_time),
-                                        tenant_id=TENANT_ID_1)
+                                        tenant_id=TENANT_ID_1,
+                                        os_architecture=OS_ARCH_1,
+                                        os_version=OS_VERSION_1,
+                                        os_distro=OS_DISTRO_1,
+                                        rax_options=RAX_OPTIONS_1)
         json_str = json.dumps(notif)
         event = 'compute.instance.exists'
         raw = utils.create_raw(self.mox, current_decimal, event=event,
@@ -734,7 +705,11 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
             'usage': usage,
             'delete': delete,
             'raw': raw,
-            'tenant': TENANT_ID_1
+            'tenant': TENANT_ID_1,
+            'rax_options': RAX_OPTIONS_1,
+            'os_architecture': OS_ARCH_1,
+            'os_version': OS_VERSION_1,
+            'os_distro': OS_DISTRO_1
         }
         exists = self.mox.CreateMockAnything()
         views.STACKDB.create_instance_exists(**exists_values).AndReturn(exists)
