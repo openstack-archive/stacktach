@@ -18,12 +18,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import unittest
-
 from stacktach import image_type
+from tests.unit import StacktachBaseTestCase
 
 
-class ImageTypeTestCase(unittest.TestCase):
+class ImageTypeTestCase(StacktachBaseTestCase):
 
     # Abstractions
     def _test_get_numeric_code(self, image, os_type, os_distro, expected,

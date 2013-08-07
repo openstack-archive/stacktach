@@ -19,7 +19,6 @@
 # IN THE SOFTWARE.
 
 import datetime
-import unittest
 
 import mox
 import requests
@@ -30,6 +29,7 @@ from stacktach import utils as stackutils
 from stacktach.reconciler import exceptions
 from stacktach.reconciler import nova
 from stacktach.reconciler import utils as rec_utils
+from tests.unit import StacktachBaseTestCase
 from tests.unit import utils
 from tests.unit.utils import INSTANCE_ID_1
 from tests.unit.utils import TENANT_ID_1
@@ -45,7 +45,7 @@ DEFAULT_OS_VERSION = "1.1"
 DEFAULT_RAX_OPTIONS = "rax_ops"
 
 
-class ReconcilerTestCase(unittest.TestCase):
+class ReconcilerTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.client = self.mox.CreateMockAnything()
@@ -415,7 +415,7 @@ json_bridge_config = {
 }
 
 
-class NovaJSONBridgeClientTestCase(unittest.TestCase):
+class NovaJSONBridgeClientTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.client = nova.JSONBridgeClient(json_bridge_config)

@@ -20,7 +20,6 @@
 
 import datetime
 import json
-import unittest
 
 from django.db.models import FieldDoesNotExist
 from django.db import transaction
@@ -29,13 +28,14 @@ import mox
 from stacktach import dbapi
 from stacktach import models
 from stacktach import utils as stacktach_utils
+from tests.unit import StacktachBaseTestCase
 import utils
 from utils import INSTANCE_ID_1
 from utils import MESSAGE_ID_1
 from utils import MESSAGE_ID_2
 
 
-class DBAPITestCase(unittest.TestCase):
+class DBAPITestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         dne_exception = models.InstanceExists.DoesNotExist

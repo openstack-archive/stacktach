@@ -21,7 +21,6 @@
 import datetime
 import decimal
 import json
-import unittest
 
 import mox
 
@@ -33,8 +32,10 @@ from utils import INSTANCE_ID_1
 from utils import INSTANCE_ID_2
 from utils import REQUEST_ID_1
 
+from tests.unit import StacktachBaseTestCase
 
-class StackyServerTestCase(unittest.TestCase):
+
+class StackyServerTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.mox.StubOutWithMock(models, 'RawData', use_mock_anything=True)

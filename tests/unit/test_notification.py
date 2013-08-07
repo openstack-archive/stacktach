@@ -18,8 +18,6 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import unittest
-
 import mox
 
 from stacktach import notification
@@ -29,6 +27,7 @@ from stacktach.notification import Notification
 from stacktach.notification import NovaNotification
 from stacktach.notification import GlanceNotification
 from stacktach import db
+from tests.unit import StacktachBaseTestCase
 from tests.unit.utils import REQUEST_ID_1
 from tests.unit.utils import DECIMAL_DUMMY_TIME
 from tests.unit.utils import DUMMY_TIME
@@ -38,7 +37,7 @@ from tests.unit.utils import INSTANCE_ID_1
 from tests.unit.utils import MESSAGE_ID_1
 
 
-class NovaNotificationTestCase(unittest.TestCase):
+class NovaNotificationTestCase(StacktachBaseTestCase):
 
     def setUp(self):
         self.mox = mox.Mox()
@@ -150,7 +149,7 @@ class NovaNotificationTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
 
-class GlanceNotificationTestCase(unittest.TestCase):
+class GlanceNotificationTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
@@ -423,7 +422,7 @@ class GlanceNotificationTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
 
-class NotificationTestCase(unittest.TestCase):
+class NotificationTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
