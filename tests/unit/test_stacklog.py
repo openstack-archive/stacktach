@@ -1,14 +1,13 @@
 import glob
 import logging
 import os
-from unittest import TestCase
 import mox
 from stacktach import stacklog
 import __builtin__
 from stacktach.stacklog import ExchangeLogger
+from tests.unit import StacktachBaseTestCase
 
-
-class StacklogTestCase(TestCase):
+class StacklogTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
@@ -30,7 +29,7 @@ class StacklogTestCase(TestCase):
             os.remove(file)
 
 
-class ExchangeLoggerTestCase(TestCase):
+class ExchangeLoggerTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
