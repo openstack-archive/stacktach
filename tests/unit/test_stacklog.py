@@ -44,7 +44,7 @@ class ExchangeLoggerTestCase(TestCase):
         mock_logger.setLevel(logging.DEBUG)
         self.mox.StubOutClassWithMocks(logging.handlers,
                                        'TimedRotatingFileHandler')
-        filename = "{0}.log".format(name)
+        filename = "/tmp/{0}.log".format(name)
         handler = logging.handlers.TimedRotatingFileHandler(
             filename, backupCount=3, interval=1, when='midnight')
         self.mox.StubOutClassWithMocks(logging, 'Formatter')
