@@ -44,4 +44,4 @@ setup_environment()
 
 from stacktach import stacklog
 
-stacklog.set_default_logger_location("%s.log")
+stacklog.set_default_logger_location("/tmp/%s.log")
