@@ -20,11 +20,11 @@
 
 import datetime
 import decimal
-import unittest
 
 from stacktach import datetime_to_decimal
+from tests.unit import StacktachBaseTestCase
 
-class DatetimeToDecimalTestCase(unittest.TestCase):
+class DatetimeToDecimalTestCase(StacktachBaseTestCase):
 
     def test_datetime_to_decimal(self):
         expected_decimal = decimal.Decimal('1356093296.123')

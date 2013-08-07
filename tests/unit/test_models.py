@@ -18,11 +18,11 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import unittest
 from stacktach.models import RawData, GlanceRawData, GenericRawData
+from tests.unit import StacktachBaseTestCase
 
 
-class ModelsTestCase(unittest.TestCase):
+class ModelsTestCase(StacktachBaseTestCase):
     def test_get_name_for_rawdata(self):
         self.assertEquals(RawData.get_name(), 'RawData')
 

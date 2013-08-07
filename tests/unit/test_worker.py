@@ -19,7 +19,6 @@
 # IN THE SOFTWARE.
 
 import json
-import unittest
 
 import kombu
 import mox
@@ -27,9 +26,10 @@ import mox
 from stacktach import db
 from stacktach import views
 import worker.worker as worker
+from tests.unit import StacktachBaseTestCase
 
 
-class ConsumerTestCase(unittest.TestCase):
+class ConsumerTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 

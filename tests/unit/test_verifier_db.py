@@ -22,7 +22,6 @@ import datetime
 import decimal
 import json
 import time
-import unittest
 import uuid
 
 
@@ -51,9 +50,10 @@ from verifier import AmbiguousResults
 from verifier import FieldMismatch
 from verifier import NotFound
 from verifier import VerificationException
+from tests.unit import StacktachBaseTestCase
 
 
-class VerifierTestCase(unittest.TestCase):
+class VerifierTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.mox.StubOutWithMock(models, 'RawData', use_mock_anything=True)

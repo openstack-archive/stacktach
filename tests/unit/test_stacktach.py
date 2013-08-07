@@ -20,7 +20,6 @@
 
 import datetime
 import json
-import unittest
 
 import mox
 
@@ -40,9 +39,10 @@ from utils import IMAGE_UUID_1
 from stacktach import stacklog
 from stacktach import notification
 from stacktach import views
+from tests.unit import StacktachBaseTestCase
 
 
-class StacktachRawParsingTestCase(unittest.TestCase):
+class StacktachRawParsingTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         views.STACKDB = self.mox.CreateMockAnything()
@@ -101,7 +101,7 @@ class StacktachRawParsingTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
 
-class StacktachLifecycleTestCase(unittest.TestCase):
+class StacktachLifecycleTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         views.STACKDB = self.mox.CreateMockAnything()
@@ -287,7 +287,7 @@ class StacktachLifecycleTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
 
-class StacktachUsageParsingTestCase(unittest.TestCase):
+class StacktachUsageParsingTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         views.STACKDB = self.mox.CreateMockAnything()
@@ -830,7 +830,7 @@ class StacktachUsageParsingTestCase(unittest.TestCase):
         self.mox.VerifyAll()
 
 
-class StacktachImageUsageParsingTestCase(unittest.TestCase):
+class StacktachImageUsageParsingTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         views.STACKDB = self.mox.CreateMockAnything()
