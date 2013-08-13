@@ -18,6 +18,8 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
+import json
+
 import mox
 
 from stacktach import notification
@@ -118,13 +120,13 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
         raw = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(db, 'create_nova_rawdata')
         db.create_nova_rawdata(
             deployment="1",
             tenant=TENANT_ID_1,
-            json=json,
+            json=json_body,
             routing_key=routing_key,
             when=utils.str_time_to_unix(TIMESTAMP_1),
             publisher="compute.global.preprod-ord.ohthree.com",
@@ -144,7 +146,7 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
 
         self.mox.ReplayAll()
 
-        notification = NovaNotification(body, deployment, routing_key, json)
+        notification = NovaNotification(body, deployment, routing_key, json_body)
         self.assertEquals(notification.save(), raw)
         self.mox.VerifyAll()
 
@@ -173,13 +175,13 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "glance_monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
         raw = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(db, 'create_glance_rawdata')
         db.create_glance_rawdata(
             deployment="1",
             owner=TENANT_ID_1,
-            json=json,
+            json=json_body,
             routing_key=routing_key,
             when=utils.str_time_to_unix("2013-06-20 17:31:57.939614"),
             publisher="glance-api01-r2961.global.preprod-ord.ohthree.com",
@@ -195,7 +197,42 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         notification = GlanceNotification(body, deployment, routing_key,
-                                          json)
+                                          json_body)
+        self.assertEquals(notification.save(), raw)
+        self.mox.VerifyAll()
+
+    def test_save_should_persist_glance_rawdata_erro_payload_to_database(self):
+        body = {
+            "event_type": "image.upload",
+            "timestamp": "2013-06-20 17:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": "error_message"
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.error"
+        json_body = json.dumps([routing_key, body])
+        raw = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(db, 'create_glance_rawdata')
+        db.create_glance_rawdata(
+            deployment="1",
+            owner=None,
+            json=json_body,
+            routing_key=routing_key,
+            when=utils.str_time_to_unix("2013-06-20 17:31:57.939614"),
+            publisher="glance-api01-r2961.global.preprod-ord.ohthree.com",
+            event="image.upload",
+            service="glance-api01-r2961",
+            host="global.preprod-ord.ohthree.com",
+            instance=None,
+            request_id='',
+            image_type=None,
+            status=None,
+            uuid=None).AndReturn(raw)
+
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
         self.assertEquals(notification.save(), raw)
         self.mox.VerifyAll()
 
@@ -225,7 +262,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "glance_monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
 
         self.mox.StubOutWithMock(db, 'create_image_exists')
         self.mox.StubOutWithMock(db, 'get_image_usage')
@@ -246,7 +283,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         notification = GlanceNotification(body, deployment, routing_key,
-                                          json)
+                                          json_body)
         notification.save_exists(raw)
         self.mox.VerifyAll()
 
@@ -279,7 +316,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "glance_monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
 
         self.mox.StubOutWithMock(db, 'create_image_exists')
         self.mox.StubOutWithMock(db, 'get_image_usage')
@@ -305,7 +342,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         notification = GlanceNotification(body, deployment, routing_key,
-                                          json)
+                                          json_body)
         notification.save_exists(raw)
         self.mox.VerifyAll()
 
@@ -336,7 +373,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "glance_monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
 
         self.mox.StubOutWithMock(db, 'create_image_exists')
         self.mox.StubOutWithMock(db, 'get_image_usage')
@@ -358,7 +395,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         notification = GlanceNotification(body, deployment, routing_key,
-                                          json)
+                                          json_body)
         notification.save_exists(raw)
         self.mox.VerifyAll()
 
@@ -379,7 +416,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "glance_monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
 
         self.mox.StubOutWithMock(db, 'create_image_usage')
         db.create_image_usage(
@@ -390,7 +427,8 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
             uuid=uuid).AndReturn(raw)
         self.mox.ReplayAll()
 
-        notification = GlanceNotification(body, deployment, routing_key, json)
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
         notification.save_usage(raw)
         self.mox.VerifyAll()
 
@@ -408,7 +446,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "glance_monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
 
         self.mox.StubOutWithMock(db, 'create_image_delete')
         db.create_image_delete(
@@ -417,7 +455,8 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
             deleted_at=utils.str_time_to_unix(deleted_at)).AndReturn(raw)
         self.mox.ReplayAll()
 
-        notification = GlanceNotification(body, deployment, routing_key, json)
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
         notification.save_delete(raw)
         self.mox.VerifyAll()
 
@@ -446,13 +485,13 @@ class NotificationTestCase(StacktachBaseTestCase):
         }
         deployment = "1"
         routing_key = "generic_monitor.info"
-        json = '{["routing_key", {%s}]}' % body
+        json_body = json.dumps([routing_key, body])
         raw = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(db, 'create_generic_rawdata')
         db.create_generic_rawdata(
             deployment="1",
             tenant=TENANT_ID_1,
-            json=json,
+            json=json_body,
             routing_key=routing_key,
             when=utils.str_time_to_unix(TIMESTAMP_1),
             publisher="glance-api01-r2961.global.preprod-ord.ohthree.com",
@@ -465,6 +504,6 @@ class NotificationTestCase(StacktachBaseTestCase):
 
         self.mox.ReplayAll()
 
-        notification = Notification(body, deployment, routing_key, json)
+        notification = Notification(body, deployment, routing_key, json_body)
         self.assertEquals(notification.save(), raw)
         self.mox.VerifyAll()
