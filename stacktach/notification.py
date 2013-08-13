@@ -95,25 +95,38 @@ class GlanceNotification(Notification):
     def __init__(self, body, deployment, routing_key, json):
         super(GlanceNotification, self).__init__(body, deployment,
                                                  routing_key, json)
-        self.properties = self.payload.get('properties', {})
-        self.image_type = image_type.get_numeric_code(self.payload)
-        self.status = self.payload.get('status', None)
-        self.uuid = self.payload.get('id', None)
-        self.size = self.payload.get('size', None)
-        created_at = self.payload.get('created_at', None)
-        self.created_at = created_at and utils.str_time_to_unix(created_at)
-        audit_period_beginning = self.payload.get(
-            'audit_period_beginning', None)
-        self.audit_period_beginning = audit_period_beginning and\
-            utils.str_time_to_unix(audit_period_beginning)
-        audit_period_ending = self.payload.get(
-            'audit_period_ending', None)
-        self.audit_period_ending = audit_period_ending and \
-            utils.str_time_to_unix(audit_period_ending)
+        if isinstance(self.payload, dict):
+            self.properties = self.payload.get('properties', {})
+            self.image_type = image_type.get_numeric_code(self.payload)
+            self.status = self.payload.get('status', None)
+            self.uuid = self.payload.get('id', None)
+            self.size = self.payload.get('size', None)
+            created_at = self.payload.get('created_at', None)
+            self.created_at = created_at and utils.str_time_to_unix(created_at)
+            audit_period_beginning = self.payload.get(
+                'audit_period_beginning', None)
+            self.audit_period_beginning = audit_period_beginning and\
+                utils.str_time_to_unix(audit_period_beginning)
+            audit_period_ending = self.payload.get(
+                'audit_period_ending', None)
+            self.audit_period_ending = audit_period_ending and \
+                utils.str_time_to_unix(audit_period_ending)
+        else:
+            self.properties = {}
+            self.image_type = None
+            self.status = None
+            self.uuid = None
+            self.size = None
+            self.created_at = None
+            self.audit_period_beginning = None
+            self.audit_period_ending = None
 
     @property
     def owner(self):
-        return self.payload.get('owner', None)
+        if isinstance(self.payload, dict):
+            return self.payload.get('owner', None)
+        else:
+            return None
 
     @property
     def instance(self):
@@ -121,7 +134,10 @@ class GlanceNotification(Notification):
     @property
     def deleted_at(self):
         deleted_at = self.body.get('deleted_at', None)
-        deleted_at = deleted_at or self.payload.get('deleted_at', None)
+
+        if isinstance(self.payload, dict):
+            deleted_at = deleted_at or self.payload.get('deleted_at', None)
+
         return deleted_at and utils.str_time_to_unix(deleted_at)
 
     def save(self):
