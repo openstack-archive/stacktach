@@ -290,6 +290,10 @@ def get_db_objects(klass, request, default_order_by, direction='desc',
 
     offset = request.GET.get('offset')
     limit = request.GET.get('limit', DEFAULT_LIMIT)
+
+    if limit:
+        limit = int(limit)
+
     if limit > HARD_LIMIT:
         limit = HARD_LIMIT
     if offset:
