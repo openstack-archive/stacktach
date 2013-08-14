@@ -33,7 +33,7 @@ case "$1" in
     /sbin/start-stop-daemon --start --pidfile $PIDFILE --make-pidfile -b --exec $DAEMON $ARGS
     ;;
   status)
-    status_of_proc "$DAEMON" "verifier" && exit 0 || exit $?
+    status_of_proc -p "${PIDFILE}" "$DAEMON" "verifier" && exit 0 || exit $?
     ;;
   *)
     echo "Usage: verifier.sh {start|stop|restart|status}"
