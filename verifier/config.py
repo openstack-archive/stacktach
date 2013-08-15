@@ -20,11 +20,11 @@
 import json
 import os
 
-config_filename = os.environ.get('STACKTACH_DEPLOYMENTS_FILE',
-                                 'stacktach_worker_config.json')
+config_filename = os.environ.get('STACKTACH_VERIFIER_CONFIG',
+                                 'stacktach_verifier_config.json')
 try:
     from local_settings import *
-    config_filename = STACKTACH_DEPLOYMENTS_FILE
+    config_filename = STACKTACH_VERIFIER_CONFIG
 except ImportError:
     pass
 
@@ -33,9 +33,57 @@ with open(config_filename, "r") as f:
     config = json.load(f)
 
 
-def deployments():
-    return config['deployments']
+def enable_notifications():
+    return config['enable_notifications']
 
 
 def topics():
-    return config['topics']
+    return config['rabbit']['topics']
+
+
+def tick_time():
+    return config['tick_time']
+
+
+def settle_units():
+    return config['settle_units']
+
+
+def settle_time():
+    return config['settle_time']
+
+
+def reconcile():
+    return config.get('reconcile', False)
+
+
+def reconciler_config():
+    return config.get(
+        'reconciler_config', '/etc/stacktach/reconciler_config.json')
+
+def pool_size():
+    return config['pool_size']
+
+
+def durable_queue():
+    return config['rabbit']['durable_queue']
+
+
+def host():
+    return config['rabbit']['host']
+
+
+def port():
+    return config['rabbit']['port']
+
+
+def userid():
+    return config['rabbit']['userid']
+
+
+def password():
+    return config['rabbit']['password']
+
+
+def virtual_host():
+    return config['rabbit']['virtual_host']

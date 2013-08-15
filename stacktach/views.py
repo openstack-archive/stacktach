@@ -288,6 +288,7 @@ def _process_exists(raw, notification):
 def _process_glance_usage(raw, notification):
     notification.save_usage(raw)
 
+
 def _process_glance_delete(raw, notification):
     notification.save_delete(raw)
 

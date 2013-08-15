@@ -25,7 +25,7 @@ TENANT_ID_2 = 'testtenantid2'
 
 from stacktach import datetime_to_decimal as dt
 
-IMAGE_UUID_1 = "1"
+IMAGE_UUID_1 = "12345678-6352-4dbc-8271-96cc54bf14cd"
 
 INSTANCE_ID_1 = "08f685d9-6352-4dbc-8271-96cc54bf14cd"
 INSTANCE_ID_2 = "515adf96-41d3-b86d-5467-e584edc61dab"
@@ -56,6 +56,14 @@ OS_VERSION_1 = "1"
 OS_VERSION_2 = "2"
 
 TIMESTAMP_1 = "2013-06-20 17:31:57.939614"
+SETTLE_TIME = 5
+SETTLE_UNITS = "minutes"
+TICK_TIME = 10
+HOST = '10.0.0.1'
+PORT = '5672'
+VIRTUAL_HOST = '/'
+USERID = 'rabbit'
+PASSWORD = 'password'
 
 def decimal_utc(t = datetime.datetime.utcnow()):
     return dt.dt_to_decimal(t)
