@@ -127,8 +127,8 @@ def _verify(exist):
 
 
 class GlanceVerifier(Verifier):
-    def __init__(self, pool=None):
-        super(GlanceVerifier, self).__init__(pool)
+    def __init__(self, config, pool=None):
+        super(GlanceVerifier, self).__init__(config, pool=pool)
 
     def verify_for_range(self, ending_max, callback=None):
         exists = models.ImageExists.find(

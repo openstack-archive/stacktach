@@ -25,17 +25,16 @@ import uuid
 import kombu
 
 import mox
-import stubout
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 from tests.unit import StacktachBaseTestCase
 from utils import IMAGE_UUID_1
+from utils import make_verifier_config
 from verifier import glance_verifier
 from verifier import FieldMismatch
 from verifier import NotFound
 from verifier import VerificationException
-from verifier import config as verifier_config
 
 
 class GlanceVerifierTestCase(StacktachBaseTestCase):
@@ -44,14 +43,14 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(models, 'ImageUsage', use_mock_anything=True)
         models.ImageUsage.objects = self.mox.CreateMockAnything()
         self.pool = self.mox.CreateMockAnything()
-        self.glance_verifier = glance_verifier.GlanceVerifier(pool=self.pool)
+        config = make_verifier_config(False)
+        self.glance_verifier = glance_verifier.GlanceVerifier(config,
+                                                              pool=self.pool)
         self.mox.StubOutWithMock(models, 'ImageDeletes',
                                  use_mock_anything=True)
         models.ImageDeletes.objects = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(models, 'ImageExists',
                                  use_mock_anything=True)
-        self.stubs = stubout.StubOutForTesting()
-        self.stubs.Set(verifier_config, 'pool_size', lambda: 5)
 
     def tearDown(self):
         self.mox.UnsetStubs()
