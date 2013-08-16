@@ -17,7 +17,13 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+from datetime import datetime
 
+import unittest
+import mox
+from stacktach.models import RawData, GlanceRawData, GenericRawData, ImageDeletes, InstanceExists, ImageExists
+from tests.unit.utils import IMAGE_UUID_1
+from stacktach import datetime_to_decimal as dt, models
 from stacktach.models import RawData, GlanceRawData, GenericRawData
 from tests.unit import StacktachBaseTestCase
 
@@ -31,3 +37,85 @@ class ModelsTestCase(StacktachBaseTestCase):
 
     def test_get_name_for_genericrawdata(self):
         self.assertEquals(GenericRawData.get_name(), 'GenericRawData')
+
+
+class ImageDeletesTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_find_delete_should_return_delete_issued_before_given_time(self):
+        delete = self.mox.CreateMockAnything()
+        deleted_max = datetime.utcnow()
+        self.mox.StubOutWithMock(ImageDeletes.objects, 'filter')
+        ImageDeletes.objects.filter(
+            uuid=IMAGE_UUID_1,
+            deleted_at__lte=dt.dt_to_decimal(deleted_max)).AndReturn(delete)
+        self.mox.ReplayAll()
+
+        self.assertEquals(ImageDeletes.find(
+            IMAGE_UUID_1, deleted_max), delete)
+        self.mox.VerifyAll()
+
+    def test_find_delete_should_return_delete_with_the_given_uuid(self):
+        delete = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(ImageDeletes.objects, 'filter')
+        ImageDeletes.objects.filter(uuid=IMAGE_UUID_1).AndReturn(delete)
+        self.mox.ReplayAll()
+
+        self.assertEquals(ImageDeletes.find(IMAGE_UUID_1, None), delete)
+        self.mox.VerifyAll()
+
+
+class ImageExistsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_find_should_return_records_with_date_and_status_in_audit_period(self):
+        end_max = datetime.utcnow()
+        status = 'pending'
+        unordered_results = self.mox.CreateMockAnything()
+        expected_results = [1, 2]
+        related_results = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(ImageExists.objects, 'select_related')
+        ImageExists.objects.select_related().AndReturn(related_results)
+        related_results.filter(audit_period_ending__lte=dt.dt_to_decimal(
+            end_max), status=status).AndReturn(unordered_results)
+        unordered_results.order_by('id').AndReturn(expected_results)
+        self.mox.ReplayAll()
+
+        results = ImageExists.find(end_max, status)
+
+        self.mox.VerifyAll()
+        self.assertEqual(results, [1, 2])
+
+
+class InstanceExistsTestCase(unittest.TestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_find_should_return_records_with_date_and_status_in_audit_period(self):
+        end_max = datetime.utcnow()
+        status = 'pending'
+        unordered_results = self.mox.CreateMockAnything()
+        expected_results = [1, 2]
+        related_results = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(InstanceExists.objects, 'select_related')
+        InstanceExists.objects.select_related().AndReturn(related_results)
+        related_results.filter(audit_period_ending__lte=dt.dt_to_decimal(
+            end_max), status=status).AndReturn(unordered_results)
+        unordered_results.order_by('id').AndReturn(expected_results)
+        self.mox.ReplayAll()
+
+        results = InstanceExists.find(end_max, status)
+
+        self.mox.VerifyAll()
+        self.assertEqual(results, [1, 2])
