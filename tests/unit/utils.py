@@ -146,3 +146,28 @@ def create_tracker(mox, request_id, lifecycle, start, last_timing=None,
     tracker.last_timing=last_timing
     tracker.duration=duration
     return tracker
+
+
+class FakeVerifierConfig(object):
+    def __init__(self, host, port, virtual_host, userid, password, tick_time,
+                 settle_time, settle_units, durable_queue, topics, notifs):
+        self.host = lambda: host
+        self.port = lambda: port
+        self.virtual_host = lambda: virtual_host
+        self.userid = lambda: userid
+        self.password = lambda: password
+        self.pool_size = lambda: 5
+        self.tick_time = lambda: tick_time
+        self.settle_time = lambda: settle_time
+        self.settle_units = lambda: settle_units
+        self.durable_queue = lambda: durable_queue
+        self.topics = lambda: topics
+        self.enable_notifications = lambda: notifs
+
+
+def make_verifier_config(notifs):
+        topics = {'exchange': ['notifications.info']}
+        config = FakeVerifierConfig(HOST, PORT, VIRTUAL_HOST, USERID,
+                                    PASSWORD, TICK_TIME, SETTLE_TIME,
+                                    SETTLE_UNITS, True, topics, notifs)
+        return config

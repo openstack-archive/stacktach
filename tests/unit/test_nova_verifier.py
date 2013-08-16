@@ -31,6 +31,7 @@ import mox
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 from tests.unit import StacktachBaseTestCase
+from utils import make_verifier_config
 from utils import INSTANCE_ID_1
 from utils import RAX_OPTIONS_1
 from utils import RAX_OPTIONS_2
@@ -84,7 +85,8 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
     def _setup_verifier(self):
         self.pool = self.mox.CreateMockAnything()
         self.reconciler = self.mox.CreateMockAnything()
-        self.verifier = nova_verifier.NovaVerifier(
+        config = make_verifier_config(False)
+        self.verifier = nova_verifier.NovaVerifier(config,
             pool=self.pool, reconciler=self.reconciler)
 
     def tearDown(self):

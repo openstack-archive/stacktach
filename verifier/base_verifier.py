@@ -32,8 +32,6 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
-from verifier import config as verifier_config
-
 from stacktach import stacklog, message_service
 LOG = stacklog.get_logger('verifier')
 
@@ -68,9 +66,10 @@ def _verify_date_field(d1, d2, same_second=False):
 
 
 class Verifier(object):
-    def __init__(self, pool=None, reconciler=None):
-        self.pool = pool or multiprocessing.Pool(verifier_config.pool_size())
-        self.enable_notifications = verifier_config.enable_notifications()
+    def __init__(self, config, pool=None, reconciler=None):
+        self.config = config
+        self.pool = pool or multiprocessing.Pool(config.pool_size())
+        self.enable_notifications = config.enable_notifications()
         self.reconciler = reconciler
         self.results = []
         self.failed = []
@@ -102,9 +101,9 @@ class Verifier(object):
         return datetime.datetime.utcnow()
 
     def _run(self, callback=None):
-        tick_time = verifier_config.tick_time()
-        settle_units = verifier_config.settle_units()
-        settle_time = verifier_config.settle_time()
+        tick_time = self.config.tick_time()
+        settle_units = self.config.settle_units()
+        settle_time = self.config.settle_time()
         while self._keep_running():
             with transaction.commit_on_success():
                 now = self._utcnow()
@@ -120,22 +119,27 @@ class Verifier(object):
 
     def run(self):
         if self.enable_notifications:
+            exchange_name = self.exchange()
             exchange = message_service.create_exchange(
-                self.exchange(), 'topic',
-                durable=verifier_config.durable_queue())
-            routing_keys = verifier_config.topics()[self.exchange()]
+                exchange_name, 'topic',
+                durable=self.config.durable_queue())
+            routing_keys = self.config.topics()[exchange_name]
 
             with message_service.create_connection(
-                verifier_config.host(), verifier_config.port(),
-                verifier_config.userid(), verifier_config.password(),
-                "librabbitmq", verifier_config.virtual_host()) as conn:
+                self.config.host(), self.config.port(),
+                self.config.userid(), self.config.password(),
+                "librabbitmq", self.config.virtual_host()) as conn:
                 def callback(result):
                     (verified, exist) = result
                     if verified:
                         self.send_verified_notification(
                             exist, conn, exchange, routing_keys=routing_keys)
 
-                self._run(callback=callback)
+                try:
+                    self._run(callback=callback)
+                except Exception, e:
+                    print e
+                    raise e
         else:
             self._run()
 
