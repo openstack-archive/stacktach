@@ -229,6 +229,21 @@ class ReconcilerTestCase(unittest.TestCase):
         self.assertFalse(result)
         self.mox.VerifyAll()
 
+    def test_missing_exists_for_instance_region_not_found(self):
+        launch_id = 1
+        beginning_d = utils.decimal_utc()
+        launch = self.mox.CreateMockAnything()
+        launch.instance = INSTANCE_ID_1
+        launch.launched_at = beginning_d - (60*60)
+        launch.instance_type_id = 1
+        models.InstanceUsage.objects.get(id=launch_id).AndReturn(launch)
+        launch.deployment().AndReturn(None)
+        self.mox.ReplayAll()
+        result = self.reconciler.missing_exists_for_instance(launch_id,
+                                                             beginning_d)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
     def test_failed_validation(self):
         exists = self._fake_usage(is_exists=True, mock_deployment=True)
         launched_at = exists.launched_at
@@ -339,6 +354,21 @@ class ReconcilerTestCase(unittest.TestCase):
         ex = exceptions.NotFound()
         self.client.get_instance('RegionOne', INSTANCE_ID_1,
                                  get_metadata=True).AndRaise(ex)
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
+    def test_failed_validation_region_not_found(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = None
+        exists.deployment().AndReturn(None)
+        ex = exceptions.NotFound()
         self.mox.ReplayAll()
         result = self.reconciler.failed_validation(exists)
         self.assertFalse(result)
