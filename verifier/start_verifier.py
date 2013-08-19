@@ -73,10 +73,10 @@ if __name__ == '__main__':
             reconciler = None
             if reconcile:
                 reconciler = _load_nova_reconciler()
-            verifier = nova_verifier.NovaVerifier(verifier_config,
+            verifier = nova_verifier.NovaVerifier(pool=None,
                                                   reconciler=reconciler)
         elif exchange == "glance":
-            verifier = glance_verifier.GlanceVerifier(verifier_config)
+            verifier = glance_verifier.GlanceVerifier()
 
         verifier.run()
 
