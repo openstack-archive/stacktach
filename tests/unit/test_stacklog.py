@@ -3,6 +3,7 @@ import logging
 import os
 import mox
 from stacktach import stacklog
+import __builtin__
 from stacktach.stacklog import ExchangeLogger
 from tests.unit import StacktachBaseTestCase
 
