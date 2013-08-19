@@ -17,8 +17,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-import json
 
+import json
 import os
 import signal
 import sys
@@ -30,11 +30,10 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
-from stacktach import reconciler
-from verifier import nova_verifier
-from verifier import glance_verifier
-import verifier.config as verifier_config
+from verifier import dbverifier
 
+config_filename = os.environ.get('STACKTACH_VERIFIER_CONFIG',
+                                 'stacktach_verifier_config.json')
 try:
     from local_settings import *
     config_filename = STACKTACH_VERIFIER_CONFIG
@@ -43,46 +42,31 @@ except ImportError:
 
 process = None
 
-processes = []
-
 
 def kill_time(signal, frame):
     print "dying ..."
-    for process in processes:
+    if process:
         process.terminate()
     print "rose"
-    for process in processes:
+    if process:
         process.join()
     print "bud"
     sys.exit(0)
 
 
-def _load_nova_reconciler():
-    config_loc = verifier_config.reconciler_config()
-    with open(config_loc, 'r') as rec_config_file:
-        rec_config = json.load(rec_config_file)
-        return reconciler.Reconciler(rec_config)
-
 if __name__ == '__main__':
-    def make_and_start_verifier(exchange):
+    config = None
+    with open(config_filename, "r") as f:
+        config = json.load(f)
+
+    def make_and_start_verifier(config):
         # Gotta create it and run it this way so things don't get
         # lost when the process is forked.
-        verifier = None
-        if exchange == "nova":
-            reconcile = verifier_config.reconcile()
-            reconciler = None
-            if reconcile:
-                reconciler = _load_nova_reconciler()
-            verifier = nova_verifier.NovaVerifier(verifier_config,
-                                                  reconciler=reconciler)
-        elif exchange == "glance":
-            verifier = glance_verifier.GlanceVerifier(verifier_config)
-
+        verifier = dbverifier.Verifier(config)
         verifier.run()
 
-    for exchange in verifier_config.topics().keys():
-        process = Process(target=make_and_start_verifier, args=(exchange,))
-        process.start()
+    process = Process(target=make_and_start_verifier, args=(config,))
+    process.start()
     signal.signal(signal.SIGINT, kill_time)
     signal.signal(signal.SIGTERM, kill_time)
     signal.pause()

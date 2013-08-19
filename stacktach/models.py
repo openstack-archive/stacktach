@@ -12,19 +12,15 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
-import datetime
+
 import copy
-
 from django.db import models
-
-from stacktach import datetime_to_decimal as dt
 
 
 def routing_key_type(key):
     if key.endswith('error'):
         return 'E'
     return ' '
-
 
 class Deployment(models.Model):
     name = models.CharField(max_length=50)
@@ -35,7 +31,7 @@ class Deployment(models.Model):
 
 class GenericRawData(models.Model):
     result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
-                      "Instance", "Request id"]]
+                          "Instance", "Request id"]]
     deployment = models.ForeignKey(Deployment)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
@@ -177,16 +173,6 @@ class InstanceUsage(models.Model):
         raw = raws[0]
         return raw.deployment
 
-    @staticmethod
-    def find(instance, launched_at):
-        start = launched_at - datetime.timedelta(
-            microseconds=launched_at.microsecond)
-        end = start + datetime.timedelta(microseconds=999999)
-        params = {'instance': instance,
-                  'launched_at__gte': dt.dt_to_decimal(start),
-                  'launched_at__lte': dt.dt_to_decimal(end)}
-        return InstanceUsage.objects.filter(**params)
-
 
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
@@ -199,17 +185,6 @@ class InstanceDeletes(models.Model):
 
     def deployment(self):
         return self.raw.deployment
-
-    @staticmethod
-    def find(instance, launched, deleted_max=None):
-        start = launched - datetime.timedelta(microseconds=launched.microsecond)
-        end = start + datetime.timedelta(microseconds=999999)
-        params = {'instance': instance,
-                  'launched_at__gte': dt.dt_to_decimal(start),
-                  'launched_at__lte': dt.dt_to_decimal(end)}
-        if deleted_max:
-            params['deleted_at__lte'] = dt.dt_to_decimal(deleted_max)
-        return InstanceDeletes.objects.filter(**params)
 
 
 class InstanceReconcile(models.Model):
@@ -233,15 +208,6 @@ class InstanceReconcile(models.Model):
     rax_options = models.TextField(null=True, blank=True)
     source = models.CharField(max_length=150, null=True,
                               blank=True, db_index=True)
-
-    @staticmethod
-    def find(instance, launched):
-        start = launched - datetime.timedelta(microseconds=launched.microsecond)
-        end = start + datetime.timedelta(microseconds=999999)
-        params = {'instance': instance,
-                  'launched_at__gte': dt.dt_to_decimal(start),
-                  'launched_at__lte': dt.dt_to_decimal(end)}
-        return InstanceReconcile.objects.filter(**params)
 
 
 class InstanceExists(models.Model):
@@ -293,32 +259,6 @@ class InstanceExists(models.Model):
 
     def deployment(self):
         return self.raw.deployment
-
-    @staticmethod
-    def find(ending_max, status):
-        params = {'audit_period_ending__lte': dt.dt_to_decimal(ending_max),
-                  'status': status}
-        return InstanceExists.objects.select_related()\
-            .filter(**params).order_by('id')
-
-    def mark_verified(self, reconciled=False, reason=None):
-        if not reconciled:
-            self.status = InstanceExists.VERIFIED
-        else:
-            self.status = InstanceExists.RECONCILED
-            if reason is not None:
-                self.fail_reason = reason
-
-        self.save()
-
-    def mark_failed(self, reason=None):
-        self.status = InstanceExists.FAILED
-        if reason:
-            self.fail_reason = reason
-        self.save()
-
-    def update_status(self, new_status):
-        self.status = new_status
 
 
 class Timing(models.Model):
@@ -436,13 +376,6 @@ class ImageDeletes(models.Model):
                                      null=True)
     raw = models.ForeignKey(GlanceRawData, null=True)
 
-    @staticmethod
-    def find(uuid, deleted_max=None):
-        params = {'uuid': uuid}
-        if deleted_max:
-            params['deleted_at__lte'] = dt.dt_to_decimal(deleted_max)
-        return ImageDeletes.objects.filter(**params)
-
 
 class ImageExists(models.Model):
     PENDING = 'pending'
@@ -478,25 +411,6 @@ class ImageExists(models.Model):
     send_status = models.IntegerField(default=0, db_index=True)
     owner = models.CharField(max_length=255, db_index=True)
     size = models.BigIntegerField(max_length=20)
-
-    def update_status(self, new_status):
-        self.status = new_status
-
-    @staticmethod
-    def find(ending_max, status):
-        params = {'audit_period_ending__lte': dt.dt_to_decimal(ending_max),
-                  'status': status}
-        return ImageExists.objects.select_related().filter(**params).order_by('id')
-
-    def mark_verified(self):
-        self.status = InstanceExists.VERIFIED
-        self.save()
-
-    def mark_failed(self, reason=None):
-        self.status = InstanceExists.FAILED
-        if reason:
-            self.fail_reason = reason
-        self.save()
 
 
 def get_model_fields(model):

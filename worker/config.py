@@ -39,3 +39,5 @@ def deployments():
 
 def topics():
     return config['topics']
+
+
