@@ -2,47 +2,61 @@ import datetime
 import time
 from django.db import transaction
 import mox
+import stubout
 from stacktach import message_service
 from tests.unit import StacktachBaseTestCase
 from tests.unit.utils import HOST, PORT, VIRTUAL_HOST, USERID, PASSWORD, TICK_TIME, SETTLE_TIME, SETTLE_UNITS
-from tests.unit.utils import make_verifier_config
+from verifier import config as verifier_config
 from verifier import base_verifier
 
 
 class BaseVerifierTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
-        config = make_verifier_config(False)
         self.pool = self.mox.CreateMockAnything()
+        self.stubs = stubout.StubOutForTesting()
         self.reconciler = self.mox.CreateMockAnything()
-        self.verifier_with_reconciler = base_verifier.Verifier(config,
+        self.verifier_with_reconciler = base_verifier.Verifier(
             pool=self.pool, reconciler=self.reconciler)
         self.verifier_without_notifications = self\
             ._verifier_with_notifications_disabled()
         self.verifier_with_notifications = self\
             ._verifier_with_notifications_enabled()
+        self.stubs = stubout.StubOutForTesting()
+        self.stubs.Set(verifier_config, 'durable_queue', lambda: True)
+        self.stubs.Set(verifier_config, 'topics', lambda:
+            {'exchange': ['notifications.info']})
+        self.stubs.Set(verifier_config, 'host', lambda: HOST)
+        self.stubs.Set(verifier_config, 'port', lambda: PORT)
+        self.stubs.Set(verifier_config, 'virtual_host', lambda: VIRTUAL_HOST)
+        self.stubs.Set(verifier_config, 'userid', lambda: USERID)
+        self.stubs.Set(verifier_config, 'password', lambda: PASSWORD)
+        self.stubs.Set(verifier_config, 'tick_time', lambda: TICK_TIME)
+        self.stubs.Set(verifier_config, 'settle_time', lambda: SETTLE_TIME)
+        self.stubs.Set(verifier_config, 'settle_units', lambda: SETTLE_UNITS)
+        self.stubs.Set(self.verifier_with_notifications, 'exchange',
+                       lambda: 'exchange')
 
     def _verifier_with_notifications_disabled(self):
-        config = make_verifier_config(False)
-        reconciler = self.mox.CreateMockAnything()
-        return base_verifier.Verifier(config,
-                                      pool=self.pool,
-                                      reconciler=reconciler)
+            self.stubs.Set(verifier_config, 'enable_notifications', lambda: False)
+            reconciler = self.mox.CreateMockAnything()
+            return base_verifier.Verifier(
+                pool=self.pool, reconciler=reconciler)
 
     def _verifier_with_notifications_enabled(self):
-        config = make_verifier_config(True)
+        self.stubs.Set(verifier_config, 'enable_notifications', lambda: True)
         reconciler = self.mox.CreateMockAnything()
-        return base_verifier.Verifier(config,
-                                      pool=self.pool,
-                                      reconciler=reconciler)
+        return base_verifier.Verifier(
+            pool=self.pool, reconciler=reconciler)
 
     def tearDown(self):
         self.mox.UnsetStubs()
+        self.stubs.UnsetAll()
 
     def test_should_create_verifier_with_reconciler(self):
-        config = make_verifier_config(False)
+        self.stubs.Set(verifier_config, 'reconcile', lambda: True)
         rec = self.mox.CreateMockAnything()
-        verifier = base_verifier.Verifier(config, pool=None, reconciler=rec)
+        verifier = base_verifier.Verifier(pool=None, reconciler=rec)
         self.assertEqual(verifier.reconciler, rec)
 
     def test_clean_results_full(self):
@@ -139,7 +153,7 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_run_notifications(self):
-        self._mock_exchange_create_and_connect(self.verifier_with_notifications)
+        self._mock_exchange_create_and_connect()
         self.mox.StubOutWithMock(self.verifier_with_notifications, '_run')
         self.verifier_with_notifications._run(callback=mox.Not(mox.Is(None)))
         self.mox.ReplayAll()
@@ -147,7 +161,7 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_run_notifications_with_routing_keys(self):
-        self._mock_exchange_create_and_connect(self.verifier_with_notifications)
+        self._mock_exchange_create_and_connect()
         self.mox.StubOutWithMock(self.verifier_with_notifications, '_run')
         self.verifier_with_notifications._run(callback=mox.Not(mox.Is(None)))
         self.mox.ReplayAll()
@@ -202,8 +216,7 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         tran.__enter__().AndReturn(tran)
         tran.__exit__(mox.IgnoreArg(), mox.IgnoreArg(), mox.IgnoreArg())
         transaction.commit_on_success().AndReturn(tran)
-        self._mock_exchange_create_and_connect(self.verifier_with_notifications)
-        self.verifier_with_notifications.exchange().AndReturn('exchange')
+        self._mock_exchange_create_and_connect()
         self.mox.StubOutWithMock(self.verifier_with_notifications, '_keep_running')
         self.verifier_with_notifications._keep_running().AndReturn(True)
         start = datetime.datetime.utcnow()
@@ -234,9 +247,7 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
-    def _mock_exchange_create_and_connect(self, verifier):
-        self.mox.StubOutWithMock(verifier, 'exchange')
-        self.verifier_with_notifications.exchange().AndReturn('exchange')
+    def _mock_exchange_create_and_connect(self):
         self.mox.StubOutWithMock(message_service, 'create_exchange')
         exchange = self.mox.CreateMockAnything()
         message_service.create_exchange('exchange', 'topic', durable=True) \

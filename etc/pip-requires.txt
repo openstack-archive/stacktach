@@ -7,4 +7,3 @@ prettytable>=0.7.2
 argparse
 Pympler
 requests
-south
