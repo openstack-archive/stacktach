@@ -424,7 +424,7 @@ class ImageUsage(models.Model):
     uuid = models.CharField(max_length=50, db_index=True)
     created_at = models.DecimalField(max_digits=20,
                                      decimal_places=6, db_index=True)
-    owner = models.CharField(max_length=50, db_index=True)
+    owner = models.CharField(max_length=50, db_index=True, null=True, blank=True)
     size = models.BigIntegerField(max_length=20)
     last_raw = models.ForeignKey(GlanceRawData, null=True)
 
@@ -456,7 +456,7 @@ class ImageExists(models.Model):
         (FAILED, 'Failed Verification'),
     ]
 
-    uuid = models.CharField(max_length=50, db_index=True)
+    uuid = models.CharField(max_length=50, db_index=True, null=True)
     created_at = models.DecimalField(max_digits=20,
                                      decimal_places=6, db_index=True,
                                      null=True)
@@ -476,8 +476,8 @@ class ImageExists(models.Model):
     usage = models.ForeignKey(ImageUsage, related_name='+', null=True)
     delete = models.ForeignKey(ImageDeletes, related_name='+', null=True)
     send_status = models.IntegerField(default=0, db_index=True)
-    owner = models.CharField(max_length=255, db_index=True)
-    size = models.BigIntegerField(max_length=20)
+    owner = models.CharField(max_length=255, db_index=True, null=True, blank=True)
+    size = models.BigIntegerField(max_length=20, null=True)
 
     def update_status(self, new_status):
         self.status = new_status

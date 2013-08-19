@@ -32,6 +32,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from verifier import base_verifier
+from verifier import NullFieldException
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
 from verifier import FieldMismatch
@@ -145,6 +146,24 @@ def _verify_for_delete(exist, delete=None,
                 'deleted_at', exist.deleted_at, delete.deleted_at)
 
 
+def _verify_validity(exist):
+    fields = {exist.tenant: 'tenant', exist.launched_at: 'launched_at',
+              exist.instance_type_id: 'instance_type_id'}
+    for (field_value, field_name) in fields.items():
+        if field_value is None:
+            raise NullFieldException(field_name, exist.id)
+    base_verifier._is_hex_owner_id('tenant', exist.tenant, exist.id)
+    base_verifier._is_int('instance_type_id', exist.instance_type_id, exist.id)
+    base_verifier._is_like_date('launched_at', exist.launched_at, exist.id)
+    if exist.deleted_at is not None:
+        base_verifier._is_like_date('deleted_at', exist.deleted_at, exist.id)
+    base_verifier._is_int('rax_options', exist.rax_options, exist.id)
+    base_verifier._is_alphanumeric('os_arch', exist.os_arch, exist.id)
+    base_verifier._is_alphanumeric('os_distro', exist.os_distro, exist.id)
+    base_verifier._is_alphanumeric('os_version', exist.os_version, exist.id)
+
+
+
 def _verify_with_reconciled_data(exist):
     if not exist.launched_at:
         raise VerificationException("Exists without a launched_at")
@@ -201,6 +220,7 @@ def _verify(exist):
 
         _verify_for_launch(exist)
         _verify_for_delete(exist)
+        _verify_validity(exist)
 
         verified = True
         exist.mark_verified()

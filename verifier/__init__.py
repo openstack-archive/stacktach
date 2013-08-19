@@ -51,3 +51,15 @@ class FieldMismatch(VerificationException):
         self.reason = "Expected %s to be '%s' got '%s'" % (self.field_name,
                                                            self.expected,
                                                            self.actual)
+
+class NullFieldException(VerificationException):
+    def __init__(self, field_name, exist_id):
+        self.field_name = field_name
+        self.reason = "%s field was null for exist id %s" %(field_name, exist_id)
+
+class WrongTypeException(VerificationException):
+    def __init__(self, field_name, value, exist_id):
+        self.field_name = field_name
+        self.reason = "{ %s : %s } of incorrect type for exist id %s"\
+                      %(field_name, value, exist_id)
+

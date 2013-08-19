@@ -45,6 +45,8 @@ from utils import TENANT_ID_1
 from utils import TENANT_ID_2
 from utils import INSTANCE_TYPE_ID_1
 from verifier import nova_verifier
+from verifier import NullFieldException
+from verifier import WrongTypeException
 from verifier import AmbiguousResults
 from verifier import FieldMismatch
 from verifier import NotFound
@@ -324,6 +326,228 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
+    def test_should_verify_that_tenant_in_exist_is_not_null(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = None
+        exist.id = 23
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except NullFieldException as nf:
+            self.assertEqual(nf.field_name, 'tenant')
+            self.assertEqual(nf.reason, "tenant field was null for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_that_launched_at_in_exist_is_not_null(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = 'tenant'
+        exist.id = 23
+        exist.launched_at = None
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except NullFieldException as nf:
+            self.assertEqual(nf.field_name, 'launched_at')
+            self.assertEqual(nf.reason, "launched_at field was null for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_that_instance_type_id_in_exist_is_not_null(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = 'tenant'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.instance_type_id = None
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except NullFieldException as nf:
+            self.assertEqual(nf.field_name, 'instance_type_id')
+            self.assertEqual(nf.reason, "instance_type_id field was null for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_tenant_id_is_of_type_hex(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = 'tenant'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.instance_type_id = 2
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'tenant')
+            self.assertEqual(wt.reason, "{ tenant : tenant } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_flavor_is_of_type_integer(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.instance_type_id = 'flavor'
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'instance_type_id')
+            self.assertEqual(wt.reason, "{ instance_type_id : flavor } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_launched_at_is_of_type_decimal(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = 111
+        exist.instance_type_id = 4
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'launched_at')
+            self.assertEqual(wt.reason, "{ launched_at : 111 } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_deleted_at_is_of_decimal_type_if_present(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.instance_type_id = 4
+        exist.deleted_at = 20
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'deleted_at')
+            self.assertEqual(wt.reason, "{ deleted_at : 20 } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+
+    def test_should_verify_rax_options_should_be_of_integer_type(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = 4
+        exist.rax_options = 'a'
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'rax_options')
+            self.assertEqual(wt.reason, "{ rax_options : a } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_os_arch_should_be_alphanumeric(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+
+        exist.instance_type_id = 4
+        exist.rax_options = 12
+        exist.os_arch = 'x64,'
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'os_arch')
+            self.assertEqual(wt.reason, "{ os_arch : x64, } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_os_distro_should_be_alphanumeric(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = 4
+        exist.rax_options = 12
+        exist.os_arch = 'x64'
+        exist.os_distro = 'com.microsoft.server,'
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'os_distro')
+            self.assertEqual(wt.reason, "{ os_distro : com.microsoft.server, } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_os_version_should_be_alphanumeric(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = 4
+        exist.rax_options = 12
+        exist.os_arch = 'x64'
+        exist.os_distro = 'com.microsoft.server'
+        exist.os_version = '2008.2,'
+        self.mox.ReplayAll()
+
+        try:
+            nova_verifier._verify_validity(exist)
+            self.fail()
+        except WrongTypeException as wt:
+            self.assertEqual(wt.field_name, 'os_version')
+            self.assertEqual(wt.reason, "{ os_version : 2008.2, } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_exist_fields_correctly(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = 4
+        exist.rax_options = 12
+        exist.os_arch = 'x64'
+        exist.os_distro = 'com.microsoft.server'
+        exist.os_version = '2008.2'
+        self.mox.ReplayAll()
+
+        nova_verifier._verify_validity(exist)
+        self.mox.VerifyAll()
+
+    def test_should_verify_exist_fields_correctly_and_deleted_at_can_be_none(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = None
+        exist.instance_type_id = 4
+        exist.rax_options = 12
+        exist.os_arch = 'x64'
+        exist.os_distro = 'com.microsoft.server'
+        exist.os_version = '2008.2'
+        self.mox.ReplayAll()
+
+        nova_verifier._verify_validity(exist)
+        self.mox.VerifyAll()
+
     def test_verify_for_delete(self):
         exist = self.mox.CreateMockAnything()
         exist.delete = self.mox.CreateMockAnything()
@@ -571,9 +795,11 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.launched_at = decimal.Decimal('1.1')
         self.mox.StubOutWithMock(nova_verifier, '_verify_for_launch')
         self.mox.StubOutWithMock(nova_verifier, '_verify_for_delete')
+        self.mox.StubOutWithMock(nova_verifier, '_verify_validity')
         self.mox.StubOutWithMock(exist, 'mark_verified')
         nova_verifier._verify_for_launch(exist)
         nova_verifier._verify_for_delete(exist)
+        nova_verifier._verify_validity(exist)
         exist.mark_verified()
         self.mox.ReplayAll()
         result, exists = nova_verifier._verify(exist)
