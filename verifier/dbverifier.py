@@ -23,7 +23,7 @@ import datetime
 import json
 import os
 import sys
-from time import sleep
+import time
 import uuid
 
 from django.db import transaction
@@ -44,6 +44,7 @@ LOG = stacklog.get_logger()
 
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
+from stacktach import reconciler
 from verifier import AmbiguousResults
 from verifier import FieldMismatch
 from verifier import NotFound
@@ -69,6 +70,15 @@ def _find_launch(instance, launched):
     return models.InstanceUsage.objects.filter(**params)
 
 
+def _find_reconcile(instance, launched):
+    start = launched - datetime.timedelta(microseconds=launched.microsecond)
+    end = start + datetime.timedelta(microseconds=999999)
+    params = {'instance': instance,
+              'launched_at__gte': dt.dt_to_decimal(start),
+              'launched_at__lte': dt.dt_to_decimal(end)}
+    return models.InstanceReconcile.objects.filter(**params)
+
+
 def _find_delete(instance, launched, deleted_max=None):
     start = launched - datetime.timedelta(microseconds=launched.microsecond)
     end = start + datetime.timedelta(microseconds=999999)
@@ -80,8 +90,16 @@ def _find_delete(instance, launched, deleted_max=None):
     return models.InstanceDeletes.objects.filter(**params)
 
 
-def _mark_exist_verified(exist):
-    exist.status = models.InstanceExists.VERIFIED
+def _mark_exist_verified(exist,
+                         reconciled=False,
+                         reason=None):
+    if not reconciled:
+        exist.status = models.InstanceExists.VERIFIED
+    else:
+        exist.status = models.InstanceExists.RECONCILED
+        if reason is not None:
+            exist.fail_reason = reason
+
     exist.save()
 
 
@@ -152,10 +170,11 @@ def _verify_field_mismatch(exists, launch):
                             launch.os_distro)
 
 
-def _verify_for_launch(exist):
-    if exist.usage:
+def _verify_for_launch(exist, launch=None, launch_type="InstanceUsage"):
+
+    if not launch and exist.usage:
         launch = exist.usage
-    else:
+    elif not launch:
         if models.InstanceUsage.objects\
                  .filter(instance=exist.instance).count() > 0:
             launches = _find_launch(exist.instance,
@@ -166,23 +185,22 @@ def _verify_for_launch(exist):
                 'launched_at': exist.launched_at
             }
             if count > 1:
-                raise AmbiguousResults('InstanceUsage', query)
+                raise AmbiguousResults(launch_type, query)
             elif count == 0:
-                raise NotFound('InstanceUsage', query)
+                raise NotFound(launch_type, query)
             launch = launches[0]
         else:
-            raise NotFound('InstanceUsage', {'instance': exist.instance})
+            raise NotFound(launch_type, {'instance': exist.instance})
 
     _verify_field_mismatch(exist, launch)
 
 
-def _verify_for_delete(exist):
+def _verify_for_delete(exist, delete=None, delete_type="InstanceDelete"):
 
-    delete = None
-    if exist.delete:
+    if not delete and exist.delete:
         # We know we have a delete and we have it's id
         delete = exist.delete
-    else:
+    elif not delete:
         if exist.deleted_at:
             # We received this exists before the delete, go find it
             deletes = _find_delete(exist.instance,
@@ -194,7 +212,7 @@ def _verify_for_delete(exist):
                     'instance': exist.instance,
                     'launched_at': exist.launched_at
                 }
-                raise NotFound('InstanceDelete', query)
+                raise NotFound(delete_type, query)
         else:
             # We don't know if this is supposed to have a delete or not.
             # Thus, we need to check if we have a delete for this instance.
@@ -206,7 +224,7 @@ def _verify_for_delete(exist):
             deleted_at_max = dt.dt_from_decimal(exist.audit_period_ending)
             deletes = _find_delete(exist.instance, launched_at, deleted_at_max)
             if deletes.count() > 0:
-                reason = 'Found InstanceDeletes for non-delete exist'
+                reason = 'Found %ss for non-delete exist' % delete_type
                 raise VerificationException(reason)
 
     if delete:
@@ -221,6 +239,54 @@ def _verify_for_delete(exist):
                                 delete.deleted_at)
 
 
+def _verify_with_reconciled_data(exist):
+    if not exist.launched_at:
+        raise VerificationException("Exists without a launched_at")
+
+    query = models.InstanceReconcile.objects.filter(instance=exist.instance)
+    if query.count() > 0:
+        recs = _find_reconcile(exist.instance,
+                               dt.dt_from_decimal(exist.launched_at))
+        search_query = {'instance': exist.instance,
+                        'launched_at': exist.launched_at}
+        count = recs.count()
+        if count > 1:
+            raise AmbiguousResults('InstanceReconcile', search_query)
+        elif count == 0:
+            raise NotFound('InstanceReconcile', search_query)
+        reconcile = recs[0]
+    else:
+        raise NotFound('InstanceReconcile', {'instance': exist.instance})
+
+    _verify_for_launch(exist, launch=reconcile,
+                       launch_type="InstanceReconcile")
+    delete = None
+    if reconcile.deleted_at is not None:
+        delete = reconcile
+    _verify_for_delete(exist, delete=delete,
+                       delete_type="InstanceReconcile")
+
+
+def _attempt_reconciled_verify(exist, orig_e):
+    verified = False
+    try:
+        # Attempt to verify against reconciled data
+        _verify_with_reconciled_data(exist)
+        verified = True
+        _mark_exist_verified(exist)
+    except NotFound, rec_e:
+        # No reconciled data, just mark it failed
+        _mark_exist_failed(exist, reason=str(orig_e))
+    except VerificationException, rec_e:
+        # Verification failed against reconciled data, mark it failed
+        #    using the second failure.
+        _mark_exist_failed(exist, reason=str(rec_e))
+    except Exception, rec_e:
+        _mark_exist_failed(exist, reason=rec_e.__class__.__name__)
+        LOG.exception(rec_e)
+    return verified
+
+
 def _verify(exist):
     verified = False
     try:
@@ -232,61 +298,14 @@ def _verify(exist):
 
         verified = True
         _mark_exist_verified(exist)
-    except VerificationException, e:
-        _mark_exist_failed(exist, reason=str(e))
+    except VerificationException, orig_e:
+        # Something is wrong with the InstanceUsage record
+        verified = _attempt_reconciled_verify(exist, orig_e)
     except Exception, e:
         _mark_exist_failed(exist, reason=e.__class__.__name__)
         LOG.exception(e)
 
     return verified, exist
-
-
-results = []
-
-
-def verify_for_range(pool, ending_max, callback=None):
-    exists = _list_exists(ending_max=ending_max,
-                          status=models.InstanceExists.PENDING)
-    count = exists.count()
-    added = 0
-    update_interval = datetime.timedelta(seconds=30)
-    next_update = datetime.datetime.utcnow() + update_interval
-    LOG.info("Adding %s exists to queue." % count)
-    while added < count:
-        for exist in exists[0:1000]:
-            exist.status = models.InstanceExists.VERIFYING
-            exist.save()
-            result = pool.apply_async(_verify, args=(exist,),
-                                      callback=callback)
-            results.append(result)
-            added += 1
-            if datetime.datetime.utcnow() > next_update:
-                values = ((added,) + clean_results())
-                msg = "N: %s, P: %s, S: %s, E: %s" % values
-                LOG.info(msg)
-                next_update = datetime.datetime.utcnow() + update_interval
-
-    return count
-
-
-def clean_results():
-    global results
-
-    pending = []
-    finished = 0
-    successful = 0
-
-    for result in results:
-        if result.ready():
-            finished += 1
-            if result.successful():
-                successful += 1
-        else:
-            pending.append(result)
-
-    results = pending
-    errored = finished - successful
-    return len(results), successful, errored
 
 
 def _send_notification(message, routing_key, connection, exchange):
@@ -325,81 +344,155 @@ def _create_connection(config):
     return kombu.connection.BrokerConnection(**conn_params)
 
 
-def _run(config, pool, callback=None):
-    tick_time = config['tick_time']
-    settle_units = config['settle_units']
-    settle_time = config['settle_time']
-    while True:
-        with transaction.commit_on_success():
-            now = datetime.datetime.utcnow()
-            kwargs = {settle_units: settle_time}
-            ending_max = now - datetime.timedelta(**kwargs)
-            new = verify_for_range(pool, ending_max, callback=callback)
+class Verifier(object):
 
-            msg = "N: %s, P: %s, S: %s, E: %s" % ((new,) + clean_results())
-            LOG.info(msg)
-        sleep(tick_time)
+    def __init__(self, config, pool=None, rec=None):
+        self.config = config
+        self.pool = pool or multiprocessing.Pool(self.config['pool_size'])
+        self.reconcile = self.config.get('reconcile', False)
+        self.reconciler = self._load_reconciler(config, rec=rec)
+        self.results = []
+        self.failed = []
 
+    def _load_reconciler(self, config, rec=None):
+        if rec:
+            return rec
 
-def run(config):
-    pool = multiprocessing.Pool(config['pool_size'])
+        if self.reconcile:
+            config_loc = config.get('reconciler_config',
+                                    '/etc/stacktach/reconciler_config.json')
+            with open(config_loc, 'r') as rec_config_file:
+                rec_config = json.load(rec_config_file)
+                return reconciler.Reconciler(rec_config)
 
-    if config['enable_notifications']:
-        exchange = _create_exchange(config['rabbit']['exchange_name'],
-                                    'topic',
-                                    durable=config['rabbit']['durable_queue'])
-        routing_keys = None
-        if config['rabbit'].get('routing_keys') is not None:
-            routing_keys = config['rabbit']['routing_keys']
+    def clean_results(self):
+        pending = []
+        finished = 0
+        successful = 0
 
-        with _create_connection(config) as conn:
-            def callback(result):
-                (verified, exist) = result
-                if verified:
-                    send_verified_notification(exist, conn, exchange,
-                                               routing_keys=routing_keys)
+        for result in self.results:
+            if result.ready():
+                finished += 1
+                if result.successful():
+                    (verified, exists) = result.get()
+                    if self.reconcile and not verified:
+                        self.failed.append(exists)
+                    successful += 1
+            else:
+                pending.append(result)
 
-            _run(config, pool, callback=callback)
-    else:
-        _run(config, pool)
+        self.results = pending
+        errored = finished - successful
+        return len(self.results), successful, errored
 
+    def verify_for_range(self, ending_max, callback=None):
+        exists = _list_exists(ending_max=ending_max,
+                              status=models.InstanceExists.PENDING)
+        count = exists.count()
+        added = 0
+        update_interval = datetime.timedelta(seconds=30)
+        next_update = datetime.datetime.utcnow() + update_interval
+        LOG.info("Adding %s exists to queue." % count)
+        while added < count:
+            for exist in exists[0:1000]:
+                exist.status = models.InstanceExists.VERIFYING
+                exist.save()
+                result = self.pool.apply_async(_verify, args=(exist,),
+                                               callback=callback)
+                self.results.append(result)
+                added += 1
+                if datetime.datetime.utcnow() > next_update:
+                    values = ((added,) + self.clean_results())
+                    msg = "N: %s, P: %s, S: %s, E: %s" % values
+                    LOG.info(msg)
+                    next_update = datetime.datetime.utcnow() + update_interval
+        return count
 
-def _run_once(config, pool, callback=None):
-    tick_time = config['tick_time']
-    settle_units = config['settle_units']
-    settle_time = config['settle_time']
-    now = datetime.datetime.utcnow()
-    kwargs = {settle_units: settle_time}
-    ending_max = now - datetime.timedelta(**kwargs)
-    new = verify_for_range(pool, ending_max, callback=callback)
+    def reconcile_failed(self):
+        for failed_exist in self.failed:
+            if self.reconciler.failed_validation(failed_exist):
+                _mark_exist_verified(failed_exist, reconciled=True)
+        self.failed = []
 
-    LOG.info("Verifying %s exist events" % new)
-    while len(results) > 0:
-        LOG.info("P: %s, F: %s, E: %s" % clean_results())
-        sleep(tick_time)
+    def _keep_running(self):
+        return True
 
+    def _utcnow(self):
+        return datetime.datetime.utcnow()
 
-def run_once(config):
-    pool = multiprocessing.Pool(config['pool_size'])
+    def _run(self, callback=None):
+        tick_time = self.config['tick_time']
+        settle_units = self.config['settle_units']
+        settle_time = self.config['settle_time']
+        while self._keep_running():
+            with transaction.commit_on_success():
+                now = self._utcnow()
+                kwargs = {settle_units: settle_time}
+                ending_max = now - datetime.timedelta(**kwargs)
+                new = self.verify_for_range(ending_max,
+                                            callback=callback)
+                values = ((new,) + self.clean_results())
+                if self.reconcile:
+                    self.reconcile_failed()
+                msg = "N: %s, P: %s, S: %s, E: %s" % values
+                LOG.info(msg)
+            time.sleep(tick_time)
 
-    if config['enable_notifications']:
-        exchange = _create_exchange(config['rabbit']['exchange_name'],
-                                    'topic',
-                                    durable=config['rabbit']['durable_queue'])
-        routing_keys = None
-        if config['rabbit'].get('routing_keys') is not None:
-            routing_keys = config['rabbit']['routing_keys']
+    def run(self):
+        if self.config['enable_notifications']:
+            exchange = _create_exchange(self.config['rabbit']['exchange_name'],
+                                        'topic',
+                                        durable=self.config['rabbit']['durable_queue'])
+            routing_keys = None
+            if self.config['rabbit'].get('routing_keys') is not None:
+                routing_keys = self.config['rabbit']['routing_keys']
 
-        with _create_connection(config) as conn:
-            def callback(result):
-                (verified, exist) = result
-                if verified:
-                    send_verified_notification(exist, conn, exchange,
-                                               routing_keys=routing_keys)
+            with _create_connection(self.config) as conn:
+                def callback(result):
+                    (verified, exist) = result
+                    if verified:
+                        send_verified_notification(exist, conn, exchange,
+                                                   routing_keys=routing_keys)
 
-            _run_once(config, pool, callback=callback)
-    else:
-        _run_once(config, pool)
+                self._run(callback=callback)
+        else:
+            self._run()
+
+    def _run_once(self, callback=None):
+        tick_time = self.config['tick_time']
+        settle_units = self.config['settle_units']
+        settle_time = self.config['settle_time']
+        now = self._utcnow()
+        kwargs = {settle_units: settle_time}
+        ending_max = now - datetime.timedelta(**kwargs)
+        new = self.verify_for_range(ending_max, callback=callback)
+
+        LOG.info("Verifying %s exist events" % new)
+        while len(self.results) > 0:
+            LOG.info("P: %s, F: %s, E: %s" % self.clean_results())
+            if self.reconcile:
+                self.reconcile_failed()
+            time.sleep(tick_time)
+
+    def run_once(self):
+        if self.config['enable_notifications']:
+            exchange = _create_exchange(self.config['rabbit']['exchange_name'],
+                                        'topic',
+                                        durable=self.config['rabbit']['durable_queue'])
+            routing_keys = None
+            if self.config['rabbit'].get('routing_keys') is not None:
+                routing_keys = self.config['rabbit']['routing_keys']
+
+            with _create_connection(self.config) as conn:
+                def callback(result):
+                    (verified, exist) = result
+                    if verified:
+                        send_verified_notification(exist, conn, exchange,
+                                                   routing_keys=routing_keys)
+
+                self._run_once(callback=callback)
+        else:
+            self._run_once()
 
 
 if __name__ == '__main__':
@@ -429,7 +522,8 @@ if __name__ == '__main__':
     config = {'tick_time': args.tick_time, 'settle_time': args.settle_time,
               'settle_units': args.settle_units, 'pool_size': args.pool_size}
 
+    verifier = Verifier(config)
     if args.run_once:
-        run_once(config)
+        verifier.run_once()
     else:
-        run(config)
+        verifier.run()
