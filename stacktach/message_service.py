@@ -19,7 +19,7 @@ def create_exchange(name, exchange_type, exclusive=False, auto_delete=False,
 def create_connection(hostname, port, userid, password, transport,
                       virtual_host):
     return kombu.connection.BrokerConnection(
-        hostname=hostname, port=port, user_id=userid, password=password,
+        hostname=hostname, port=port, userid=userid, password=password,
         transport=transport, virtual_host=virtual_host)
 
 
