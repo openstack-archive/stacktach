@@ -267,9 +267,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(db, 'create_image_exists')
         self.mox.StubOutWithMock(db, 'get_image_usage')
 
-        created_at_range = (DECIMAL_DUMMY_TIME, DECIMAL_DUMMY_TIME+1)
-        db.get_image_usage(created_at__range=created_at_range,
-                                      uuid=uuid).AndReturn(None)
+        db.get_image_usage(uuid=uuid).AndReturn(None)
         db.create_image_exists(
             created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
             owner=TENANT_ID_1,
@@ -322,11 +320,8 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(db, 'get_image_usage')
         self.mox.StubOutWithMock(db, 'get_image_delete')
 
-        created_at_range = (DECIMAL_DUMMY_TIME, DECIMAL_DUMMY_TIME+1)
-        db.get_image_usage(created_at__range=created_at_range,
-                           uuid=uuid).AndReturn(None)
-        db.get_image_delete(created_at__range=created_at_range,
-                            uuid=uuid).AndReturn(delete)
+        db.get_image_usage(uuid=uuid).AndReturn(None)
+        db.get_image_delete(uuid=uuid).AndReturn(delete)
         db.create_image_exists(
             created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
             owner=TENANT_ID_1,
@@ -379,9 +374,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(db, 'get_image_usage')
         self.mox.StubOutWithMock(db, 'get_image_delete')
 
-        created_at_range = (DECIMAL_DUMMY_TIME, DECIMAL_DUMMY_TIME+1)
-        db.get_image_usage(created_at__range=created_at_range,
-                           uuid=uuid).AndReturn(usage)
+        db.get_image_usage(uuid=uuid).AndReturn(usage)
         db.create_image_exists(
             created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
             owner=TENANT_ID_1,
