@@ -10,8 +10,26 @@
         "exit_on_exception": true,
         "queue_name": "stacktach",
         "topics": {
-            "nova": ["monitor.info", "monitor.error"],
-            "glance": ["monitor_glance.info", "monitor_glance.error"]
+            "nova": [
+                {
+                    "queue": "monitor.info",
+                    "routing_key": "monitor.info"
+                },
+                {
+                    "queue": "monitor.error",
+                    "routing_key": "monitor.error"
+                }
+            ],
+            "glance": [
+                {
+                    "queue": "stacktach_monitor_glance.info",
+                    "routing_key": "monitor_glance.info"
+                },
+                {
+                    "queue": "stacktach_monitor_glance.error",
+                    "routing_key": "monitor_glance.error"
+                },
+            ]
         }
     },
     {
@@ -25,8 +43,16 @@
         "exit_on_exception": false,
         "queue_name": "stacktach",
         "topics": {
-            "nova": ["monitor.info", "monitor.error"],
-            "glance": ["monitor_glance.info", "monitor_glance.error"]
+            "nova": [
+                {
+                    "queue": "monitor.info",
+                    "routing_key": "monitor.info"
+                },
+                {
+                    "queue": "monitor.error",
+                    "routing_key": "monitor.error"
+                }
+            ]
         }
     }]
 }
