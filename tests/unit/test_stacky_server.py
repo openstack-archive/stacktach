@@ -297,7 +297,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
                           "2013-07-17 10:16:10.717219", "deployment",
                           "test.start", "example.com", "state"]]
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'uuid': INSTANCE_ID_1}
+        fake_request.GET = {'uuid': INSTANCE_ID_1, 'service': 'glance'}
         result = self.mox.CreateMockAnything()
         models.GlanceRawData.objects.select_related().AndReturn(result)
         result.filter(uuid=INSTANCE_ID_1).AndReturn(result)
@@ -307,7 +307,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
         raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
 
-        resp = stacky_server.do_uuid(fake_request,'glance')
+        resp = stacky_server.do_uuid(fake_request)
 
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
@@ -591,6 +591,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
     def test_do_show(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
         raw = self._create_raw()
         models.RawData.objects.get(id=1).AndReturn(raw)
         self.mox.ReplayAll()
@@ -604,11 +605,12 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
     def test_do_show_for_glance_rawdata(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service':'glance'}
         raw = self._create_raw()
         models.GlanceRawData.objects.get(id=1).AndReturn(raw)
         self.mox.ReplayAll()
 
-        resp = stacky_server.do_show(fake_request, 1, 'glance')
+        resp = stacky_server.do_show(fake_request, 1)
 
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
@@ -617,11 +619,12 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
     def test_do_show_for_generic_rawdata(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service':'generic'}
         raw = self._create_raw()
         models.GenericRawData.objects.get(id=1).AndReturn(raw)
         self.mox.ReplayAll()
 
-        resp = stacky_server.do_show(fake_request, 1, 'generic')
+        resp = stacky_server.do_show(fake_request, 1)
 
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
@@ -630,6 +633,8 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
     def test_do_show_should_return_empty_result_on_object_not_found_exception(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {}
+
         raw = self._create_raw()
         models.RawData.objects.get(id=1).AndReturn(raw)
         self.mox.ReplayAll()
@@ -643,7 +648,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
     def test_do_watch_for_glance(self):
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {}
+        fake_request.GET = {'service': 'glance'}
         self.mox.StubOutWithMock(stacky_server, 'get_deployments')
         deployment1 = self.mox.CreateMockAnything()
         deployment1.id = 1
@@ -660,7 +665,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
         results.__iter__().AndReturn([self._create_raw()].__iter__())
         self.mox.ReplayAll()
 
-        resp = stacky_server.do_watch(fake_request, 0, 'glance')
+        resp = stacky_server.do_watch(fake_request, 0)
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
@@ -750,7 +755,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
     def test_do_watch_with_event_name(self):
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'event_name': 'test.start'}
+        fake_request.GET = {'event_name': 'test.start','service': 'nova'}
         self.mox.StubOutWithMock(stacky_server, 'get_deployments')
         deployment1 = self.mox.CreateMockAnything()
         deployment1.id = 1
@@ -768,7 +773,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
         results.__iter__().AndReturn([self._create_raw()].__iter__())
         self.mox.ReplayAll()
 
-        resp = stacky_server.do_watch(fake_request, 0, 'nova')
+        resp = stacky_server.do_watch(fake_request, 0)
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
@@ -1145,7 +1150,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
         raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
 
-        resp = stacky_server.search(fake_request, 'nova')
+        resp = stacky_server.search(fake_request)
 
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
@@ -1164,7 +1169,8 @@ class StackyServerTestCase(StacktachBaseTestCase):
                           "2013-07-17 10:16:10.717219", "deployment",
                           "test.start", "example.com", "active", None, None]]
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'field': 'tenant', 'value': 'tenant', 'limit': '2'}
+        fake_request.GET = {'field': 'tenant', 'value': 'tenant', 'limit': '2',
+                            'service': 'nova'}
         raw1 = self._create_raw()
         raw2 = self._create_raw()
         raw3 = self._create_raw()
@@ -1176,7 +1182,7 @@ class StackyServerTestCase(StacktachBaseTestCase):
         raw2.search_results(search_result, mox.IgnoreArg(),' ').AndReturn(search_result_2)
         self.mox.ReplayAll()
 
-        resp = stacky_server.search(fake_request, 'nova')
+        resp = stacky_server.search(fake_request)
 
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
