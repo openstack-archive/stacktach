@@ -120,6 +120,10 @@ class Reconciler(object):
         reconciled = False
         launch = models.InstanceUsage.objects.get(id=launched_id)
         region = self._region_for_usage(launch)
+
+        if not region:
+            return False
+
         try:
             instance = self.client.get_instance(region, launch.instance)
             if instance['deleted'] and instance['deleted_at'] is not None:
@@ -140,6 +144,10 @@ class Reconciler(object):
     def failed_validation(self, exists):
         reconciled = False
         region = self._region_for_usage(exists)
+
+        if not region:
+            return False
+
         try:
             instance = self.client.get_instance(region, exists.instance,
                                                 get_metadata=True)
