@@ -83,6 +83,7 @@ if __name__ == '__main__':
     for exchange in verifier_config.topics().keys():
         process = Process(target=make_and_start_verifier, args=(exchange,))
         process.start()
+        processes.append(process)
     signal.signal(signal.SIGINT, kill_time)
     signal.signal(signal.SIGTERM, kill_time)
     signal.pause()
