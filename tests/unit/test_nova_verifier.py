@@ -290,12 +290,11 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         results.count().AndReturn(0)
         self.mox.ReplayAll()
 
-        try:
+        with self.assertRaises(NotFound) as nf:
             nova_verifier._verify_for_launch(exist)
-            self.fail()
-        except NotFound, nf:
-            self.assertEqual(nf.object_type, 'InstanceUsage')
-            self.assertEqual(nf.search_params, {'instance': INSTANCE_ID_1})
+        exception = nf.exception
+        self.assertEqual(exception.object_type, 'InstanceUsage')
+        self.assertEqual(exception.search_params, {'instance': INSTANCE_ID_1})
 
         self.mox.VerifyAll()
 
@@ -315,14 +314,13 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         results.count().AndReturn(2)
         self.mox.ReplayAll()
 
-        try:
+        with self.assertRaises(AmbiguousResults) as ar:
             nova_verifier._verify_for_launch(exist)
-            self.fail()
-        except AmbiguousResults, nf:
-            self.assertEqual(nf.object_type, 'InstanceUsage')
-            search_params = {'instance': INSTANCE_ID_1,
-                             'launched_at': decimal.Decimal('1.1')}
-            self.assertEqual(nf.search_params, search_params)
+        exception = ar.exception
+        self.assertEqual(exception.object_type, 'InstanceUsage')
+        search_params = {'instance': INSTANCE_ID_1,
+                         'launched_at': decimal.Decimal('1.1')}
+        self.assertEqual(exception.search_params, search_params)
 
         self.mox.VerifyAll()
 
@@ -332,12 +330,12 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.id = 23
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except NullFieldException as nf:
-            self.assertEqual(nf.field_name, 'tenant')
-            self.assertEqual(nf.reason, "tenant field was null for exist id 23")
+        with self.assertRaises(NullFieldException) as nf:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = nf.exception
+        self.assertEqual(exception.field_name, 'tenant')
+        self.assertEqual(exception.reason,
+                         "tenant field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_launched_at_in_exist_is_not_null(self):
@@ -347,12 +345,12 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.launched_at = None
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except NullFieldException as nf:
-            self.assertEqual(nf.field_name, 'launched_at')
-            self.assertEqual(nf.reason, "launched_at field was null for exist id 23")
+        with self.assertRaises(NullFieldException) as nf:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = nf.exception
+        self.assertEqual(exception.field_name, 'launched_at')
+        self.assertEqual(exception.reason,
+                         "launched_at field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_instance_type_id_in_exist_is_not_null(self):
@@ -363,12 +361,12 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.instance_type_id = None
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except NullFieldException as nf:
-            self.assertEqual(nf.field_name, 'instance_type_id')
-            self.assertEqual(nf.reason, "instance_type_id field was null for exist id 23")
+        with self.assertRaises(NullFieldException) as nf:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = nf.exception
+        self.assertEqual(exception.field_name, 'instance_type_id')
+        self.assertEqual(exception.reason,
+                         "instance_type_id field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_tenant_id_is_of_type_hex(self):
@@ -379,12 +377,13 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.instance_type_id = 2
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'tenant')
-            self.assertEqual(wt.reason, "{ tenant : tenant } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'tenant')
+        self.assertEqual(
+            exception.reason,
+            "{ tenant : tenant } of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_flavor_is_of_type_integer(self):
@@ -395,12 +394,13 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.instance_type_id = 'flavor'
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'instance_type_id')
-            self.assertEqual(wt.reason, "{ instance_type_id : flavor } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'instance_type_id')
+        self.assertEqual(
+            exception.reason,
+            "{ instance_type_id : flavor } of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_launched_at_is_of_type_decimal(self):
@@ -411,12 +411,13 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.instance_type_id = 4
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'launched_at')
-            self.assertEqual(wt.reason, "{ launched_at : 111 } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'launched_at')
+        self.assertEqual(
+            exception.reason,
+            "{ launched_at : 111 } of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_deleted_at_is_of_decimal_type_if_present(self):
@@ -428,12 +429,13 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.deleted_at = 20
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'deleted_at')
-            self.assertEqual(wt.reason, "{ deleted_at : 20 } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'deleted_at')
+        self.assertEqual(
+            exception.reason,
+            "{ deleted_at : 20 } of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
 
@@ -447,12 +449,30 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.rax_options = 'a'
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'rax_options')
-            self.assertEqual(wt.reason, "{ rax_options : a } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'rax_options')
+        self.assertEqual(
+            exception.reason,
+            "{ rax_options : a } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_rax_options_should_not_be_empty(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = 4
+        exist.rax_options = ''
+        self.mox.ReplayAll()
+
+        with self.assertRaises(NullFieldException) as nf:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = nf.exception
+        self.assertEqual(exception.field_name, 'rax_options')
+        self.assertEqual(exception.reason, "rax_options field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_os_arch_should_be_alphanumeric(self):
@@ -464,15 +484,37 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
 
         exist.instance_type_id = 4
         exist.rax_options = 12
-        exist.os_arch = 'x64,'
+        exist.os_architecture = 'x64,'
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'os_arch')
-            self.assertEqual(wt.reason, "{ os_arch : x64, } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'os_architecture')
+        self.assertEqual(
+            exception.reason,
+            "{ os_architecture : x64, } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_os_arch_should_not_be_empty(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+
+        exist.instance_type_id = 4
+        exist.rax_options = 12
+        exist.os_architecture = ''
+        self.mox.ReplayAll()
+
+        with self.assertRaises(NullFieldException) as nf:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = nf.exception
+        self.assertEqual(exception.field_name, 'os_architecture')
+        self.assertEqual(
+            exception.reason,
+            "os_architecture field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_os_distro_should_be_alphanumeric(self):
@@ -483,16 +525,38 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.deleted_at = decimal.Decimal('5.1')
         exist.instance_type_id = 4
         exist.rax_options = 12
-        exist.os_arch = 'x64'
+        exist.os_architecture = 'x64'
         exist.os_distro = 'com.microsoft.server,'
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'os_distro')
-            self.assertEqual(wt.reason, "{ os_distro : com.microsoft.server, } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'os_distro')
+        self.assertEqual(
+            exception.reason,
+            "{ os_distro : com.microsoft.server, } of incorrect type for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_os_distro_should_not_be_empty(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = 4
+        exist.rax_options = 12
+        exist.os_architecture = 'x64'
+        exist.os_distro = ''
+        self.mox.ReplayAll()
+
+        with self.assertRaises(NullFieldException) as nf:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = nf.exception
+        self.assertEqual(exception.field_name, 'os_distro')
+        self.assertEqual(
+            exception.reason,
+            "os_distro field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_os_version_should_be_alphanumeric(self):
@@ -503,20 +567,21 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.deleted_at = decimal.Decimal('5.1')
         exist.instance_type_id = 4
         exist.rax_options = 12
-        exist.os_arch = 'x64'
+        exist.os_architecture = 'x64'
         exist.os_distro = 'com.microsoft.server'
         exist.os_version = '2008.2,'
         self.mox.ReplayAll()
 
-        try:
-            nova_verifier._verify_validity(exist)
-            self.fail()
-        except WrongTypeException as wt:
-            self.assertEqual(wt.field_name, 'os_version')
-            self.assertEqual(wt.reason, "{ os_version : 2008.2, } of incorrect type for exist id 23")
+        with self.assertRaises(WrongTypeException) as wt:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = wt.exception
+        self.assertEqual(exception.field_name, 'os_version')
+        self.assertEqual(
+            exception.reason,
+            "{ os_version : 2008.2, } of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
-    def test_should_verify_exist_fields_correctly(self):
+    def test_should_verify_os_version_should_not_be_empty(self):
         exist = self.mox.CreateMockAnything()
         exist.tenant = '3762854cd6f6435998188d5120e4c271'
         exist.id = 23
@@ -524,15 +589,56 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.deleted_at = decimal.Decimal('5.1')
         exist.instance_type_id = 4
         exist.rax_options = 12
-        exist.os_arch = 'x64'
+        exist.os_architecture = 'x64'
+        exist.os_distro = 'com.microsoft.server'
+        exist.os_version = ''
+        self.mox.ReplayAll()
+
+        with self.assertRaises(NullFieldException) as nf:
+            nova_verifier._verify_validity(exist, 'all')
+        exception = nf.exception
+        self.assertEqual(exception.field_name, 'os_version')
+        self.assertEqual(
+            exception.reason, "os_version field was null for exist id 23")
+        self.mox.VerifyAll()
+
+    def test_should_verify_all_exist_fields_when_validity_check_value_is_all(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = '4'
+        exist.rax_options = '12'
+        exist.os_architecture = 'x64'
         exist.os_distro = 'com.microsoft.server'
         exist.os_version = '2008.2'
         self.mox.ReplayAll()
 
-        nova_verifier._verify_validity(exist)
+        nova_verifier._verify_validity(exist, 'all')
         self.mox.VerifyAll()
 
-    def test_should_verify_exist_fields_correctly_and_deleted_at_can_be_none(self):
+    def test_should_verify_only_basic_exist_fields_when_validity_check_value_is_basic(self):
+        exist = self.mox.CreateMockAnything()
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.instance_type_id = '4'
+        self.mox.ReplayAll()
+
+        nova_verifier._verify_validity(exist, 'basic')
+        self.mox.VerifyAll()
+
+    def test_should_not_verify_any_fields_if_validity_check_value_is_none(self):
+        exist = self.mox.CreateMockAnything()
+        exist.id = 23
+        self.mox.ReplayAll()
+
+        nova_verifier._verify_validity(exist, 'none')
+        self.mox.VerifyAll()
+
+    def test_should_verify_exist_fields_even_if_deleted_at_is_none(self):
         exist = self.mox.CreateMockAnything()
         exist.tenant = '3762854cd6f6435998188d5120e4c271'
         exist.id = 23
@@ -540,12 +646,12 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.deleted_at = None
         exist.instance_type_id = 4
         exist.rax_options = 12
-        exist.os_arch = 'x64'
+        exist.os_architecture = 'x64'
         exist.os_distro = 'com.microsoft.server'
         exist.os_version = '2008.2'
         self.mox.ReplayAll()
 
-        nova_verifier._verify_validity(exist)
+        nova_verifier._verify_validity(exist, 'all')
         self.mox.VerifyAll()
 
     def test_verify_for_delete(self):
@@ -618,12 +724,11 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
 
         self.mox.ReplayAll()
 
-        try:
+        with self.assertRaises(VerificationException) as ve:
             nova_verifier._verify_for_delete(exist)
-            self.fail()
-        except VerificationException, ve:
-            msg = 'Found InstanceDeletes for non-delete exist'
-            self.assertEqual(ve.reason, msg)
+        exception = ve.exception
+        msg = 'Found InstanceDeletes for non-delete exist'
+        self.assertEqual(exception.reason, msg)
 
         self.mox.VerifyAll()
 
@@ -636,13 +741,12 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.delete.deleted_at = decimal.Decimal('5.1')
         self.mox.ReplayAll()
 
-        try:
+        with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_delete(exist)
-            self.fail()
-        except FieldMismatch, fm:
-            self.assertEqual(fm.field_name, 'launched_at')
-            self.assertEqual(fm.expected, decimal.Decimal('1.1'))
-            self.assertEqual(fm.actual, decimal.Decimal('2.1'))
+        exception = fm.exception
+        self.assertEqual(exception.field_name, 'launched_at')
+        self.assertEqual(exception.expected, decimal.Decimal('1.1'))
+        self.assertEqual(exception.actual, decimal.Decimal('2.1'))
         self.mox.VerifyAll()
 
     def test_verify_for_delete_deleted_at_mismatch(self):
@@ -654,13 +758,12 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.delete.deleted_at = decimal.Decimal('6.1')
         self.mox.ReplayAll()
 
-        try:
+        with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_delete(exist)
-            self.fail()
-        except FieldMismatch, fm:
-            self.assertEqual(fm.field_name, 'deleted_at')
-            self.assertEqual(fm.expected, decimal.Decimal('5.1'))
-            self.assertEqual(fm.actual, decimal.Decimal('6.1'))
+        exception = fm.exception
+        self.assertEqual(exception.field_name, 'deleted_at')
+        self.assertEqual(exception.expected, decimal.Decimal('5.1'))
+        self.assertEqual(exception.actual, decimal.Decimal('6.1'))
         self.mox.VerifyAll()
 
     def test_verify_with_reconciled_data(self):
@@ -799,10 +902,10 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(exist, 'mark_verified')
         nova_verifier._verify_for_launch(exist)
         nova_verifier._verify_for_delete(exist)
-        nova_verifier._verify_validity(exist)
+        nova_verifier._verify_validity(exist, 'all')
         exist.mark_verified()
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'all')
         self.assertTrue(result)
         self.mox.VerifyAll()
 
@@ -817,7 +920,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         nova_verifier._verify_with_reconciled_data(exist)\
                   .AndRaise(NotFound('InstanceReconcile', {}))
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'all')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
@@ -833,7 +936,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
                   .AndRaise(VerificationException('test2'))
         exist.mark_failed(reason='test2')
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'none')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
@@ -850,7 +953,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
                   .AndRaise(NotFound('InstanceReconcile', {}))
         exist.mark_failed(reason='test')
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'none')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
@@ -866,7 +969,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         nova_verifier._verify_with_reconciled_data(exist)
         exist.mark_verified(reconciled=True)
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'none')
         self.assertTrue(result)
         self.mox.VerifyAll()
 
@@ -883,7 +986,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
                   .AndRaise(Exception())
         exist.mark_failed(reason='Exception')
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'none')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
@@ -901,7 +1004,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
                   .AndRaise(NotFound('InstanceReconcile', {}))
         exist.mark_failed(reason='test')
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'none')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
@@ -914,7 +1017,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         nova_verifier._verify_for_launch(exist).AndRaise(Exception())
         exist.mark_failed(reason='Exception')
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'none')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
@@ -928,7 +1031,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         nova_verifier._verify_for_delete(exist).AndRaise(Exception())
         exist.mark_failed(reason='Exception')
         self.mox.ReplayAll()
-        result, exists = nova_verifier._verify(exist)
+        result, exists = nova_verifier._verify(exist, 'none')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
@@ -948,9 +1051,9 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist2.update_status('verifying')
         exist1.save()
         exist2.save()
-        self.pool.apply_async(nova_verifier._verify, args=(exist1,),
+        self.pool.apply_async(nova_verifier._verify, args=(exist1, 'all'),
                               callback=None)
-        self.pool.apply_async(nova_verifier._verify, args=(exist2,),
+        self.pool.apply_async(nova_verifier._verify, args=(exist2, 'all'),
                               callback=None)
         self.mox.ReplayAll()
         self.verifier.verify_for_range(when_max)
@@ -973,9 +1076,9 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist2.update_status('verifying')
         exist1.save()
         exist2.save()
-        self.pool.apply_async(nova_verifier._verify, args=(exist1,),
+        self.pool.apply_async(nova_verifier._verify, args=(exist1, 'all'),
                               callback=callback)
-        self.pool.apply_async(nova_verifier._verify, args=(exist2,),
+        self.pool.apply_async(nova_verifier._verify, args=(exist2, 'all'),
                               callback=callback)
         self.mox.ReplayAll()
         self.verifier.verify_for_range(when_max, callback=callback)

@@ -80,14 +80,22 @@ def _is_like_date(attr_name, attr_value, exist_id):
         raise WrongTypeException(attr_name, attr_value, exist_id)
 
 
-def _is_int(attr_name, attr_value, exist_id):
-    if not isinstance(attr_value, int):
+def _is_long(attr_name, attr_value, exist_id):
+    if not isinstance(attr_value, long):
+        raise WrongTypeException(attr_name, attr_value, exist_id)
+
+
+def _is_int_in_char(attr_name, attr_value, exist_id):
+    try:
+        int(attr_value)
+    except ValueError:
         raise WrongTypeException(attr_name, attr_value, exist_id)
 
 
 def _is_hex_owner_id(attr_name, attr_value, exist_id):
     if not re.match("[0-9a-f]{32}$", attr_value):
        raise WrongTypeException(attr_name, attr_value, exist_id)
+
 
 def _is_alphanumeric(attr_name, attr_value, exist_id):
     if not re.match("[a-zA-Z0-9.]+$", attr_value):

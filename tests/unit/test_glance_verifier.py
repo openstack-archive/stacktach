@@ -379,7 +379,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
     def test_should_verify_owner_is_of_type_hex(self):
         exist = self.mox.CreateMockAnything()
         exist.id = 23
-        exist.size = 1234
+        exist.size = 1234L
         exist.created_at = decimal.Decimal('5.1')
         exist.uuid = "58fb036d-5ef8-47a8-b503-7571276c400a"
         exist.owner = "3762854cd6f6435998188d5120e4c271,kl"
@@ -396,7 +396,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
     def test_should_verify_correctly_for_all_non_null_and_valid_types(self):
         exist = self.mox.CreateMockAnything()
         exist.id = 23
-        exist.size = 983040
+        exist.size = 983040L
         exist.created_at = decimal.Decimal('5.1')
         exist.uuid = "58fb036d-5ef8-47a8-b503-7571276c400a"
         exist.owner = "3762854cd6f6435998188d5120e4c271"

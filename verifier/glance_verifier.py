@@ -65,9 +65,8 @@ def _verify_validity(exist):
             raise NullFieldException(field_name, exist.id)
     base_verifier._is_like_uuid('uuid', exist.uuid, exist.id)
     base_verifier._is_like_date('created_at', exist.created_at, exist.id)
-    base_verifier._is_int('size', exist.size, exist.id)
+    base_verifier._is_long('size', exist.size, exist.id)
     base_verifier._is_hex_owner_id('owner', exist.owner, exist.id)
-
 
 
 def _verify_for_usage(exist, usage=None):
