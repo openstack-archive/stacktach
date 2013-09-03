@@ -116,11 +116,6 @@ def _verify_for_delete(exist, delete=None):
 
     if delete:
         if not base_verifier._verify_date_field(
-                delete.created_at, exist.created_at, same_second=True):
-            raise FieldMismatch('created_at', exist.created_at,
-                                delete.created_at)
-
-        if not base_verifier._verify_date_field(
                 delete.deleted_at, exist.deleted_at, same_second=True):
             raise FieldMismatch('deleted_at', exist.deleted_at,
                                 delete.deleted_at)
