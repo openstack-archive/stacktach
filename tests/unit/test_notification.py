@@ -22,7 +22,7 @@ import json
 
 import mox
 
-from stacktach import notification
+from stacktach import notification, stacklog
 from stacktach import utils
 
 from stacktach.notification import Notification
@@ -316,162 +316,6 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
         self.assertEquals(notification.save(), raw)
         self.mox.VerifyAll()
 
-    def test_save_image_exists(self):
-        raw = self.mox.CreateMockAnything()
-        audit_period_beginning = "2013-05-20 17:31:57.939614"
-        audit_period_ending = "2013-06-20 17:31:57.939614"
-        size = 123
-        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
-        body = {
-            "event_type": "image.upload",
-            "timestamp": "2013-06-20 18:31:57.939614",
-            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
-            "payload": {
-                "created_at": str(DUMMY_TIME),
-                "status": "saving",
-                "audit_period_beginning": audit_period_beginning,
-                "audit_period_ending": audit_period_ending,
-                "properties": {
-                    "image_type": "snapshot",
-                    "instance_uuid": INSTANCE_ID_1,
-                },
-                "size": size,
-                "owner": TENANT_ID_1,
-                "id": uuid
-            }
-        }
-        deployment = "1"
-        routing_key = "glance_monitor.info"
-        json_body = json.dumps([routing_key, body])
-
-        self.mox.StubOutWithMock(db, 'create_image_exists')
-        self.mox.StubOutWithMock(db, 'get_image_usage')
-
-        db.get_image_usage(uuid=uuid).AndReturn(None)
-        db.create_image_exists(
-            created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
-            owner=TENANT_ID_1,
-            raw=raw,
-            audit_period_beginning=utils.str_time_to_unix(audit_period_beginning),
-            audit_period_ending=utils.str_time_to_unix(audit_period_ending),
-            size=size,
-            uuid=uuid,
-            usage=None).AndReturn(raw)
-
-        self.mox.ReplayAll()
-
-        notification = GlanceNotification(body, deployment, routing_key,
-                                          json_body)
-        notification.save_exists(raw)
-        self.mox.VerifyAll()
-
-    def test_save_image_exists_with_delete_not_none(self):
-        raw = self.mox.CreateMockAnything()
-        delete = self.mox.CreateMockAnything()
-        audit_period_beginning = "2013-05-20 17:31:57.939614"
-        audit_period_ending = "2013-06-20 17:31:57.939614"
-        size = 123
-        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
-        deleted_at = "2013-06-20 14:31:57.939614"
-        body = {
-            "event_type": "image.upload",
-            "timestamp": "2013-06-20 18:31:57.939614",
-            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
-            "payload": {
-                "created_at": str(DUMMY_TIME),
-                "status": "saving",
-                "audit_period_beginning": audit_period_beginning,
-                "audit_period_ending": audit_period_ending,
-                "properties": {
-                    "image_type": "snapshot",
-                    "instance_uuid": INSTANCE_ID_1,
-                    },
-                "deleted_at": deleted_at,
-                "size": size,
-                "owner": TENANT_ID_1,
-                "id": "2df2ccf6-bc1b-4853-aab0-25fda346b3bb",
-                }
-        }
-        deployment = "1"
-        routing_key = "glance_monitor.info"
-        json_body = json.dumps([routing_key, body])
-
-        self.mox.StubOutWithMock(db, 'create_image_exists')
-        self.mox.StubOutWithMock(db, 'get_image_usage')
-        self.mox.StubOutWithMock(db, 'get_image_delete')
-
-        db.get_image_usage(uuid=uuid).AndReturn(None)
-        db.get_image_delete(uuid=uuid).AndReturn(delete)
-        db.create_image_exists(
-            created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
-            owner=TENANT_ID_1,
-            raw=raw,
-            audit_period_beginning=utils.str_time_to_unix(audit_period_beginning),
-            audit_period_ending=utils.str_time_to_unix(audit_period_ending),
-            size=size,
-            uuid=uuid,
-            usage=None,
-            delete=delete,
-            deleted_at=utils.str_time_to_unix(str(deleted_at))).AndReturn(raw)
-
-        self.mox.ReplayAll()
-
-        notification = GlanceNotification(body, deployment, routing_key,
-                                          json_body)
-        notification.save_exists(raw)
-        self.mox.VerifyAll()
-
-    def test_save_image_exists_with_usage_not_none(self):
-        raw = self.mox.CreateMockAnything()
-        usage = self.mox.CreateMockAnything()
-        audit_period_beginning = "2013-05-20 17:31:57.939614"
-        audit_period_ending = "2013-06-20 17:31:57.939614"
-        size = 123
-        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
-        body = {
-            "event_type": "image.upload",
-            "timestamp": "2013-06-20 18:31:57.939614",
-            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
-            "payload": {
-                "created_at": str(DUMMY_TIME),
-                "status": "saving",
-                "audit_period_beginning": audit_period_beginning,
-                "audit_period_ending": audit_period_ending,
-                "properties": {
-                    "image_type": "snapshot",
-                    "instance_uuid": INSTANCE_ID_1,
-                    },
-                "size": size,
-                "owner": TENANT_ID_1,
-                "id": "2df2ccf6-bc1b-4853-aab0-25fda346b3bb",
-                }
-        }
-        deployment = "1"
-        routing_key = "glance_monitor.info"
-        json_body = json.dumps([routing_key, body])
-
-        self.mox.StubOutWithMock(db, 'create_image_exists')
-        self.mox.StubOutWithMock(db, 'get_image_usage')
-        self.mox.StubOutWithMock(db, 'get_image_delete')
-
-        db.get_image_usage(uuid=uuid).AndReturn(usage)
-        db.create_image_exists(
-            created_at=utils.str_time_to_unix(str(DUMMY_TIME)),
-            owner=TENANT_ID_1,
-            raw=raw,
-            audit_period_beginning=utils.str_time_to_unix(audit_period_beginning),
-            audit_period_ending=utils.str_time_to_unix(audit_period_ending),
-            size=size,
-            uuid=uuid,
-            usage=usage).AndReturn(raw)
-
-        self.mox.ReplayAll()
-
-        notification = GlanceNotification(body, deployment, routing_key,
-                                          json_body)
-        notification.save_exists(raw)
-        self.mox.VerifyAll()
-
     def test_save_usage_should_persist_image_usage(self):
         raw = self.mox.CreateMockAnything()
         size = 123
@@ -579,4 +423,255 @@ class NotificationTestCase(StacktachBaseTestCase):
 
         notification = Notification(body, deployment, routing_key, json_body)
         self.assertEquals(notification.save(), raw)
+        self.mox.VerifyAll()
+
+
+class GlanceExistsNotificationTestCase(StacktachBaseTestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_save_glancerawdata(self):
+        raw = self.mox.CreateMockAnything()
+        audit_period_beginning = "2013-05-20 17:31:57.939614"
+        audit_period_ending = "2013-06-20 17:31:57.939614"
+        created_at = "2013-05-20 19:31:57.939614"
+        size = 123
+        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
+        body = {
+            "event_type": "image.exists",
+            "timestamp": "2013-06-20 18:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
+                "audit_period_beginning": audit_period_beginning,
+                "audit_period_ending": audit_period_ending,
+                "owner": TENANT_ID_1,
+                "images":
+                [
+                    {
+                        "created_at": created_at,
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": None,
+                    },
+                    {
+                        "created_at": str(DUMMY_TIME),
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": None,
+                    }
+                ]
+            }
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json_body = json.dumps([routing_key, body])
+
+        self.mox.StubOutWithMock(db, 'create_glance_rawdata')
+
+        db.create_glance_rawdata(
+            deployment="1",
+            owner="testtenantid1",
+            json=json_body,
+            routing_key=routing_key,
+            when=utils.str_time_to_unix("2013-06-20 18:31:57.939614"),
+            publisher="glance-api01-r2961.global.preprod-ord.ohthree.com",
+            event="image.exists",
+            service="glance-api01-r2961",
+            host="global.preprod-ord.ohthree.com",
+            instance=None,
+            request_id='',
+            image_type=0,
+            status=None,
+            uuid=None).AndReturn(raw)
+
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
+        notification.save()
+        self.mox.VerifyAll()
+
+    def test_save_image_exists_with_created_at_but_deleted_at_none(self):
+        raw = self.mox.CreateMockAnything()
+        audit_period_beginning = "2013-05-20 17:31:57.939614"
+        audit_period_ending = "2013-06-20 17:31:57.939614"
+        created_at = "2013-05-20 19:31:57.939614"
+        size = 123
+        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
+        body = {
+            "event_type": "image.exists",
+            "timestamp": "2013-06-20 18:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
+                "audit_period_beginning": audit_period_beginning,
+                "audit_period_ending": audit_period_ending,
+                "owner": TENANT_ID_1,
+                "images":
+                [
+                    {
+                        "created_at": created_at,
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": None,
+                    },
+                    {
+                        "created_at": created_at,
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": None,
+                    }
+                ]
+            }
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json_body = json.dumps([routing_key, body])
+
+        self.mox.StubOutWithMock(db, 'create_image_exists')
+        self.mox.StubOutWithMock(db, 'get_image_usage')
+
+        for i in range(0, 2):
+            db.get_image_usage(uuid=uuid).AndReturn(None)
+            db.create_image_exists(
+                created_at=utils.str_time_to_unix(created_at),
+                owner=TENANT_ID_1,
+                raw=raw,
+                audit_period_beginning=utils.str_time_to_unix(audit_period_beginning),
+                audit_period_ending=utils.str_time_to_unix(audit_period_ending),
+                size=size,
+                uuid=uuid,
+                usage=None).AndReturn(raw)
+
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
+        notification.save_exists(raw)
+        self.mox.VerifyAll()
+
+    def test_save_image_exists_with_created_at_and_deleted_at(self):
+        raw = self.mox.CreateMockAnything()
+        delete = self.mox.CreateMockAnything()
+        audit_period_beginning = "2013-05-20 17:31:57.939614"
+        audit_period_ending = "2013-06-20 17:31:57.939614"
+        created_at = "2013-05-20 19:31:57.939614"
+        deleted_at = "2013-05-20 21:31:57.939614"
+        size = 123
+        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
+        body = {
+            "event_type": "image.exists",
+            "timestamp": "2013-06-20 18:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
+                "audit_period_beginning": audit_period_beginning,
+                "audit_period_ending": audit_period_ending,
+                "owner": TENANT_ID_1,
+                "images":
+                [
+                    {
+                        "created_at": created_at,
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": deleted_at,
+                    },
+                    {
+                        "created_at": created_at,
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": deleted_at,
+                    }
+                ]
+            }
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json_body = json.dumps([routing_key, body])
+        self.mox.StubOutWithMock(db, 'create_image_exists')
+        self.mox.StubOutWithMock(db, 'get_image_usage')
+        self.mox.StubOutWithMock(db, 'get_image_delete')
+
+        for i in range(0, 2):
+            db.get_image_usage(uuid=uuid).AndReturn(None)
+            db.get_image_delete(uuid=uuid).AndReturn(delete)
+            db.create_image_exists(
+                created_at=utils.str_time_to_unix(created_at),
+                owner=TENANT_ID_1,
+                raw=raw,
+                audit_period_beginning=utils.str_time_to_unix(audit_period_beginning),
+                audit_period_ending=utils.str_time_to_unix(audit_period_ending),
+                size=size,
+                uuid=uuid,
+                usage=None,
+                delete=delete,
+                deleted_at=utils.str_time_to_unix(deleted_at)).AndReturn(raw)
+
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
+        notification.save_exists(raw)
+        self.mox.VerifyAll()
+
+    def test_save_image_exists_without_created_at(self):
+        raw = self.mox.CreateMockAnything()
+        raw.id = 1
+        audit_period_beginning = "2013-05-20 17:31:57.939614"
+        audit_period_ending = "2013-06-20 17:31:57.939614"
+        size = 123
+        uuid = "2df2ccf6-bc1b-4853-aab0-25fda346b3bb"
+        body = {
+            "event_type": "image.exists",
+            "timestamp": "2013-06-20 18:31:57.939614",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": {
+                "audit_period_beginning": audit_period_beginning,
+                "audit_period_ending": audit_period_ending,
+                "owner": TENANT_ID_1,
+                "images":
+                [
+                    {
+                        "created_at": None,
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": None,
+                    },
+                    {
+                        "created_at": None,
+                        "id": uuid,
+                        "size": size,
+                        "status": "saving",
+                        "properties": {"instance_uuid": INSTANCE_ID_1},
+                        "deleted_at": None,
+                    }
+                ]
+            }
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json_body = json.dumps([routing_key, body])
+        self.mox.StubOutWithMock(stacklog, 'warn')
+        stacklog.warn("Ignoring exists without created_at. GlanceRawData(1)")
+        stacklog.warn("Ignoring exists without created_at. GlanceRawData(1)")
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
+        notification.save_exists(raw)
         self.mox.VerifyAll()

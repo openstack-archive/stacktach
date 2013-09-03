@@ -103,14 +103,6 @@ class GlanceNotification(Notification):
             self.size = self.payload.get('size', None)
             created_at = self.payload.get('created_at', None)
             self.created_at = created_at and utils.str_time_to_unix(created_at)
-            audit_period_beginning = self.payload.get(
-                'audit_period_beginning', None)
-            self.audit_period_beginning = audit_period_beginning and\
-                utils.str_time_to_unix(audit_period_beginning)
-            audit_period_ending = self.payload.get(
-                'audit_period_ending', None)
-            self.audit_period_ending = audit_period_ending and \
-                utils.str_time_to_unix(audit_period_ending)
         else:
             self.properties = {}
             self.image_type = None
@@ -118,8 +110,6 @@ class GlanceNotification(Notification):
             self.uuid = None
             self.size = None
             self.created_at = None
-            self.audit_period_beginning = None
-            self.audit_period_ending = None
 
     @property
     def owner(self):
@@ -131,6 +121,7 @@ class GlanceNotification(Notification):
     @property
     def instance(self):
         return self.properties.get('instance_uuid', None)
+
     @property
     def deleted_at(self):
         deleted_at = self.body.get('deleted_at', None)
@@ -157,27 +148,49 @@ class GlanceNotification(Notification):
                                         uuid=self.uuid)
 
     def save_exists(self, raw):
-        if self.created_at:
-            values = {
-                'uuid': self.uuid,
-                'audit_period_beginning': self.audit_period_beginning,
-                'audit_period_ending': self.audit_period_ending,
-                'owner': self.owner,
-                'size': self.size,
-                'raw': raw
-            }
-            usage = db.get_image_usage(uuid=self.uuid)
-            values['usage'] = usage
-            values['created_at'] = self.created_at
-            if self.deleted_at:
-                delete = db.get_image_delete(uuid=self.uuid)
-                values['delete'] = delete
-                values['deleted_at'] = self.deleted_at
-
-            db.create_image_exists(**values)
+        if isinstance(self.payload, dict):
+            audit_period_beginning = self.payload.get(
+                'audit_period_beginning', None)
+            audit_period_beginning = audit_period_beginning and\
+                utils.str_time_to_unix(audit_period_beginning)
+            audit_period_ending = self.payload.get(
+                'audit_period_ending', None)
+            audit_period_ending = audit_period_ending and \
+                utils.str_time_to_unix(audit_period_ending)
+            images = self.payload.get('images', [])
         else:
-            stacklog.warn("Ignoring exists without created_at. GlanceRawData(%s)"
-                          % raw.id)
+            audit_period_beginning = None
+            audit_period_ending = None
+            images = []
+
+        for image in images:
+            created_at = image['created_at']
+            created_at = created_at and utils.str_time_to_unix(created_at)
+            uuid = image['id']
+            deleted_at = image['deleted_at']
+            deleted_at = deleted_at and utils.str_time_to_unix(deleted_at)
+            if created_at:
+
+                values = {
+                    'uuid': uuid,
+                    'audit_period_beginning': audit_period_beginning,
+                    'audit_period_ending': audit_period_ending,
+                    'owner': self.owner,
+                    'size': image['size'],
+                    'raw': raw
+                }
+                usage = db.get_image_usage(uuid=uuid)
+                values['usage'] = usage
+                values['created_at'] = created_at
+                if deleted_at:
+                    delete = db.get_image_delete(uuid=uuid)
+                    values['delete'] = delete
+                    values['deleted_at'] = deleted_at
+
+                db.create_image_exists(**values)
+            else:
+                stacklog.warn("Ignoring exists without created_at. GlanceRawData(%s)"
+                              % raw.id)
 
     def save_usage(self, raw):
         values = {
