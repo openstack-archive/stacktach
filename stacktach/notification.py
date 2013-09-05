@@ -249,6 +249,7 @@ class NovaNotification(Notification):
                                       host=self.host,
                                       instance=self.instance,
                                       request_id=self.request_id,
+                                      image_type=self.image_type,
                                       state=self.state,
                                       old_state=self.old_state,
                                       task=self.task,

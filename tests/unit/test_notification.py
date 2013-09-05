@@ -29,6 +29,7 @@ from stacktach.notification import Notification
 from stacktach.notification import NovaNotification
 from stacktach.notification import GlanceNotification
 from stacktach import db
+from stacktach import image_type
 from tests.unit import StacktachBaseTestCase
 from tests.unit.utils import REQUEST_ID_1
 from tests.unit.utils import DECIMAL_DUMMY_TIME
@@ -135,6 +136,7 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
             host="global.preprod-ord.ohthree.com",
             instance=INSTANCE_ID_1,
             request_id=REQUEST_ID_1,
+            image_type=image_type.get_numeric_code(body['payload']),
             old_state='old_state',
             old_task='old_task',
             os_architecture='os_arch',
