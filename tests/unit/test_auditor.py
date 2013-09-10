@@ -23,10 +23,9 @@ import datetime
 import json
 import sys
 import os
+from reports import usage_audit
 
 sys.path.append(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach'))
-
-import usage_audit
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
@@ -43,21 +42,6 @@ select * from stacktach_instanceusage where
         select distinct(instance)
             from stacktach_instancereconcile where
                 deleted_at < %s);"""
-
-OLD_RECONCILES_QUERY = """
-select stacktach_instancereconcile.id,
-       stacktach_instancereconcile.instance,
-       stacktach_instancereconcile.launched_at from stacktach_instancereconcile
-    left outer join stacktach_instancedeletes on
-        stacktach_instancereconcile.instance = stacktach_instancedeletes.instance
-        where (
-            stacktach_instancereconcile.deleted_at is null and (
-                stacktach_instancedeletes.deleted_at is null or
-                stacktach_instancedeletes.deleted_at > %s
-            )
-            or (stacktach_instancereconcile.deleted_at is not null and
-                stacktach_instancereconcile.deleted_at > %s)
-        ) and stacktach_instancereconcile.launched_at < %s;"""
 
 reconciler = None
 
@@ -145,21 +129,6 @@ def _launch_audit_for_period(beginning, ending):
                  launch.launched_at):
             old_launches_dict[instance] = l
 
-    # NOTE (apmelton)
-    # Django's safe substitution doesn't allow dict substitution...
-    # Thus, we send it 'beginning' three times...
-    old_recs = models.InstanceReconcile.objects\
-                     .raw(OLD_RECONCILES_QUERY,
-                          [beginning, beginning, beginning])
-
-    for rec in old_recs:
-        instance = rec.instance
-        l = {'id': rec.id, 'launched_at': rec.launched_at}
-        if instance not in old_launches_dict or \
-                (old_launches_dict[instance]['launched_at'] <
-                 rec.launched_at):
-            old_launches_dict[instance] = l
-
     for instance, launch in old_launches_dict.items():
         if instance in launches_dict:
             launches_dict[instance].append(launch)
@@ -218,7 +187,7 @@ def store_results(start, end, summary, details):
         'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
         'period_start': start,
         'period_end': end,
-        'version': 5,
+        'version': 4,
         'name': 'nova usage audit'
     }
 
