@@ -34,7 +34,7 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
-from stacktach import db
+from stacktach import db, message_service
 from stacktach import stacklog
 from stacktach import views
 
@@ -44,7 +44,7 @@ LOG = stacklog.get_logger()
 
 class Consumer(kombu.mixins.ConsumerMixin):
     def __init__(self, name, connection, deployment, durable, queue_arguments,
-                 exchange, topics, queue_name_prefix):
+                 exchange, topics):
         self.connection = connection
         self.deployment = deployment
         self.durable = durable
@@ -56,25 +56,24 @@ class Consumer(kombu.mixins.ConsumerMixin):
         self.total_processed = 0
         self.topics = topics
         self.exchange = exchange
-        self.queue_name_prefix = queue_name_prefix
 
     def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
-        return kombu.entity.Exchange(name, type=type, exclusive=exclusive,
+        return message_service.create_exchange(name, exchange_type=type, exclusive=exclusive,
                                      durable=self.durable,
                                      auto_delete=auto_delete)
 
     def _create_queue(self, name, nova_exchange, routing_key, exclusive=False,
                      auto_delete=False):
-        return kombu.Queue(name, nova_exchange, durable=self.durable,
-                           auto_delete=exclusive, exclusive=auto_delete,
-                           queue_arguments=self.queue_arguments,
-                           routing_key=routing_key)
+        return message_service.create_queue(
+            name, nova_exchange, durable=self.durable, auto_delete=exclusive,
+            exclusive=auto_delete, queue_arguments=self.queue_arguments,
+            routing_key=routing_key)
 
     def get_consumers(self, Consumer, channel):
         exchange = self._create_exchange(self.exchange, "topic")
 
-        queue_name = "%s%s" % (self.queue_name_prefix, self.exchange)
-        queues = [self._create_queue(queue_name, exchange, topic)
+        queues = [self._create_queue(topic['queue'], exchange,
+                                     topic['routing_key'])
                   for topic in self.topics]
 
         return [Consumer(queues=queues, callbacks=[self.on_nova])]
@@ -154,7 +153,6 @@ def run(deployment_config, exchange):
     queue_arguments = deployment_config.get('queue_arguments', {})
     exit_on_exception = deployment_config.get('exit_on_exception', False)
     topics = deployment_config.get('topics', {})
-    queue_name_prefix = deployment_config.get('queue_name_prefix', 'stacktach_')
 
     deployment, new = db.get_or_create_deployment(name)
 
@@ -177,8 +175,7 @@ def run(deployment_config, exchange):
                 try:
                     consumer = Consumer(name, conn, deployment, durable,
                                         queue_arguments, exchange,
-                                        topics[exchange],
-                                        queue_name_prefix)
+                                        topics[exchange])
                     consumer.run()
                 except Exception as e:
                     LOG.error("!!!!Exception!!!!")

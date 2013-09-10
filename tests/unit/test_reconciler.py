@@ -19,7 +19,6 @@
 # IN THE SOFTWARE.
 
 import datetime
-import unittest
 
 import mox
 import requests
@@ -30,6 +29,7 @@ from stacktach import utils as stackutils
 from stacktach.reconciler import exceptions
 from stacktach.reconciler import nova
 from stacktach.reconciler import utils as rec_utils
+from tests.unit import StacktachBaseTestCase
 from tests.unit import utils
 from tests.unit.utils import INSTANCE_ID_1
 from tests.unit.utils import TENANT_ID_1
@@ -45,7 +45,7 @@ DEFAULT_OS_VERSION = "1.1"
 DEFAULT_RAX_OPTIONS = "rax_ops"
 
 
-class ReconcilerTestCase(unittest.TestCase):
+class ReconcilerTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.client = self.mox.CreateMockAnything()
@@ -229,6 +229,21 @@ class ReconcilerTestCase(unittest.TestCase):
         self.assertFalse(result)
         self.mox.VerifyAll()
 
+    def test_missing_exists_for_instance_region_not_found(self):
+        launch_id = 1
+        beginning_d = utils.decimal_utc()
+        launch = self.mox.CreateMockAnything()
+        launch.instance = INSTANCE_ID_1
+        launch.launched_at = beginning_d - (60*60)
+        launch.instance_type_id = 1
+        models.InstanceUsage.objects.get(id=launch_id).AndReturn(launch)
+        launch.deployment().AndReturn(None)
+        self.mox.ReplayAll()
+        result = self.reconciler.missing_exists_for_instance(launch_id,
+                                                             beginning_d)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
     def test_failed_validation(self):
         exists = self._fake_usage(is_exists=True, mock_deployment=True)
         launched_at = exists.launched_at
@@ -344,6 +359,21 @@ class ReconcilerTestCase(unittest.TestCase):
         self.assertFalse(result)
         self.mox.VerifyAll()
 
+    def test_failed_validation_region_not_found(self):
+        beginning_d = utils.decimal_utc()
+        exists = self.mox.CreateMockAnything()
+        exists.instance = INSTANCE_ID_1
+        launched_at = beginning_d - (60*60)
+        exists.launched_at = launched_at
+        exists.instance_type_id = 1
+        exists.deleted_at = None
+        exists.deployment().AndReturn(None)
+        ex = exceptions.NotFound()
+        self.mox.ReplayAll()
+        result = self.reconciler.failed_validation(exists)
+        self.assertFalse(result)
+        self.mox.VerifyAll()
+
     def test_fields_match(self):
         exists = self._fake_usage(is_exists=True)
         kwargs = {'launched_at': exists.launched_at}
@@ -415,7 +445,7 @@ json_bridge_config = {
 }
 
 
-class NovaJSONBridgeClientTestCase(unittest.TestCase):
+class NovaJSONBridgeClientTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.client = nova.JSONBridgeClient(json_bridge_config)

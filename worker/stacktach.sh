@@ -33,7 +33,7 @@ case "$1" in
     /sbin/start-stop-daemon --start --pidfile $PIDFILE --make-pidfile -b --exec $DAEMON $ARGS
     ;;
   status)
-    status_of_proc "$DAEMON" "stacktach" && exit 0 || exit $?
+    status_of_proc -p "${PIDFILE}" "$DAEMON" "stacktach" && exit 0 || exit $?
     ;;
   *)
     echo "Usage: stacktach.sh {start|stop|restart|status}"

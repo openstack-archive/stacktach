@@ -171,8 +171,9 @@ def do_hosts(request):
     return rsp(json.dumps(results))
 
 
-def do_uuid(request, service='nova'):
+def do_uuid(request):
     uuid = str(request.GET['uuid'])
+    service = str(request.GET.get('service', 'nova'))
     if not utils.is_uuid_like(uuid):
         msg = "%s is not uuid-like" % uuid
         return error_response(400, 'Bad Request', msg)
@@ -341,6 +342,7 @@ def append_generic_raw_attributes(event, results):
     results.append(["Req ID", event.request_id])
     return results
 
+
 def _append_raw_attributes(event, results, service):
     if service == 'nova':
         return append_nova_raw_attributes(event, results)
@@ -349,8 +351,11 @@ def _append_raw_attributes(event, results, service):
     if service == 'generic':
         return append_generic_raw_attributes(event, results)
 
-def do_show(request, event_id, service='nova'):
+
+def do_show(request, event_id):
+    service = str(request.GET.get('service', 'nova'))
     event_id = int(event_id)
+
     results = []
     model = _model_factory(service)
     try:
@@ -374,7 +379,9 @@ def _model_factory(service):
         return models.GenericRawData.objects
 
 
-def do_watch(request, deployment_id, service='nova'):
+def do_watch(request, deployment_id):
+    service = str(request.GET.get('service', 'nova'))
+
     model = _model_factory(service)
     deployment_id = int(deployment_id)
     since = request.GET.get('since')
@@ -577,7 +584,8 @@ def do_jsonreport(request, report_id):
     return rsp(report.json)
 
 
-def search(request, service):
+def search(request):
+    service = str(request.GET.get('service', 'nova'))
     field = request.GET.get('field')
     value = request.GET.get('value')
     model = _model_factory(service)

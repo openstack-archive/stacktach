@@ -33,16 +33,21 @@ from stacktach import models
 from stacktach.reconciler import Reconciler
 
 OLD_LAUNCHES_QUERY = """
-select * from stacktach_instanceusage where
-    launched_at is not null and
-    launched_at < %s and
-    instance not in
-        (select distinct(instance)
-            from stacktach_instancedeletes where
-                deleted_at < %s union
-        select distinct(instance)
-            from stacktach_instancereconcile where
-                deleted_at < %s);"""
+select stacktach_instanceusage.id,
+       stacktach_instanceusage.instance,
+       stacktach_instanceusage.launched_at from stacktach_instanceusage
+    left outer join stacktach_instancedeletes on
+        stacktach_instanceusage.instance = stacktach_instancedeletes.instance
+    left outer join stacktach_instancereconcile on
+        stacktach_instanceusage.instance = stacktach_instancereconcile.instance
+        where (
+            stacktach_instancereconcile.deleted_at is null and (
+                stacktach_instancedeletes.deleted_at is null or
+                stacktach_instancedeletes.deleted_at > %s
+            )
+            or (stacktach_instancereconcile.deleted_at is not null and
+                stacktach_instancereconcile.deleted_at > %s)
+        ) and stacktach_instanceusage.launched_at < %s;"""
 
 reconciler = None
 

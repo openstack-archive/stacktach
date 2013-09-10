@@ -1,14 +1,12 @@
 import glob
 import logging
 import os
-from unittest import TestCase
 import mox
 from stacktach import stacklog
-import __builtin__
 from stacktach.stacklog import ExchangeLogger
+from tests.unit import StacktachBaseTestCase
 
-
-class StacklogTestCase(TestCase):
+class StacklogTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
@@ -30,7 +28,7 @@ class StacklogTestCase(TestCase):
             os.remove(file)
 
 
-class ExchangeLoggerTestCase(TestCase):
+class ExchangeLoggerTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
@@ -44,7 +42,7 @@ class ExchangeLoggerTestCase(TestCase):
         mock_logger.setLevel(logging.DEBUG)
         self.mox.StubOutClassWithMocks(logging.handlers,
                                        'TimedRotatingFileHandler')
-        filename = "{0}.log".format(name)
+        filename = "/tmp/{0}.log".format(name)
         handler = logging.handlers.TimedRotatingFileHandler(
             filename, backupCount=3, interval=1, when='midnight')
         self.mox.StubOutClassWithMocks(logging, 'Formatter')

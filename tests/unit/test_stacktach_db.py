@@ -18,17 +18,15 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import datetime
-import unittest
-
 import mox
 
 from stacktach import db
 from stacktach import stacklog
 from stacktach import models
+from tests.unit import StacktachBaseTestCase
 
 
-class StacktachDBTestCase(unittest.TestCase):
+class StacktachDBTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.log = self.mox.CreateMockAnything()
