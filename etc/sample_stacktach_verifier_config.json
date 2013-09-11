@@ -11,7 +11,9 @@
         "userid": "rabbit",
         "password": "rabbit",
         "virtual_host": "/",
-        "exchange_name": "stacktach",
-        "routing_keys": ["notifications.info"]
+        "topics": {
+            "nova": ["notifications.info"],
+            "glance": ["notifications.info"]
+        }
     }
 }

@@ -7,7 +7,30 @@
         "rabbit_userid": "rabbit",
         "rabbit_password": "rabbit",
         "rabbit_virtual_host": "/",
-        "exit_on_exception": true
+        "exit_on_exception": true,
+        "queue_name": "stacktach",
+        "topics": {
+            "nova": [
+                {
+                    "queue": "monitor.info",
+                    "routing_key": "monitor.info"
+                },
+                {
+                    "queue": "monitor.error",
+                    "routing_key": "monitor.error"
+                }
+            ],
+            "glance": [
+                {
+                    "queue": "stacktach_monitor_glance.info",
+                    "routing_key": "monitor_glance.info"
+                },
+                {
+                    "queue": "stacktach_monitor_glance.error",
+                    "routing_key": "monitor_glance.error"
+                },
+            ]
+        }
     },
     {
         "name": "east_coast.prod.cell1",
@@ -17,6 +40,19 @@
         "rabbit_userid": "rabbit",
         "rabbit_password": "rabbit",
         "rabbit_virtual_host": "/",
-        "exit_on_exception": false
+        "exit_on_exception": false,
+        "queue_name": "stacktach",
+        "topics": {
+            "nova": [
+                {
+                    "queue": "monitor.info",
+                    "routing_key": "monitor.info"
+                },
+                {
+                    "queue": "monitor.error",
+                    "routing_key": "monitor.error"
+                }
+            ]
+        }
     }]
 }

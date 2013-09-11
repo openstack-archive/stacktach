@@ -9,13 +9,78 @@ from django.shortcuts import get_object_or_404
 import datetime_to_decimal as dt
 import models
 import utils
+from django.core.exceptions import ObjectDoesNotExist, FieldError
 
 SECS_PER_HOUR = 60 * 60
 SECS_PER_DAY = SECS_PER_HOUR * 24
 
+DEFAULT_LIMIT = 50
+HARD_LIMIT = 1000
 
-def get_event_names():
-    return models.RawData.objects.values('event').distinct()
+
+def _get_limit(request):
+    limit = request.GET.get('limit', DEFAULT_LIMIT)
+    if limit:
+        limit = int(limit)
+    if limit > HARD_LIMIT:
+        limit = HARD_LIMIT
+    return limit
+
+
+def _get_query_range(request):
+    limit = _get_limit(request)
+    offset = request.GET.get('offset')
+
+    start = None
+    if offset:
+        start = int(offset)
+    else:
+        offset = 0
+
+    end = int(offset) + int(limit)
+    return start, end
+
+
+def model_search(request, model, filters,
+                 related=False, order_by=None, excludes=None):
+
+    query = model
+
+    if related:
+        query = query.select_related()
+
+    if filters:
+        query = query.filter(**filters)
+    else:
+        query = query.all()
+
+    if excludes:
+        for exclude in excludes:
+            if isinstance(exclude, dict):
+                query = query.exclude(**exclude)
+            else:
+                query = query.exclude(exclude)
+
+    if order_by:
+        query = query.order_by(order_by)
+
+    start, end = _get_query_range(request)
+    query = query[start:end]
+    return query
+
+
+def _add_when_filters(request, filters):
+    when_max = request.GET.get('when_max')
+    if when_max:
+        filters['when__lte'] = decimal.Decimal(when_max)
+
+    when_min = request.GET.get('when_min')
+    if when_min:
+        filters['when__gte'] = decimal.Decimal(when_min)
+
+
+def get_event_names(service='nova'):
+    return _model_factory(service).values('event').distinct()
 
 
 def get_host_names():
@@ -36,8 +101,10 @@ def get_deployments():
     return models.Deployment.objects.all().order_by('name')
 
 
-def get_timings_for_uuid(uuid):
-    lifecycles = models.Lifecycle.objects.filter(instance=uuid)
+def get_timings_for_uuid(request, uuid):
+    model = models.Lifecycle.objects
+    filters = {'instance': uuid}
+    lifecycles = model_search(request, model, filters)
 
     results = [["?", "Event", "Time (secs)"]]
     for lc in lifecycles:
@@ -106,20 +173,28 @@ def do_hosts(request):
 
 def do_uuid(request):
     uuid = str(request.GET['uuid'])
+    service = str(request.GET.get('service', 'nova'))
     if not utils.is_uuid_like(uuid):
         msg = "%s is not uuid-like" % uuid
         return error_response(400, 'Bad Request', msg)
+    model = _model_factory(service)
+    result = []
+    filters = {}
 
-    related = models.RawData.objects.select_related().filter(instance=uuid)\
-                                                     .order_by('when')
-    results = [["#", "?", "When", "Deployment", "Event", "Host", "State",
-                "State'", "Task'"]]
-    for e in related:
-        when = dt.dt_from_decimal(e.when)
-        results.append([e.id, routing_key_type(e.routing_key), str(when),
-                        e.deployment.name, e.event, e.host, e.state,
-                        e.old_state, e.old_task])
-    return rsp(json.dumps(results))
+    if service == 'nova' or service == 'generic':
+        filters = {'instance': uuid}
+    if service == 'glance':
+        filters = {'uuid': uuid}
+
+    _add_when_filters(request, filters)
+
+    related = model_search(request, model, filters,
+                           related=True, order_by='when')
+    for event in related:
+        when = dt.dt_from_decimal(event.when)
+        routing_key_status = routing_key_type(event.routing_key)
+        result = event.search_results(result, when, routing_key_status)
+    return rsp(json.dumps(result))
 
 
 def do_timings_uuid(request):
@@ -127,24 +202,32 @@ def do_timings_uuid(request):
     if not utils.is_uuid_like(uuid):
         msg = "%s is not uuid-like" % uuid
         return error_response(400, 'Bad Request', msg)
-    results = get_timings_for_uuid(uuid)
+    results = get_timings_for_uuid(request, uuid)
     return rsp(json.dumps(results))
 
 
 def do_timings(request):
     name = request.GET['name']
-    results = [[name, "Time"]]
-    timings_query = models.Timing.objects.select_related()\
-                                 .filter(name=name)\
-                                 .exclude(Q(start_raw=None) | Q(end_raw=None))
+    model = models.Timing.objects
+
+    filters = {
+        'name': name
+    }
+
     if request.GET.get('end_when_min') is not None:
         min_when = decimal.Decimal(request.GET['end_when_min'])
-        timings_query = timings_query.filter(end_when__gte=min_when)
+        filters['end_when__gte'] = min_when
+
     if request.GET.get('end_when_max') is not None:
         max_when = decimal.Decimal(request.GET['end_when_max'])
-        timings_query = timings_query.filter(end_when__lte=max_when)
-    timings = timings_query.order_by('diff')
+        filters['end_when__lte'] = max_when
 
+    excludes = [Q(start_raw=None) | Q(end_raw=None), ]
+    timings = model_search(request, model, filters,
+                           excludes=excludes, related=True,
+                           order_by='diff')
+
+    results = [[name, "Time"]]
     for t in timings:
         results.append([t.lifecycle.instance, sec_to_time(t.diff)])
     return rsp(json.dumps(results))
@@ -161,9 +244,14 @@ def do_summary(request):
     results = [["Event", "N", "Min", "Max", "Avg"]]
 
     for name in interesting:
-        timings = models.Timing.objects.filter(name=name) \
-                               .exclude(Q(start_raw=None) | Q(end_raw=None)) \
-                               .exclude(diff__lt=0)
+        model = models.Timing.objects
+        filters = {'name': name}
+        excludes = [
+            Q(start_raw=None) | Q(end_raw=None),
+            {'diff__lt': 0}
+        ]
+        timings = model_search(request, model, filters,
+                               excludes=excludes)
         if not timings:
             continue
 
@@ -190,8 +278,10 @@ def do_request(request):
         msg = "%s is not request-id-like" % request_id
         return error_response(400, 'Bad Request', msg)
 
-    events = models.RawData.objects.filter(request_id=request_id) \
-                                   .order_by('when')
+    model = models.RawData.objects
+    filters = {'request_id': request_id}
+    _add_when_filters(request, filters)
+    events = model_search(request, model, filters, order_by='when')
     results = [["#", "?", "When", "Deployment", "Event", "Host",
                 "State", "State'", "Task'"]]
     for e in events:
@@ -202,15 +292,7 @@ def do_request(request):
     return rsp(json.dumps(results))
 
 
-def do_show(request, event_id):
-    event_id = int(event_id)
-    results = []
-    event = None
-    try:
-        event = models.RawData.objects.get(id=event_id)
-    except models.RawData.ObjectDoesNotExist:
-        return results
-
+def append_nova_raw_attributes(event, results):
     results.append(["Key", "Value"])
     results.append(["#", event.id])
     when = dt.dt_from_decimal(event.when)
@@ -224,16 +306,83 @@ def do_show(request, event_id):
     results.append(["Host", event.host])
     results.append(["UUID", event.instance])
     results.append(["Req ID", event.request_id])
+    return results
 
-    final = [results, ]
-    j = json.loads(event.json)
-    final.append(json.dumps(j, indent=2))
-    final.append(event.instance)
 
-    return rsp(json.dumps(final))
+def append_glance_raw_attributes(event, results):
+    results.append(["Key", "Value"])
+    results.append(["#", event.id])
+    when = dt.dt_from_decimal(event.when)
+    results.append(["When", str(when)])
+    results.append(["Deployment", event.deployment.name])
+    results.append(["Category", event.routing_key])
+    results.append(["Publisher", event.publisher])
+    results.append(["Status", event.status])
+    results.append(["Event", event.event])
+    results.append(["Service", event.service])
+    results.append(["Host", event.host])
+    results.append(["UUID", event.uuid])
+    results.append(["Req ID", event.request_id])
+    return results
+
+
+def append_generic_raw_attributes(event, results):
+    results.append(["Key", "Value"])
+    results.append(["#", event.id])
+    when = dt.dt_from_decimal(event.when)
+    results.append(["When", str(when)])
+    results.append(["Deployment", event.deployment.name])
+    results.append(["Category", event.routing_key])
+    results.append(["Publisher", event.publisher])
+    results.append(["State", event.state])
+    results.append(["Event", event.event])
+    results.append(["Service", event.service])
+    results.append(["Host", event.host])
+    results.append(["UUID", event.instance])
+    results.append(["Req ID", event.request_id])
+    return results
+
+
+def _append_raw_attributes(event, results, service):
+    if service == 'nova':
+        return append_nova_raw_attributes(event, results)
+    if service == 'glance':
+        return append_glance_raw_attributes(event, results)
+    if service == 'generic':
+        return append_generic_raw_attributes(event, results)
+
+
+def do_show(request, event_id):
+    service = str(request.GET.get('service', 'nova'))
+    event_id = int(event_id)
+
+    results = []
+    model = _model_factory(service)
+    try:
+        event = model.get(id=event_id)
+        results = _append_raw_attributes(event, results, service)
+        final = [results, ]
+        j = json.loads(event.json)
+        final.append(json.dumps(j, indent=2))
+        final.append(event.uuid)
+        return rsp(json.dumps(final))
+    except ObjectDoesNotExist:
+        return rsp({})
+
+
+def _model_factory(service):
+    if service == 'glance':
+        return models.GlanceRawData.objects
+    elif service == 'nova':
+        return models.RawData.objects
+    elif service == 'generic':
+        return models.GenericRawData.objects
 
 
 def do_watch(request, deployment_id):
+    service = str(request.GET.get('service', 'nova'))
+
+    model = _model_factory(service)
     deployment_id = int(deployment_id)
     since = request.GET.get('since')
     event_name = request.GET.get('event_name')
@@ -244,7 +393,7 @@ def do_watch(request, deployment_id):
     events = get_event_names()
     max_event_width = max([len(event['event']) for event in events])
 
-    base_events = models.RawData.objects.order_by('when')
+    base_events = model.order_by('when')
     if deployment_id > 0:
         base_events = base_events.filter(deployment=deployment_id)
 
@@ -276,7 +425,7 @@ def do_watch(request, deployment_id):
     results = []
 
     for raw in events:
-        uuid = raw.instance
+        uuid = raw.uuid
         if not uuid:
             uuid = "-"
         typ = routing_key_type(raw.routing_key)
@@ -325,10 +474,11 @@ def do_list_usage_launches(request):
             return error_response(400, 'Bad Request', msg)
         filter_args['instance'] = uuid
 
+    model = models.InstanceUsage.objects
     if len(filter_args) > 0:
-        launches = models.InstanceUsage.objects.filter(**filter_args)
+        launches = model_search(request, model, filter_args)
     else:
-        launches = models.InstanceUsage.objects.all()
+        launches = model_search(request, model, None)
 
     results = [["UUID", "Launched At", "Instance Type Id"]]
 
@@ -351,10 +501,11 @@ def do_list_usage_deletes(request):
             return error_response(400, 'Bad Request', msg)
         filter_args['instance'] = uuid
 
+    model = models.InstanceDeletes.objects
     if len(filter_args) > 0:
-        deletes = models.InstanceDeletes.objects.filter(**filter_args)
+        deletes = model_search(request, model, filter_args)
     else:
-        deletes = models.InstanceDeletes.objects.all()
+        deletes = model_search(request, model, None)
 
     results = [["UUID", "Launched At", "Deleted At"]]
 
@@ -380,10 +531,11 @@ def do_list_usage_exists(request):
             return error_response(400, 'Bad Request', msg)
         filter_args['instance'] = uuid
 
+    model = models.InstanceExists.objects
     if len(filter_args) > 0:
-        exists = models.InstanceExists.objects.filter(**filter_args)
+        exists = model_search(request, model, filter_args)
     else:
-        exists = models.InstanceExists.objects.all()
+        exists = model_search(request, model, None)
 
     results = [["UUID", "Launched At", "Deleted At", "Instance Type Id",
                 "Message ID", "Status"]]
@@ -409,8 +561,12 @@ def do_jsonreports(request):
     now = dt.dt_to_decimal(now)
     _from = request.GET.get('created_from', yesterday)
     _to = request.GET.get('created_to', now)
-    reports = models.JsonReport.objects.filter(created__gte=_from,
-                                               created__lte=_to)
+    model = models.JsonReport.objects
+    filters = {
+        'created__gte': _from,
+        'created__lte': _to
+    }
+    reports = model_search(request, model, filters)
     results = [['Id', 'Start', 'End', 'Created', 'Name', 'Version']]
     for report in reports:
         results.append([report.id,
@@ -426,3 +582,23 @@ def do_jsonreport(request, report_id):
     report_id = int(report_id)
     report = get_object_or_404(models.JsonReport, pk=report_id)
     return rsp(report.json)
+
+
+def search(request):
+    service = str(request.GET.get('service', 'nova'))
+    field = request.GET.get('field')
+    value = request.GET.get('value')
+    model = _model_factory(service)
+    filters = {field: value}
+    _add_when_filters(request, filters)
+    results = []
+    try:
+
+        events = model_search(request, model, filters)
+        for event in events:
+            when = dt.dt_from_decimal(event.when)
+            routing_key_status = routing_key_type(event.routing_key)
+            results = event.search_results(results, when, routing_key_status)
+        return rsp(json.dumps(results))
+    except ObjectDoesNotExist or FieldError:
+        return rsp([])

@@ -1,9 +1,8 @@
-from django.conf.urls.defaults import patterns, include, url
+from django.conf.urls import patterns, url
 
 
 urlpatterns = patterns('',
     url(r'^$', 'stacktach.views.welcome', name='welcome'),
-
     url(r'stacky/deployments/$', 'stacktach.stacky_server.do_deployments'),
     url(r'stacky/events/$', 'stacktach.stacky_server.do_events'),
     url(r'stacky/hosts/$', 'stacktach.stacky_server.do_hosts'),
@@ -19,6 +18,7 @@ urlpatterns = patterns('',
                                         'stacktach.stacky_server.do_show'),
     url(r'stacky/watch/(?P<deployment_id>\d+)/$',
                                         'stacktach.stacky_server.do_watch'),
+    url(r'stacky/search/$', 'stacktach.stacky_server.search'),
     url(r'stacky/kpi/$', 'stacktach.stacky_server.do_kpi'),
     url(r'stacky/kpi/(?P<tenant_id>\w+)/$', 'stacktach.stacky_server.do_kpi'),
     url(r'stacky/usage/launches/$',

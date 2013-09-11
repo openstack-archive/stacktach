@@ -12,9 +12,18 @@
 # WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 # License for the specific language governing permissions and limitations
 # under the License.
+import datetime
+import copy
 
-from django import forms
 from django.db import models
+
+from stacktach import datetime_to_decimal as dt
+
+
+def routing_key_type(key):
+    if key.endswith('error'):
+        return 'E'
+    return ' '
 
 
 class Deployment(models.Model):
@@ -24,7 +33,52 @@ class Deployment(models.Model):
         return self.name
 
 
+class GenericRawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                      "Instance", "Request id"]]
+    deployment = models.ForeignKey(Deployment)
+    tenant = models.CharField(max_length=50, null=True, blank=True,
+                              db_index=True)
+    json = models.TextField()
+    routing_key = models.CharField(max_length=50, null=True,
+                                   blank=True, db_index=True)
+    when = models.DecimalField(max_digits=20, decimal_places=6,
+                                               db_index=True)
+    publisher = models.CharField(max_length=100, null=True,
+                                 blank=True, db_index=True)
+    event = models.CharField(max_length=50, null=True,
+                                 blank=True, db_index=True)
+    service = models.CharField(max_length=50, null=True,
+                                 blank=True, db_index=True)
+    host = models.CharField(max_length=100, null=True,
+                                 blank=True, db_index=True)
+    instance = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    request_id = models.CharField(max_length=50, null=True,
+                                blank=True, db_index=True)
+    message_id = models.CharField(max_length=50, null=True,
+                                  blank=True, db_index=True)
+
+    @staticmethod
+    def get_name():
+        return GenericRawData.__name__
+
+    @property
+    def uuid(self):
+        return self.instance
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                        self.deployment.name, self.event, self.host,
+                        self.instance, self.request_id])
+        return results
+
+
 class RawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "State", "State'", "Task'"]]
     deployment = models.ForeignKey(Deployment)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
@@ -57,6 +111,22 @@ class RawData(models.Model):
 
     def __repr__(self):
         return "%s %s %s" % (self.event, self.instance, self.state)
+
+    @property
+    def uuid(self):
+        return self.instance
+
+    @staticmethod
+    def get_name():
+        return RawData.__name__
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                        self.deployment.name, self.event, self.host, self.state,
+                        self.old_state, self.old_task])
+        return results
 
 
 class RawDataImageMeta(models.Model):
@@ -108,6 +178,16 @@ class InstanceUsage(models.Model):
         raw = raws[0]
         return raw.deployment
 
+    @staticmethod
+    def find(instance, launched_at):
+        start = launched_at - datetime.timedelta(
+            microseconds=launched_at.microsecond)
+        end = start + datetime.timedelta(microseconds=999999)
+        params = {'instance': instance,
+                  'launched_at__gte': dt.dt_to_decimal(start),
+                  'launched_at__lte': dt.dt_to_decimal(end)}
+        return InstanceUsage.objects.filter(**params)
+
 
 class InstanceDeletes(models.Model):
     instance = models.CharField(max_length=50, null=True,
@@ -120,6 +200,17 @@ class InstanceDeletes(models.Model):
 
     def deployment(self):
         return self.raw.deployment
+
+    @staticmethod
+    def find(instance, launched, deleted_max=None):
+        start = launched - datetime.timedelta(microseconds=launched.microsecond)
+        end = start + datetime.timedelta(microseconds=999999)
+        params = {'instance': instance,
+                  'launched_at__gte': dt.dt_to_decimal(start),
+                  'launched_at__lte': dt.dt_to_decimal(end)}
+        if deleted_max:
+            params['deleted_at__lte'] = dt.dt_to_decimal(deleted_max)
+        return InstanceDeletes.objects.filter(**params)
 
 
 class InstanceReconcile(models.Model):
@@ -144,6 +235,15 @@ class InstanceReconcile(models.Model):
     source = models.CharField(max_length=150, null=True,
                               blank=True, db_index=True)
 
+    @staticmethod
+    def find(instance, launched):
+        start = launched - datetime.timedelta(microseconds=launched.microsecond)
+        end = start + datetime.timedelta(microseconds=999999)
+        params = {'instance': instance,
+                  'launched_at__gte': dt.dt_to_decimal(start),
+                  'launched_at__lte': dt.dt_to_decimal(end)}
+        return InstanceReconcile.objects.filter(**params)
+
 
 class InstanceExists(models.Model):
     PENDING = 'pending'
@@ -158,6 +258,7 @@ class InstanceExists(models.Model):
         (RECONCILED, 'Passed Verification After Reconciliation'),
         (FAILED, 'Failed Verification'),
     ]
+
     instance = models.CharField(max_length=50, null=True,
                                 blank=True, db_index=True)
     launched_at = models.DecimalField(null=True, max_digits=20,
@@ -193,6 +294,32 @@ class InstanceExists(models.Model):
 
     def deployment(self):
         return self.raw.deployment
+
+    @staticmethod
+    def find(ending_max, status):
+        params = {'audit_period_ending__lte': dt.dt_to_decimal(ending_max),
+                  'status': status}
+        return InstanceExists.objects.select_related()\
+            .filter(**params).order_by('id')
+
+    def mark_verified(self, reconciled=False, reason=None):
+        if not reconciled:
+            self.status = InstanceExists.VERIFIED
+        else:
+            self.status = InstanceExists.RECONCILED
+            if reason is not None:
+                self.fail_reason = reason
+
+        self.save()
+
+    def mark_failed(self, reason=None):
+        self.status = InstanceExists.FAILED
+        if reason:
+            self.fail_reason = reason
+        self.save()
+
+    def update_status(self, new_status):
+        self.status = new_status
 
 
 class Timing(models.Model):
@@ -236,6 +363,141 @@ class JsonReport(models.Model):
     name = models.CharField(max_length=50, db_index=True)
     version = models.IntegerField(default=1)
     json = models.TextField()
+
+
+class GlanceRawData(models.Model):
+    result_titles = [["#", "?", "When", "Deployment", "Event", "Host",
+                          "Status"]]
+    ACTIVE = 'active'
+    DELETED = 'deleted'
+    KILLED = 'killed'
+    PENDING_DELETE = 'pending_delete'
+    QUEUED = 'queued'
+    SAVING = 'saving'
+    STATUS_CHOICES = [
+        (ACTIVE, 'Active'),
+        (DELETED, 'Deleted'),
+        (KILLED, 'Killed'),
+        (PENDING_DELETE, 'Pending delete'),
+        (QUEUED, 'Queued'),
+        (SAVING, 'Saving'),
+    ]
+
+    deployment = models.ForeignKey(Deployment)
+    owner = models.CharField(max_length=255, null=True, blank=True,
+                             db_index=True)
+    json = models.TextField()
+    routing_key = models.CharField(max_length=50, null=True, blank=True,
+                                   db_index=True)
+    when = models.DecimalField(max_digits=20, decimal_places=6, db_index=True)
+    publisher = models.CharField(max_length=100, null=True,
+                                 blank=True, db_index=True)
+    event = models.CharField(max_length=50, null=True, blank=True,
+                             db_index=True)
+    service = models.CharField(max_length=50, null=True, blank=True,
+                               db_index=True)
+    host = models.CharField(max_length=100, null=True, blank=True,
+                            db_index=True)
+    instance = models.CharField(max_length=50, null=True, blank=True,
+                                db_index=True)
+    request_id = models.CharField(max_length=50, null=True, blank=True,
+                                  db_index=True)
+    uuid = models.CharField(max_length=36, null=True, blank=True,
+                            db_index=True)
+    status = models.CharField(max_length=30, db_index=True,
+                              choices=STATUS_CHOICES, null=True)
+    image_type = models.IntegerField(null=True, default=0, db_index=True)
+
+    @staticmethod
+    def get_name():
+        return GlanceRawData.__name__
+
+    def search_results(self, results, when, routing_key_status):
+        if not results:
+            results = copy.deepcopy(self.result_titles)
+        results.append([self.id, routing_key_status, str(when),
+                            self.deployment.name, self.event, self.host,
+                            self.status])
+        return results
+
+
+class ImageUsage(models.Model):
+    uuid = models.CharField(max_length=50, db_index=True)
+    created_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True)
+    owner = models.CharField(max_length=50, db_index=True, null=True)
+    size = models.BigIntegerField(max_length=20)
+    last_raw = models.ForeignKey(GlanceRawData, null=True)
+
+
+class ImageDeletes(models.Model):
+    uuid = models.CharField(max_length=50, db_index=True)
+    deleted_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True,
+                                     null=True)
+    raw = models.ForeignKey(GlanceRawData, null=True)
+
+    @staticmethod
+    def find(uuid, deleted_max=None):
+        params = {'uuid': uuid}
+        if deleted_max:
+            params['deleted_at__lte'] = dt.dt_to_decimal(deleted_max)
+        return ImageDeletes.objects.filter(**params)
+
+
+class ImageExists(models.Model):
+    PENDING = 'pending'
+    VERIFYING = 'verifying'
+    VERIFIED = 'verified'
+    FAILED = 'failed'
+    STATUS_CHOICES = [
+        (PENDING, 'Pending Verification'),
+        (VERIFYING, 'Currently Being Verified'),
+        (VERIFIED, 'Passed Verification'),
+        (FAILED, 'Failed Verification'),
+    ]
+
+    uuid = models.CharField(max_length=50, db_index=True)
+    created_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True,
+                                     null=True)
+    deleted_at = models.DecimalField(max_digits=20,
+                                     decimal_places=6, db_index=True,
+                                     null=True)
+    audit_period_beginning = models.DecimalField(max_digits=20,
+                                                 decimal_places=6,
+                                                 db_index=True)
+    audit_period_ending = models.DecimalField(max_digits=20,
+                                              decimal_places=6, db_index=True)
+    status = models.CharField(max_length=50, db_index=True,
+                              choices=STATUS_CHOICES,
+                              default=PENDING)
+    fail_reason = models.CharField(max_length=300, null=True)
+    raw = models.ForeignKey(GlanceRawData, related_name='+')
+    usage = models.ForeignKey(ImageUsage, related_name='+', null=True)
+    delete = models.ForeignKey(ImageDeletes, related_name='+', null=True)
+    send_status = models.IntegerField(default=0, db_index=True)
+    owner = models.CharField(max_length=255, db_index=True, null=True)
+    size = models.BigIntegerField(max_length=20)
+
+    def update_status(self, new_status):
+        self.status = new_status
+
+    @staticmethod
+    def find(ending_max, status):
+        params = {'audit_period_ending__lte': dt.dt_to_decimal(ending_max),
+                  'status': status}
+        return ImageExists.objects.select_related().filter(**params).order_by('id')
+
+    def mark_verified(self):
+        self.status = InstanceExists.VERIFIED
+        self.save()
+
+    def mark_failed(self, reason=None):
+        self.status = InstanceExists.FAILED
+        if reason:
+            self.fail_reason = reason
+        self.save()
 
 
 def get_model_fields(model):

@@ -18,17 +18,16 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
 
-import unittest
-
 import mox
 
 from stacktach import utils as stacktach_utils
 from utils import INSTANCE_ID_1
 from utils import MESSAGE_ID_1
 from utils import REQUEST_ID_1
+from tests.unit import StacktachBaseTestCase
 
 
-class StacktachUtilsTestCase(unittest.TestCase):
+class StacktachUtilsTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
 
