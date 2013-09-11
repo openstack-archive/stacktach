@@ -49,6 +49,21 @@ select stacktach_instanceusage.id,
                 stacktach_instancereconcile.deleted_at > %s)
         ) and stacktach_instanceusage.launched_at < %s;"""
 
+OLD_RECONCILES_QUERY = """
+select stacktach_instancereconcile.id,
+       stacktach_instancereconcile.instance,
+       stacktach_instancereconcile.launched_at from stacktach_instancereconcile
+    left outer join stacktach_instancedeletes on
+        stacktach_instancereconcile.instance = stacktach_instancedeletes.instance
+        where (
+            stacktach_instancereconcile.deleted_at is null and (
+                stacktach_instancedeletes.deleted_at is null or
+                stacktach_instancedeletes.deleted_at > %s
+            )
+            or (stacktach_instancereconcile.deleted_at is not null and
+                stacktach_instancereconcile.deleted_at > %s)
+        ) and stacktach_instancereconcile.launched_at < %s;"""
+
 reconciler = None
 
 
@@ -215,6 +230,21 @@ def _launch_audit_for_period(beginning, ending):
         if instance not in old_launches_dict or \
                 (old_launches_dict[instance]['launched_at'] <
                  launch.launched_at):
+            old_launches_dict[instance] = l
+
+    # NOTE (apmelton)
+    # Django's safe substitution doesn't allow dict substitution...
+    # Thus, we send it 'beginning' three times...
+    old_recs = models.InstanceReconcile.objects\
+                     .raw(OLD_RECONCILES_QUERY,
+                          [beginning, beginning, beginning])
+
+    for rec in old_recs:
+        instance = rec.instance
+        l = {'id': rec.id, 'launched_at': rec.launched_at}
+        if instance not in old_launches_dict or \
+                (old_launches_dict[instance]['launched_at'] <
+                 rec.launched_at):
             old_launches_dict[instance] = l
 
     for instance, launch in old_launches_dict.items():

@@ -20,7 +20,7 @@ def get_or_create_deployment(name):
     return models.Deployment.objects.get_or_create(name=name)
 
 
-def create_rawdata(**kwargs):
+def create_nova_rawdata(**kwargs):
     imagemeta_fields = ['os_architecture', 'os_version',
                         'os_distro', 'rax_options']
     imagemeta_kwargs = \
@@ -34,6 +34,7 @@ def create_rawdata(**kwargs):
     save(models.RawDataImageMeta(**imagemeta_kwargs))
 
     return rawdata
+
 
 def create_lifecycle(**kwargs):
     return models.Lifecycle(**kwargs)
@@ -89,3 +90,46 @@ def create_instance_exists(**kwargs):
 
 def save(obj):
     obj.save()
+
+
+def create_glance_rawdata(**kwargs):
+    rawdata = models.GlanceRawData(**kwargs)
+    rawdata.save()
+
+    return rawdata
+
+
+def create_generic_rawdata(**kwargs):
+    rawdata = models.GenericRawData(**kwargs)
+    rawdata.save()
+
+    return rawdata
+
+
+def create_image_usage(**kwargs):
+    usage = models.ImageUsage(**kwargs)
+    usage.save()
+
+    return usage
+
+
+def create_image_delete(**kwargs):
+    delete = models.ImageDeletes(**kwargs)
+    delete.save()
+
+    return delete
+
+
+def create_image_exists(**kwargs):
+    exists = models.ImageExists(**kwargs)
+    exists.save()
+
+    return exists
+
+
+def get_image_delete(**kwargs):
+    return _safe_get(models.ImageDeletes, **kwargs)
+
+
+def get_image_usage(**kwargs):
+    return _safe_get(models.ImageUsage, **kwargs)

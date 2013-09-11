@@ -6,3 +6,5 @@ librabbitmq>=1.0.0
 prettytable>=0.7.2
 argparse
 Pympler
+requests
+south

@@ -1,4 +1,4 @@
-# Copyright (c) 2012 - Rackspace Inc.
+# Copyright (c) 2013 - Rackspace Inc.
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to
@@ -17,23 +17,25 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+import json
+import os
 
-import datetime
-import decimal
+config_filename = os.environ.get('STACKTACH_DEPLOYMENTS_FILE',
+                                 'stacktach_worker_config.json')
+try:
+    from local_settings import *
+    config_filename = STACKTACH_DEPLOYMENTS_FILE
+except ImportError:
+    pass
 
-from stacktach import datetime_to_decimal
-from tests.unit import StacktachBaseTestCase
+config = None
+with open(config_filename, "r") as f:
+    config = json.load(f)
 
-class DatetimeToDecimalTestCase(StacktachBaseTestCase):
 
-    def test_datetime_to_decimal(self):
-        expected_decimal = decimal.Decimal('1356093296.123')
-        utc_datetime = datetime.datetime.utcfromtimestamp(expected_decimal)
-        actual_decimal = datetime_to_decimal.dt_to_decimal(utc_datetime)
-        self.assertEqual(actual_decimal, expected_decimal)
+def deployments():
+    return config['deployments']
 
-    def test_decimal_to_datetime(self):
-        expected_decimal = decimal.Decimal('1356093296.123')
-        expected_datetime = datetime.datetime.utcfromtimestamp(expected_decimal)
-        actual_datetime = datetime_to_decimal.dt_from_decimal(expected_decimal)
-        self.assertEqual(actual_datetime, expected_datetime)
+
+def topics():
+    return config['topics']
