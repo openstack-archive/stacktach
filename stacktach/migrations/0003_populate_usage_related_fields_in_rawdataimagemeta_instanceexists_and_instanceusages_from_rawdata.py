@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import copy
+import gc
 from south.v2 import DataMigration
 from stacktach.notification import notification_factory
 
@@ -28,6 +29,27 @@ USAGE_EVENTS_EXCEPT_EXISTS = copy.deepcopy(USAGE_EVENTS)
 USAGE_EVENTS_EXCEPT_EXISTS.remove('compute.instance.exists')
 
 
+def queryset_iterator(queryset, chunksize=1000):
+    '''''
+    Iterate over a Django Queryset ordered by the primary key
+
+    This method loads a maximum of chunksize (default: 1000) rows in it's
+    memory at the same time while django normally would load all rows in it's
+    memory. Using the iterator() method only causes it to not preload all the
+    classes.
+
+    Note that the implementation of the iterator does not support ordered query sets.
+    '''
+    id = 0
+    last_pk = queryset.order_by('-id')[0]['id']
+    queryset = queryset.order_by('id')
+    while id < last_pk:
+        for row in queryset.filter(id__gt=id)[:chunksize]:
+            id = row['id']
+            yield row
+        gc.collect()
+
+
 class Migration(DataMigration):
 
     def _find_latest_usage_related_raw_id_for_request_id(self, orm, request_id):
@@ -51,7 +73,7 @@ class Migration(DataMigration):
         # and orm['appname.ModelName'] for models in other applications.
         print "Started inserting records in RawDataImageMeta"
         rawdata_all = orm.RawData.objects.filter(event__in=USAGE_EVENTS).values('json', 'id')
-        for rawdata in rawdata_all:
+        for rawdata in queryset_iterator(rawdata_all):
             notification = self._notification(rawdata['json'])
             orm.RawDataImageMeta.objects.create(
                 raw_id=rawdata['id'],
