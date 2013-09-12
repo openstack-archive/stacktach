@@ -594,7 +594,7 @@ def search(request):
     results = []
     try:
 
-        events = model_search(request, model, filters)
+        events = model_search(request, model, filters, order_by='-when')
         for event in events:
             when = dt.dt_from_decimal(event.when)
             routing_key_status = routing_key_type(event.routing_key)
