@@ -1279,7 +1279,9 @@ class StackyServerTestCase(StacktachBaseTestCase):
         fake_request = self.mox.CreateMockAnything()
         fake_request.GET = {'field': 'tenant', 'value': 'tenant'}
         raw = self._create_raw()
-        models.RawData.objects.filter(tenant='tenant').AndReturn([raw])
+        results = self.mox.CreateMockAnything()
+        models.RawData.objects.filter(tenant='tenant').AndReturn(results)
+        results.order_by('-when').AndReturn([raw])
         raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
 
@@ -1300,9 +1302,11 @@ class StackyServerTestCase(StacktachBaseTestCase):
                             'when_min': '1.1',
                             'when_max': '2.1'}
         raw = self._create_raw()
+        results = self.mox.CreateMockAnything()
         models.RawData.objects.filter(tenant='tenant',
                                       when__gte=decimal.Decimal('1.1'),
-                                      when__lte=decimal.Decimal('2.1')).AndReturn([raw])
+                                      when__lte=decimal.Decimal('2.1')).AndReturn(results)
+        results.order_by('-when').AndReturn([raw])
         raw.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         self.mox.ReplayAll()
 
@@ -1332,8 +1336,9 @@ class StackyServerTestCase(StacktachBaseTestCase):
         raw3 = self._create_raw()
         raw2.id = 2
         raw3.id = 3
-        models.RawData.objects.filter(tenant='tenant').AndReturn([raw1, raw2,
-                                                                   raw3])
+        results = self.mox.CreateMockAnything()
+        models.RawData.objects.filter(tenant='tenant').AndReturn(results)
+        results.order_by('-when').AndReturn([raw1, raw2, raw3])
         raw1.search_results([], mox.IgnoreArg(), ' ').AndReturn(search_result)
         raw2.search_results(search_result, mox.IgnoreArg(),' ').AndReturn(search_result_2)
         self.mox.ReplayAll()
