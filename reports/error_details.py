@@ -161,7 +161,8 @@ if __name__ == '__main__':
     cmds = ['create', 'rebuild', 'rescue', 'resize', 'snapshot']
 
     requests = models.RawData.objects.filter(when__gt=dstart, when__lte=dend)\
-                                     .exclude(instance=None)\
+                                     .exclude(instance=None,
+                                              event='compute.instance.exists')\
                                      .values('request_id', 'instance')\
                                      .distinct()
     inst_recs = {}
