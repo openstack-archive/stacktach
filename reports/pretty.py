@@ -61,11 +61,9 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
     for request in requests:
         uuid = request['instance']
         request_id = request['request_id']
-        if uuid in inst_recs:
-            inst_recs[uuid].append(request_id)
-        else:
-            inst_recs[uuid] = [request_id]
-
+        value = inst_recs.get(uuid, [])
+        value.append(request_id)
+        inst_recs[uuid] = value
 
     failures = {}  # { key : {failure_type: count} }
     durations = {}

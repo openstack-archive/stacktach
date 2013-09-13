@@ -169,10 +169,9 @@ if __name__ == '__main__':
     for request in requests:
         uuid = request['instance']
         request_id = request['request_id']
-        if uuid in inst_recs:
-            inst_recs[uuid].append(request_id)
-        else:
-            inst_recs[uuid] = [request_id]
+        value = inst_recs.get(uuid, [])
+        value.append(request_id)
+        inst_recs[uuid] = value
 
     for uuid_dict in updates:
         uuid = uuid_dict['instance']
