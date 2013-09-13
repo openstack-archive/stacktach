@@ -11,3 +11,6 @@ before_script:
  - "rm -f __init__.py"
  - "rm -f __init__.pyc"
 script: "./run_tests_venv.sh"
+
+notifications:
+  email: false
