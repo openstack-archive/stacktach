@@ -52,6 +52,19 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
     expiry = 60 * 60  # 1 hour
     cmds = ['create', 'rebuild', 'rescue', 'resize', 'snapshot']
 
+    requests = models.RawData.objects.filter(when__gt=dstart, when__lte=dend)\
+                                     .exclude(instance=None,
+                                              event='compute.instance.exists')\
+                                     .values('request_id', 'instance')\
+                                     .distinct()
+    inst_recs = {}
+    for request in requests:
+        uuid = request['instance']
+        request_id = request['request_id']
+        value = inst_recs.get(uuid, [])
+        value.append(request_id)
+        inst_recs[uuid] = value
+
     failures = {}  # { key : {failure_type: count} }
     durations = {}
     attempts = {}
@@ -59,14 +72,7 @@ def make_report(yesterday=None, start_hour=0, hours=24, percentile=97,
     for uuid_dict in updates:
         uuid = uuid_dict['instance']
 
-        # All the unique Request ID's for this instance during that timespan.
-        reqs = models.RawData.objects.filter(instance=uuid,
-                                             when__gt=dstart, when__lte=dend) \
-                                     .values('request_id').distinct()
-
-
-        for req_dict in reqs:
-            req = req_dict['request_id']
+        for req in inst_recs.get(uuid, []):
             raws = models.RawData.objects.filter(request_id=req)\
                                       .exclude(event='compute.instance.exists')\
                                       .order_by('when')
