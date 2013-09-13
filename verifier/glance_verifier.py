@@ -31,7 +31,10 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from stacktach import models
-from verifier import FieldMismatch, VerificationException, base_verifier
+from verifier import FieldMismatch
+from verifier import VerificationException
+from verifier import base_verifier
+from verifier import NullFieldException
 from verifier import NotFound
 from stacktach import datetime_to_decimal as dt
 import datetime
@@ -52,6 +55,18 @@ def _verify_field_mismatch(exists, usage):
     if usage.size != exists.size:
         raise FieldMismatch('size', exists.size,
                             usage.size)
+
+
+def _verify_validity(exist):
+    fields = {exist.size: 'image_size', exist.created_at: 'created_at',
+              exist.uuid: 'uuid', exist.owner: 'owner'}
+    for (field_value, field_name) in fields.items():
+        if field_value is None:
+            raise NullFieldException(field_name, exist.id)
+    base_verifier._is_like_uuid('uuid', exist.uuid, exist.id)
+    base_verifier._is_like_date('created_at', exist.created_at, exist.id)
+    base_verifier._is_long('size', exist.size, exist.id)
+    base_verifier._is_hex_owner_id('owner', exist.owner, exist.id)
 
 
 def _verify_for_usage(exist, usage=None):
@@ -116,6 +131,7 @@ def _verify(exist):
     try:
         _verify_for_usage(exist)
         _verify_for_delete(exist)
+        _verify_validity(exist)
 
         verified = True
         exist.mark_verified()

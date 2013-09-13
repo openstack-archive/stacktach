@@ -457,7 +457,7 @@ class ImageExists(models.Model):
         (FAILED, 'Failed Verification'),
     ]
 
-    uuid = models.CharField(max_length=50, db_index=True)
+    uuid = models.CharField(max_length=50, db_index=True, null=True)
     created_at = models.DecimalField(max_digits=20,
                                      decimal_places=6, db_index=True,
                                      null=True)
