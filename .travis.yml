@@ -5,4 +5,7 @@ python:
 # command to install dependencies
 # install: "pip install -r requirements.txt --use-mirrors"
 # # command to run tests
+before_script:
+ - rm -f __init__.py
+ - rm -f __init__.pyc
 script: "./run_tests_venv.sh"
