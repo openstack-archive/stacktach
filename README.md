@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/rackerlabs/stacktach.png?branch=master)](https://travis-ci.org/rackerlabs/stacktach)
+
 # StackTach
 
 StackTach is a debugging / monitoring utility for OpenStack ([Open]StackTach[ometer]). StackTach can work with multiple datacenters including multi-cell deployments.
