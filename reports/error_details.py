@@ -178,9 +178,7 @@ if __name__ == '__main__':
         uuid = uuid_dict['instance']
 
         req_list = []
-        for req_dict in inst_recs.get(uuid, []):
-            req = req_dict['request_id']
-
+        for req in inst_recs.get(uuid, []):
             raws = list(models.RawData.objects.filter(request_id=req)
                         .exclude(event='compute.instance.exists')
                         .values("id", "when", "routing_key", "old_state",
