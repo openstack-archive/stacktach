@@ -306,11 +306,13 @@ USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['rebuild_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['resize_prep_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['resize_revert_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['rescue_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['create_end']: _process_usage_for_updates,
     INSTANCE_EVENT['rebuild_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_prep_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['rescue_end']: _process_usage_for_updates,
     INSTANCE_EVENT['delete_end']: _process_delete,
     INSTANCE_EVENT['exists']: _process_exists
 }

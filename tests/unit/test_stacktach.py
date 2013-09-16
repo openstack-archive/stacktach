@@ -303,6 +303,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         else:
             stacklog.get_logger(name=name).AndReturn(self.log)
 
+    def test_all_instance_events_have_mapping(self):
+        for key, value in views.INSTANCE_EVENT.items():
+            msg = "'%s' does not have a process function mapping." % value
+            self.assertTrue(value in views.USAGE_PROCESS_MAPPING, msg)
+
     def test_process_usage_for_new_launch_create_start(self):
         notification = self.mox.CreateMockAnything()
         notification.launched_at = str(DUMMY_TIME)
