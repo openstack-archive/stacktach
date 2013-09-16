@@ -84,6 +84,10 @@ if __name__ == '__main__':
         process = Process(target=make_and_start_verifier, args=(exchange,))
         process.start()
         processes.append(process)
-    signal.signal(signal.SIGINT, kill_time)
-    signal.signal(signal.SIGTERM, kill_time)
-    signal.pause()
+
+    if len(processes) > 0:
+        # Only pause parent process if there are children running.
+        # Otherwise just end...
+        signal.signal(signal.SIGINT, kill_time)
+        signal.signal(signal.SIGTERM, kill_time)
+        signal.pause()
