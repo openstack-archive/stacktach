@@ -158,6 +158,8 @@ INSTANCE_EVENT = {
     'resize_revert_start': 'compute.instance.resize.revert.start',
     'resize_revert_end': 'compute.instance.resize.revert.end',
     'resize_finish_end': 'compute.instance.finish_resize.end',
+    'rescue_start': 'compute.instance.rescue.start',
+    'rescue_end': 'compute.instance.rescue.end',
     'delete_end': 'compute.instance.delete.end',
     'exists': 'compute.instance.exists',
 }
@@ -171,12 +173,14 @@ def _process_usage_for_new_launch(raw, notification):
     (usage, new) = STACKDB.get_or_create_instance_usage(**values)
 
     if raw.event in [INSTANCE_EVENT['create_start'],
-                     INSTANCE_EVENT['rebuild_start']]:
+                     INSTANCE_EVENT['rebuild_start'],
+                     INSTANCE_EVENT['rescue_start']]:
         usage.instance_type_id = notification.instance_type_id
 
     if raw.event in [INSTANCE_EVENT['rebuild_start'],
                      INSTANCE_EVENT['resize_prep_start'],
-                     INSTANCE_EVENT['resize_revert_start']] and\
+                     INSTANCE_EVENT['resize_revert_start'],
+                     INSTANCE_EVENT['rescue_start']] and\
             usage.launched_at is None:
         # Grab the launched_at so if this action spans the audit period,
         #     we will have a launch record corresponding to the exists.
@@ -205,7 +209,8 @@ def _process_usage_for_updates(raw, notification):
     if raw.event in [INSTANCE_EVENT['create_end'],
                      INSTANCE_EVENT['rebuild_end'],
                      INSTANCE_EVENT['resize_finish_end'],
-                     INSTANCE_EVENT['resize_revert_end']]:
+                     INSTANCE_EVENT['resize_revert_end'],
+                     INSTANCE_EVENT['rescue_end']]:
         usage.launched_at = utils.str_time_to_unix(notification.launched_at)
 
     if raw.event == INSTANCE_EVENT['resize_revert_end']:
@@ -301,11 +306,13 @@ USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['rebuild_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['resize_prep_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['resize_revert_start']: _process_usage_for_new_launch,
+    INSTANCE_EVENT['rescue_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['create_end']: _process_usage_for_updates,
     INSTANCE_EVENT['rebuild_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_prep_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['rescue_end']: _process_usage_for_updates,
     INSTANCE_EVENT['delete_end']: _process_delete,
     INSTANCE_EVENT['exists']: _process_exists
 }
