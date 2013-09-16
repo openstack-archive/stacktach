@@ -93,7 +93,7 @@ def _is_int_in_char(attr_name, attr_value, exist_id):
 
 
 def _is_hex_owner_id(attr_name, attr_value, exist_id):
-    if not re.match("[0-9a-f]{32}$", attr_value):
+    if not re.match("^[0-9a-fA-F]+$", attr_value):
        raise WrongTypeException(attr_name, attr_value, exist_id)
 
 
