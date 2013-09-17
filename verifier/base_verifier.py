@@ -19,7 +19,9 @@
 # IN THE SOFTWARE.
 
 import datetime
+import decimal
 import os
+import re
 import sys
 import time
 import multiprocessing
@@ -31,6 +33,8 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                                 os.pardir, os.pardir))
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
+
+from verifier import WrongTypeException
 
 from stacktach import stacklog, message_service
 LOG = stacklog.get_logger('verifier')
@@ -63,6 +67,39 @@ def _verify_date_field(d1, d2, same_second=False):
         elif same_second and int(d1) == int(d2):
             return True
     return False
+
+
+def _is_like_uuid(attr_name, attr_value, exist_id):
+    if not re.match("[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
+             attr_value):
+        raise WrongTypeException(attr_name, attr_value, exist_id)
+
+
+def _is_like_date(attr_name, attr_value, exist_id):
+    if not isinstance(attr_value, decimal.Decimal):
+        raise WrongTypeException(attr_name, attr_value, exist_id)
+
+
+def _is_long(attr_name, attr_value, exist_id):
+    if not isinstance(attr_value, long):
+        raise WrongTypeException(attr_name, attr_value, exist_id)
+
+
+def _is_int_in_char(attr_name, attr_value, exist_id):
+    try:
+        int(attr_value)
+    except ValueError:
+        raise WrongTypeException(attr_name, attr_value, exist_id)
+
+
+def _is_hex_owner_id(attr_name, attr_value, exist_id):
+    if not re.match("[0-9a-f]{32}$", attr_value):
+       raise WrongTypeException(attr_name, attr_value, exist_id)
+
+
+def _is_alphanumeric(attr_name, attr_value, exist_id):
+    if not re.match("[a-zA-Z0-9.]+$", attr_value):
+       raise WrongTypeException(attr_name, attr_value, exist_id)
 
 
 class Verifier(object):

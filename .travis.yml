@@ -1,0 +1,16 @@
+language: python
+python:
+  - "2.6"
+  - "2.7"
+# command to install dependencies
+# install: "pip install -r requirements.txt --use-mirrors"
+# # command to run tests
+install:
+ - "sudo rm -rf /dev/shm && sudo ln -s /run/shm /dev/shm"
+before_script:
+ - "rm -f __init__.py"
+ - "rm -f __init__.pyc"
+script: "./run_tests_venv.sh"
+
+notifications:
+  email: false

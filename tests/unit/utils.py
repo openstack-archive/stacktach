@@ -163,6 +163,7 @@ class FakeVerifierConfig(object):
         self.durable_queue = lambda: durable_queue
         self.topics = lambda: topics
         self.enable_notifications = lambda: notifs
+        self.validation_level = lambda: 'all'
 
 
 def make_verifier_config(notifs):

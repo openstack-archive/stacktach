@@ -41,13 +41,14 @@ def queryset_iterator(queryset, chunksize=1000):
     Note that the implementation of the iterator does not support ordered query sets.
     '''
     id = 0
-    last_pk = queryset.order_by('-id')[0]['id']
-    queryset = queryset.order_by('id')
-    while id < last_pk:
-        for row in queryset.filter(id__gt=id)[:chunksize]:
-            id = row['id']
-            yield row
-        gc.collect()
+    if queryset.order_by('-id').count() > 0:
+        last_pk = queryset.order_by('-id')[0]['id']
+        queryset = queryset.order_by('id')
+        while id < last_pk:
+            for row in queryset.filter(id__gt=id)[:chunksize]:
+                id = row['id']
+                yield row
+            gc.collect()
 
 
 class Migration(DataMigration):

@@ -87,3 +87,7 @@ def password():
 
 def virtual_host():
     return config['rabbit']['virtual_host']
+
+
+def validation_level():
+    return config['validation_level']

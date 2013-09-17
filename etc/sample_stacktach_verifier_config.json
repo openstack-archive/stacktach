@@ -4,6 +4,7 @@
     "settle_units": "minutes",
     "pool_size": 2,
     "enable_notifications": true,
+     "validation_level": "all",
     "rabbit": {
         "durable_queue": false,
         "host": "10.0.0.1",

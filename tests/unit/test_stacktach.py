@@ -303,6 +303,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         else:
             stacklog.get_logger(name=name).AndReturn(self.log)
 
+    def test_all_instance_events_have_mapping(self):
+        for key, value in views.INSTANCE_EVENT.items():
+            msg = "'%s' does not have a process function mapping." % value
+            self.assertTrue(value in views.USAGE_PROCESS_MAPPING, msg)
+
     def test_process_usage_for_new_launch_create_start(self):
         notification = self.mox.CreateMockAnything()
         notification.launched_at = str(DUMMY_TIME)
@@ -317,6 +322,39 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         raw = self.mox.CreateMockAnything()
         raw.event = 'compute.instance.create.start'
+
+        usage = self.mox.CreateMockAnything()
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+            .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_new_launch(raw, notification)
+
+        self.assertEquals(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_new_launch_rescue_start(self):
+        notification = self.mox.CreateMockAnything()
+        notification.launched_at = str(DUMMY_TIME)
+        notification.tenant = TENANT_ID_1
+        notification.rax_options = RAX_OPTIONS_1
+        notification.os_architecture = OS_ARCH_1
+        notification.os_version = OS_VERSION_1
+        notification.os_distro = OS_DISTRO_1
+        notification.instance = INSTANCE_ID_1
+        notification.request_id = REQUEST_ID_1
+        notification.instance_type_id = INSTANCE_TYPE_ID_1
+
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.rescue.start'
 
         usage = self.mox.CreateMockAnything()
         views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
@@ -506,6 +544,41 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
+    def test_process_usage_for_new_launch_rescue_start_when_launched_at_in_db(self):
+        notification = self.mox.CreateMockAnything()
+        notification.launched_at = str(DUMMY_TIME)
+        notification.tenant = TENANT_ID_1
+        notification.rax_options = RAX_OPTIONS_1
+        notification.os_architecture = OS_ARCH_1
+        notification.os_version = OS_VERSION_1
+        notification.os_distro = OS_DISTRO_1
+        notification.instance = INSTANCE_ID_1
+        notification.request_id = REQUEST_ID_1
+        notification.instance_type_id = INSTANCE_TYPE_ID_1
+
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.rescue.start'
+
+        orig_launched_at = utils.decimal_utc(DUMMY_TIME - datetime.timedelta(days=1))
+        usage = self.mox.CreateMockAnything()
+        usage.launched_at = orig_launched_at
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+            .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_new_launch(raw, notification)
+
+        self.assertEqual(usage.launched_at, orig_launched_at)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+
+        self.mox.VerifyAll()
+
     def test_process_usage_for_updates_create_end(self):
         notification = self.mox.CreateMockAnything()
         notification.launched_at = str(DUMMY_TIME)
@@ -521,6 +594,41 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         raw = self.mox.CreateMockAnything()
         raw.event = 'compute.instance.create.end'
+
+        usage = self.mox.CreateMockAnything()
+        usage.launched_at = None
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+            .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_updates(raw, notification)
+
+        self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_updates_rescue_end(self):
+        notification = self.mox.CreateMockAnything()
+        notification.launched_at = str(DUMMY_TIME)
+        notification.tenant = TENANT_ID_1
+        notification.rax_options = RAX_OPTIONS_1
+        notification.os_architecture = OS_ARCH_1
+        notification.os_version = OS_VERSION_1
+        notification.os_distro = OS_DISTRO_1
+        notification.instance = INSTANCE_ID_1
+        notification.request_id = REQUEST_ID_1
+        notification.instance_type_id = INSTANCE_TYPE_ID_1
+        notification.message = None
+
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.rescue.end'
 
         usage = self.mox.CreateMockAnything()
         usage.launched_at = None
