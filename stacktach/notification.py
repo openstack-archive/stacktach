@@ -223,6 +223,9 @@ class NovaNotification(Notification):
         self.audit_period_ending = self.payload.get(
             'audit_period_ending', None)
         self.message = self.payload.get('message', None)
+        bandwidth = self.payload.get('bandwidth', {})
+        bandwidth_public = bandwidth.get('public', {})
+        self.bandwidth_public_out = bandwidth_public.get('bw_out', 0)
 
     @property
     def host(self):

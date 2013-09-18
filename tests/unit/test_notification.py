@@ -31,6 +31,7 @@ from stacktach.notification import GlanceNotification
 from stacktach import db
 from stacktach import image_type
 from tests.unit import StacktachBaseTestCase
+from tests.unit.utils import BANDWIDTH_PUBLIC_OUTBOUND
 from tests.unit.utils import REQUEST_ID_1
 from tests.unit.utils import DECIMAL_DUMMY_TIME
 from tests.unit.utils import DUMMY_TIME
@@ -116,7 +117,11 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
                     "com.rackspace__1__options": 'rax_opt',
                 },
                 "state": 'state',
-                "new_task_state": 'task'
+                "new_task_state": 'task',
+                "bandwidth": {
+                    "private": {"bw_in": 0, "bw_out": 264902},
+                    "public": {"bw_in": 0, "bw_out": 1697240969}
+                }
             }
         }
         deployment = "1"
@@ -151,6 +156,79 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
         notification = NovaNotification(body, deployment, routing_key, json_body)
         self.assertEquals(notification.save(), raw)
         self.mox.VerifyAll()
+
+    def test_bandwidth_public_out_is_read_from_json(self):
+        body = {
+            "event_type": "compute.instance.exists",
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            "timestamp": TIMESTAMP_1,
+            "publisher_id": "compute.global.preprod-ord.ohthree.com",
+            "payload": {
+                'instance_id': INSTANCE_ID_1,
+                "status": "saving",
+                "container_format": "ovf",
+                "properties": {
+                    "image_type": "snapshot",
+                },
+                "tenant": "5877054",
+                "old_state": 'old_state',
+                "old_task_state": 'old_task',
+                "image_meta": {
+                    "org.openstack__1__architecture": 'os_arch',
+                    "org.openstack__1__os_distro": 'os_distro',
+                    "org.openstack__1__os_version": 'os_version',
+                    "com.rackspace__1__options": 'rax_opt',
+                },
+                "state": 'state',
+                "new_task_state": 'task',
+                "bandwidth": {
+                    "private": {"bw_in": 0, "bw_out": 264902},
+                    "public": {"bw_in": 0, "bw_out": BANDWIDTH_PUBLIC_OUTBOUND}
+                }
+            }
+        }
+        deployment = "1"
+        routing_key = "monitor.info"
+        json_body = json.dumps([routing_key, body])
+        notification = NovaNotification(body, deployment, routing_key,
+                                        json_body)
+        self.assertEquals(notification.bandwidth_public_out,
+                          BANDWIDTH_PUBLIC_OUTBOUND)
+
+    def test_bandwidth_public_out_is_set_to_0_if_not_found_in_json(self):
+        body = {
+            "event_type": "compute.instance.exists",
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            "timestamp": TIMESTAMP_1,
+            "publisher_id": "compute.global.preprod-ord.ohthree.com",
+            "payload": {
+                'instance_id': INSTANCE_ID_1,
+                "status": "saving",
+                "container_format": "ovf",
+                "properties": {
+                    "image_type": "snapshot",
+                },
+                "tenant": "5877054",
+                "old_state": 'old_state',
+                "old_task_state": 'old_task',
+                "image_meta": {
+                    "org.openstack__1__architecture": 'os_arch',
+                    "org.openstack__1__os_distro": 'os_distro',
+                    "org.openstack__1__os_version": 'os_version',
+                    "com.rackspace__1__options": 'rax_opt',
+                },
+                "state": 'state',
+                "new_task_state": 'task'
+            }
+        }
+        deployment = "1"
+        routing_key = "monitor.info"
+        json_body = json.dumps([routing_key, body])
+        notification = NovaNotification(body, deployment, routing_key,
+                                        json_body)
+        self.assertEquals(notification.bandwidth_public_out, 0)
 
 
 class GlanceNotificationTestCase(StacktachBaseTestCase):

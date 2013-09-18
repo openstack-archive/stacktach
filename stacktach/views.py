@@ -270,6 +270,7 @@ def _process_exists(raw, notification):
         values['os_architecture'] = notification.os_architecture
         values['os_version'] = notification.os_version
         values['os_distro'] = notification.os_distro
+        values['bandwidth_public_out'] = notification.bandwidth_public_out
 
         deleted_at = notification.deleted_at
         if deleted_at and deleted_at != '':
