@@ -14,10 +14,16 @@ class Migration(SchemaMigration):
                       keep_default=False)
 
 
+        # Changing field 'ImageExists.uuid'
+        db.alter_column(u'stacktach_imageexists', 'uuid', self.gf('django.db.models.fields.CharField')(max_length=50, null=True))
+
     def backwards(self, orm):
         # Deleting field 'InstanceExists.bandwidth_public_out'
         db.delete_column(u'stacktach_instanceexists', 'bandwidth_public_out')
 
+
+        # Changing field 'ImageExists.uuid'
+        db.alter_column(u'stacktach_imageexists', 'uuid', self.gf('django.db.models.fields.CharField')(default='blank_uuid', max_length=50))
 
     models = {
         u'stacktach.deployment': {
@@ -75,20 +81,20 @@ class Migration(SchemaMigration):
             'deleted_at': ('django.db.models.fields.DecimalField', [], {'null': 'True', 'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
             'fail_reason': ('django.db.models.fields.CharField', [], {'max_length': '300', 'null': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
-            'owner': ('django.db.models.fields.CharField', [], {'max_length': '255', 'db_index': 'True'}),
+            'owner': ('django.db.models.fields.CharField', [], {'max_length': '255', 'null': 'True', 'db_index': 'True'}),
             'raw': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'+'", 'to': u"orm['stacktach.GlanceRawData']"}),
             'send_status': ('django.db.models.fields.IntegerField', [], {'default': '0', 'db_index': 'True'}),
             'size': ('django.db.models.fields.BigIntegerField', [], {'max_length': '20'}),
             'status': ('django.db.models.fields.CharField', [], {'default': "'pending'", 'max_length': '50', 'db_index': 'True'}),
             'usage': ('django.db.models.fields.related.ForeignKey', [], {'related_name': "'+'", 'null': 'True', 'to': u"orm['stacktach.ImageUsage']"}),
-            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'})
+            'uuid': ('django.db.models.fields.CharField', [], {'max_length': '50', 'null': 'True', 'db_index': 'True'})
         },
         u'stacktach.imageusage': {
             'Meta': {'object_name': 'ImageUsage'},
             'created_at': ('django.db.models.fields.DecimalField', [], {'max_digits': '20', 'decimal_places': '6', 'db_index': 'True'}),
             u'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'last_raw': ('django.db.models.fields.related.ForeignKey', [], {'to': u"orm['stacktach.GlanceRawData']", 'null': 'True'}),
-            'owner': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'}),
+            'owner': ('django.db.models.fields.CharField', [], {'max_length': '50', 'null': 'True', 'db_index': 'True'}),
             'size': ('django.db.models.fields.BigIntegerField', [], {'max_length': '20'}),
             'uuid': ('django.db.models.fields.CharField', [], {'max_length': '50', 'db_index': 'True'})
         },
