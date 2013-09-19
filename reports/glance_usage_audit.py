@@ -10,32 +10,31 @@ from reports import usage_audit
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
 
-
-OLD_LAUNCHES_QUERY = """
-select * from stacktach_imageusage where
-    created_at is not null and
-    created_at < %s and
-    uuid not in
-        (select distinct(uuid)
-            from stacktach_imagedeletes where
-                deleted_at < %s);"""
+OLD_IMAGES_QUERY = """
+select * from stacktach_imageusage left join stacktach_imagedeletes
+on (stacktach_imageusage.uuid = stacktach_imagedeletes.uuid and
+ deleted_at < %s)
+ where stacktach_imagedeletes.id IS NULL
+ and created_at is not null and created_at < %s;"""
 
 
 def audit_usages_to_exists(exists, usages):
     # checks if all exists correspond to the given usages
     fails = []
-    for (uuid, launches) in usages.items():
+    for (uuid, images) in usages.items():
         if uuid not in exists:
             msg = "No exists for usage (%s)" % uuid
-            fails.append(['Usage', launches[0]['id'], msg])
+            fails.append(['Usage', images[0]['id'], msg])
     return fails
 
-def _get_new_launches(beginning, ending):
+
+def _get_new_images(beginning, ending):
     filters = {
         'created_at__gte': beginning,
         'created_at__lte': ending,
     }
     return models.ImageUsage.objects.filter(**filters)
+
 
 def _get_exists(beginning, ending):
     filters = {
@@ -44,6 +43,7 @@ def _get_exists(beginning, ending):
         'audit_period_ending__lte': ending,
     }
     return models.ImageExists.objects.filter(**filters)
+
 
 def valid_datetime(d):
     try:
@@ -62,24 +62,25 @@ def audit_for_period(beginning, ending):
      verify_detail) = _verifier_audit_for_day(beginning_decimal,
                                                           ending_decimal,
                                                           models.ImageExists)
-    detail, new_count, old_count = _launch_audit_for_period(beginning_decimal,
+    detail, new_count, old_count = _image_audit_for_period(beginning_decimal,
                                                             ending_decimal)
 
     summary = {
         'verifier': verify_summary,
-        'launch_summary': {
-            'new_launches': new_count,
-            'old_launches': old_count,
+        'image_summary': {
+            'new_images': new_count,
+            'old_images': old_count,
             'failures': len(detail)
         },
     }
 
     details = {
         'exist_fails': verify_detail,
-        'launch_fails': detail,
+        'image_fails': detail,
     }
 
     return summary, details
+
 
 def _verifier_audit_for_day(beginning, ending, exists_model):
     summary = {}
@@ -92,8 +93,8 @@ def _verifier_audit_for_day(beginning, ending, exists_model):
         'audit_period_ending': F('audit_period_beginning') + period
 
     }
-    instant_exists = exists_model.objects.filter(**filters)
-    summary['exists'] = _audit_for_exists(instant_exists)
+    exists = exists_model.objects.filter(**filters)
+    summary['exists'] = _audit_for_exists(exists)
 
     filters = {
         'raw__when__gte': beginning,
@@ -105,6 +106,7 @@ def _verifier_audit_for_day(beginning, ending, exists_model):
     for exist in failed:
         detail.append(['Exist', exist.id, exist.fail_reason])
     return summary, detail
+
 
 def _audit_for_exists(exists_query):
     (verified, reconciled,
@@ -129,29 +131,28 @@ def _audit_for_exists(exists_query):
     }
     return report
 
-def _launch_audit_for_period(beginning, ending):
-    launches_dict = {}
-    new_launches = _get_new_launches(beginning, ending)
-    for launch in new_launches:
-        uuid = launch.uuid
-        l = {'id': launch.id, 'created_at': launch.created_at}
-        if uuid in launches_dict:
-            launches_dict[uuid].append(l)
-        else:
-            launches_dict[uuid] = [l, ]
 
-    # NOTE (apmelton)
+def _image_audit_for_period(beginning, ending):
+    images_dict = {}
+    new_images = _get_new_images(beginning, ending)
+    for image in new_images:
+        uuid = image.uuid
+        l = {'id': image.id, 'created_at': image.created_at}
+        if uuid in images_dict:
+            images_dict[uuid].append(l)
+        else:
+            images_dict[uuid] = [l, ]
     # Django's safe substitution doesn't allow dict substitution...
-    # Thus, we send it 'beginning' three    times...
-    old_launches = models.ImageUsage.objects\
-                         .raw(OLD_LAUNCHES_QUERY,
+    # Thus, we send it 'beginning' two times...
+    old_images = models.ImageUsage.objects\
+                         .raw(OLD_IMAGES_QUERY,
                               [beginning, beginning])
 
-    old_launches_dict = {}
-    for launch in old_launches:
-        uuid = launch.uuid
-        l = {'id': launch.id, 'created_at': launch.created_at}
-        old_launches_dict[uuid] = l
+    old_images_dict = {}
+    for image in old_images:
+        uuid = image.uuid
+        l = {'id': image.id, 'created_at': image.created_at}
+        old_images_dict[uuid] = l
 
     exists_dict = {}
     exists = _get_exists(beginning, ending)
@@ -165,8 +166,8 @@ def _launch_audit_for_period(beginning, ending):
         else:
             exists_dict[uuid] = [e, ]
 
-    launch_to_exists_fails = audit_usages_to_exists(exists_dict,launches_dict)
-    return launch_to_exists_fails, new_launches.count(), len(old_launches_dict)
+    image_to_exists_fails = audit_usages_to_exists(exists_dict,images_dict)
+    return image_to_exists_fails, new_images.count(), len(old_images_dict)
 
 
 def store_results(start, end, summary, details):
@@ -187,7 +188,7 @@ def make_json_report(summary, details):
     report = [{'summary': summary},
               ['Object', 'ID', 'Error Description']]
     report.extend(details['exist_fails'])
-    report.extend(details['launch_fails'])
+    report.extend(details['image_fails'])
     return json.dumps(report)
 
 
