@@ -159,6 +159,8 @@ class GlanceNotification(Notification):
                 utils.str_time_to_unix(audit_period_ending)
             images = self.payload.get('images', [])
         else:
+            stacklog.warn("Received exists with invalid payload "
+                          "GlanceRawData(%s)" % raw.id)
             audit_period_beginning = None
             audit_period_ending = None
             images = []
@@ -169,8 +171,8 @@ class GlanceNotification(Notification):
             uuid = image['id']
             deleted_at = image['deleted_at']
             deleted_at = deleted_at and utils.str_time_to_unix(deleted_at)
-            if created_at:
 
+            if created_at:
                 values = {
                     'uuid': uuid,
                     'audit_period_beginning': audit_period_beginning,

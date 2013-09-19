@@ -675,3 +675,23 @@ class GlanceExistsNotificationTestCase(StacktachBaseTestCase):
                                           json_body)
         notification.save_exists(raw)
         self.mox.VerifyAll()
+
+    def test_save_exists_should_log_warning_when_payload_is_invalid(self):
+        raw = self.mox.CreateMockAnything()
+        raw.id = 1
+        body = {
+            "event_type": "image.exists",
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "payload": []
+        }
+        deployment = "1"
+        routing_key = "glance_monitor.info"
+        json_body = json.dumps([routing_key, body])
+        self.mox.StubOutWithMock(stacklog, 'warn')
+        stacklog.warn("Received exists with invalid payload GlanceRawData(1)")
+        self.mox.ReplayAll()
+
+        notification = GlanceNotification(body, deployment, routing_key,
+                                          json_body)
+        notification.save_exists(raw)
+        self.mox.VerifyAll()
