@@ -601,7 +601,7 @@ def search(request):
             results = event.search_results(results, when, routing_key_status)
         return rsp(json.dumps(results))
     except ObjectDoesNotExist:
-        return rsp(["The requested object does not exist"])
+        return error_response(404, 'Not Found', ["The requested object does not exist"])
     except FieldError:
-        return rsp(["The requested field '%s' does not exist for the corresponding object.\n"
-                    "Note: The field names of database are case-sensitive." % field] )
+        return error_response(400, 'Bad Request', "The requested field '%s' does not exist for the corresponding object.\n"
+                    "Note: The field names of database are case-sensitive." % field)
