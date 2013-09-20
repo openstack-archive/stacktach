@@ -235,13 +235,14 @@ class StackyServerTestCase(StacktachBaseTestCase):
         self.assertEqual(json_resp[2], [2, 'dep2'])
         self.mox.VerifyAll()
 
-    def test_do_events(self):
+    def test_do_events_of_a_single_service(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service': 'nova'}
         event1 = {'event': 'some.event.1'}
         event2 = {'event': 'some.event.2'}
         events = [event1, event2]
         self.mox.StubOutWithMock(stacky_server, 'get_event_names')
-        stacky_server.get_event_names().AndReturn(events)
+        stacky_server.get_event_names(service='nova').AndReturn(events)
         self.mox.ReplayAll()
 
         resp = stacky_server.do_events(fake_request)
@@ -249,6 +250,28 @@ class StackyServerTestCase(StacktachBaseTestCase):
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
+        self.assertEqual(json_resp[0], ['Event Name'])
+        self.assertEqual(json_resp[1], ['some.event.1'])
+        self.assertEqual(json_resp[2], ['some.event.2'])
+        self.mox.VerifyAll()
+
+    def test_do_events_of_all_services(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service': 'all'}
+        event1 = {'event': 'some.event.1'}
+        event2 = {'event': 'some.event.2'}
+        events = [event1, event2]
+        self.mox.StubOutWithMock(stacky_server, 'get_event_names')
+        stacky_server.get_event_names('nova').AndReturn(events)
+        stacky_server.get_event_names('glance').AndReturn(events)
+        stacky_server.get_event_names('generic').AndReturn(events)
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_events(fake_request)
+
+        self.assertEqual(resp.status_code, 200)
+        json_resp = json.loads(resp.content)
+        self.assertEqual(len(json_resp), 7)
         self.assertEqual(json_resp[0], ['Event Name'])
         self.assertEqual(json_resp[1], ['some.event.1'])
         self.assertEqual(json_resp[2], ['some.event.2'])
