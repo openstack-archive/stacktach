@@ -21,6 +21,7 @@
 import datetime
 import decimal
 import json
+from django.core.exceptions import FieldError
 
 import mox
 
@@ -1372,6 +1373,24 @@ class StackyServerTestCase(StacktachBaseTestCase):
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
         self._assert_on_search_nova(json_resp, raw1)
+        self.mox.VerifyAll()
+
+    def test_search_with_wrong_field_value_returns_400_error_and_a_message(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'field': 'tenant', 'value': 'tenant'}
+        models.RawData.objects.filter(tenant='tenant').AndRaise(FieldError)
+        self.mox.ReplayAll()
+
+        resp = stacky_server.search(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        json_resp = json.loads(resp.content)
+        self.assertEquals(json_resp[0],[u'Error', u'Message'])
+        self.assertEquals(json_resp[1],
+                          [u'Bad Request', u"The requested field"
+        u" 'tenant' does not exist for the corresponding object.\nNote: "
+        u"The field names of database are case-sensitive."])
+
         self.mox.VerifyAll()
 
     def test_model_search_default_limit(self):
