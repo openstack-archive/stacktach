@@ -16,6 +16,7 @@ import datetime
 import copy
 
 from django.db import models
+from django.db.models import Q
 
 from stacktach import datetime_to_decimal as dt
 
@@ -499,6 +500,15 @@ class ImageExists(models.Model):
         if reason:
             self.fail_reason = reason
         self.save()
+
+    @staticmethod
+    def are_all_exists_for_owner_verified(owner, audit_period_beginning,
+                                          audit_period_ending):
+        return ImageExists.objects.filter(
+            ~Q(status=ImageExists.VERIFIED),
+            audit_period_beginning=audit_period_beginning,
+            audit_period_ending=audit_period_ending,
+            owner=owner).count() == 0
 
 
 def get_model_fields(model):

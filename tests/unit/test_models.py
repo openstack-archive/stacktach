@@ -20,6 +20,7 @@
 from datetime import datetime
 
 import unittest
+from django.db.models import Q
 import mox
 from stacktach.models import RawData, GlanceRawData, GenericRawData, ImageDeletes, InstanceExists, ImageExists
 from tests.unit.utils import IMAGE_UUID_1
@@ -93,6 +94,44 @@ class ImageExistsTestCase(unittest.TestCase):
 
         self.mox.VerifyAll()
         self.assertEqual(results, [1, 2])
+
+    def test_return_true_if_all_exists_for_owner_are_verified(self):
+        owner = "1"
+        audit_period_beginning = datetime(2013, 10, 10)
+        audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+
+        results = self.mox.CreateMockAnything()
+        results.count().AndReturn(0)
+
+        self.mox.StubOutWithMock(ImageExists.objects, 'filter')
+        ImageExists.objects.filter(
+            mox.IgnoreArg(), owner=owner,
+            audit_period_beginning=audit_period_beginning,
+            audit_period_ending=audit_period_ending).AndReturn(results)
+        self.mox.ReplayAll()
+
+        self.assertTrue(models.ImageExists.are_all_exists_for_owner_verified(
+            owner, audit_period_beginning, audit_period_ending))
+        self.mox.VerifyAll()
+
+    def test_return_false_if_all_exists_for_owner_are_verified(self):
+        owner = "1"
+        audit_period_beginning = datetime(2013, 10, 10)
+        audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        results = self.mox.CreateMockAnything()
+        results.count().AndReturn(1)
+
+        self.mox.StubOutWithMock(ImageExists.objects, 'filter')
+        ImageExists.objects.filter(
+            mox.IgnoreArg(), owner=owner,
+            audit_period_beginning=audit_period_beginning,
+            audit_period_ending=audit_period_ending).AndReturn(results)
+        self.mox.ReplayAll()
+
+        self.assertFalse(ImageExists.are_all_exists_for_owner_verified(
+            owner=owner, audit_period_beginning=audit_period_beginning,
+            audit_period_ending=audit_period_ending))
+        self.mox.VerifyAll()
 
 
 class InstanceExistsTestCase(unittest.TestCase):

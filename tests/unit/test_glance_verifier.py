@@ -504,6 +504,12 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         ]
         exist_str = json.dumps(exist_dict)
         exist.raw.json = exist_str
+        exist.audit_period_beginning = datetime(2013, 10, 10)
+        exist.audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        exist.owner = "1"
+        models.ImageExists.are_all_exists_for_owner_verified(
+            exist.owner, exist.audit_period_beginning,
+            exist.audit_period_ending).AndReturn(True)
         self.mox.StubOutWithMock(uuid, 'uuid4')
         uuid.uuid4().AndReturn('some_other_uuid')
         self.mox.StubOutWithMock(kombu.pools, 'producers')
@@ -541,6 +547,12 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         ]
         exist_str = json.dumps(exist_dict)
         exist.raw.json = exist_str
+        exist.audit_period_beginning = datetime(2013, 10, 10)
+        exist.audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        exist.owner = "1"
+        models.ImageExists.are_all_exists_for_owner_verified(
+            exist.owner, exist.audit_period_beginning,
+            exist.audit_period_ending).AndReturn(True)
         self.mox.StubOutWithMock(kombu.pools, 'producers')
         self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
         producer = self.mox.CreateMockAnything()
@@ -562,3 +574,28 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
                                                         connection)
         self.mox.VerifyAll()
 
+    def test_do_not_send_verified_if_all_exists_for_owner_not_verified(self):
+        connection = self.mox.CreateMockAnything()
+        exchange = self.mox.CreateMockAnything()
+        exist = self.mox.CreateMockAnything()
+        exist.raw = self.mox.CreateMockAnything()
+        exist_dict = [
+            'monitor.info',
+            {
+                'event_type': 'test',
+                'message_id': 'some_uuid'
+            }
+        ]
+        exist_str = json.dumps(exist_dict)
+        exist.raw.json = exist_str
+        exist.audit_period_beginning = datetime(2013, 10, 10)
+        exist.audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        exist.owner = "1"
+        models.ImageExists.are_all_exists_for_owner_verified(
+            exist.owner, exist.audit_period_beginning,
+            exist.audit_period_ending).AndReturn(False)
+        self.mox.ReplayAll()
+
+        self.glance_verifier.send_verified_notification(
+            exist, exchange, connection)
+        self.mox.VerifyAll()

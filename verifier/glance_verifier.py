@@ -166,6 +166,10 @@ class GlanceVerifier(Verifier):
 
     def send_verified_notification(self, exist, connection, exchange,
                                    routing_keys=None):
+        if not models.ImageExists.are_all_exists_for_owner_verified(
+                exist.owner, exist.audit_period_beginning,
+                exist.audit_period_ending):
+            return
         body = exist.raw.json
         json_body = json.loads(body)
         json_body[1]['event_type'] = self.config.glance_event_type()
