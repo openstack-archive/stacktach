@@ -291,6 +291,7 @@ class InstanceExists(models.Model):
     os_distro = models.TextField(null=True, blank=True)
     os_version = models.TextField(null=True, blank=True)
     rax_options = models.TextField(null=True, blank=True)
+    bandwidth_public_out = models.BigIntegerField(null=True)
 
     def deployment(self):
         return self.raw.deployment

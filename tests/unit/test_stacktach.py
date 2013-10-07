@@ -24,6 +24,7 @@ import json
 import mox
 
 import utils
+from utils import BANDWIDTH_PUBLIC_OUTBOUND
 from utils import INSTANCE_ID_1
 from utils import OS_VERSION_1
 from utils import OS_ARCH_1
@@ -840,6 +841,7 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         notification.deleted_at = ''
         notification.instance_type_id = INSTANCE_TYPE_ID_1
         notification.message_id = MESSAGE_ID_1
+        notification.bandwidth_public_out = BANDWIDTH_PUBLIC_OUTBOUND
         raw = self.mox.CreateMockAnything()
         usage = self.mox.CreateMockAnything()
         launched_range = (launch_decimal, launch_decimal+1)
@@ -859,7 +861,8 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
             'rax_options': RAX_OPTIONS_1,
             'os_architecture': OS_ARCH_1,
             'os_version': OS_VERSION_1,
-            'os_distro': OS_DISTRO_1
+            'os_distro': OS_DISTRO_1,
+            'bandwidth_public_out': BANDWIDTH_PUBLIC_OUTBOUND
         }
         exists = self.mox.CreateMockAnything()
         views.STACKDB.create_instance_exists(**exists_values).AndReturn(exists)
@@ -903,6 +906,7 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         notification.instance_type_id = INSTANCE_TYPE_ID_1
         notification.message_id = MESSAGE_ID_1
         notification.deleted_at = str(delete_time)
+        notification.bandwidth_public_out = BANDWIDTH_PUBLIC_OUTBOUND
         raw = self.mox.CreateMockAnything()
         usage = self.mox.CreateMockAnything()
         launched_range = (launch_decimal, launch_decimal+1)
@@ -928,7 +932,8 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
             'rax_options': RAX_OPTIONS_1,
             'os_architecture': OS_ARCH_1,
             'os_version': OS_VERSION_1,
-            'os_distro': OS_DISTRO_1
+            'os_distro': OS_DISTRO_1,
+            'bandwidth_public_out': BANDWIDTH_PUBLIC_OUTBOUND
         }
         exists = self.mox.CreateMockAnything()
         views.STACKDB.create_instance_exists(**exists_values).AndReturn(exists)

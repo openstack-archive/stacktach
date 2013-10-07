@@ -153,8 +153,6 @@ def _verify_basic_validity(exist):
         if field_value is None:
             raise NullFieldException(field_name, exist.id)
     base_verifier._is_hex_owner_id('tenant', exist.tenant, exist.id)
-    base_verifier._is_int_in_char('instance_type_id', exist.instance_type_id,
-                                  exist.id)
     base_verifier._is_like_date('launched_at', exist.launched_at, exist.id)
     if exist.deleted_at is not None:
         base_verifier._is_like_date('deleted_at', exist.deleted_at, exist.id)

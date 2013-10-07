@@ -21,6 +21,7 @@
 import datetime
 import decimal
 import json
+from django.core.exceptions import FieldError
 
 import mox
 
@@ -235,13 +236,14 @@ class StackyServerTestCase(StacktachBaseTestCase):
         self.assertEqual(json_resp[2], [2, 'dep2'])
         self.mox.VerifyAll()
 
-    def test_do_events(self):
+    def test_do_events_of_a_single_service(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service': 'nova'}
         event1 = {'event': 'some.event.1'}
         event2 = {'event': 'some.event.2'}
         events = [event1, event2]
         self.mox.StubOutWithMock(stacky_server, 'get_event_names')
-        stacky_server.get_event_names().AndReturn(events)
+        stacky_server.get_event_names(service='nova').AndReturn(events)
         self.mox.ReplayAll()
 
         resp = stacky_server.do_events(fake_request)
@@ -249,6 +251,28 @@ class StackyServerTestCase(StacktachBaseTestCase):
         self.assertEqual(resp.status_code, 200)
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
+        self.assertEqual(json_resp[0], ['Event Name'])
+        self.assertEqual(json_resp[1], ['some.event.1'])
+        self.assertEqual(json_resp[2], ['some.event.2'])
+        self.mox.VerifyAll()
+
+    def test_do_events_of_all_services(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service': 'all'}
+        event1 = {'event': 'some.event.1'}
+        event2 = {'event': 'some.event.2'}
+        events = [event1, event2]
+        self.mox.StubOutWithMock(stacky_server, 'get_event_names')
+        stacky_server.get_event_names('nova').AndReturn(events)
+        stacky_server.get_event_names('glance').AndReturn(events)
+        stacky_server.get_event_names('generic').AndReturn(events)
+        self.mox.ReplayAll()
+
+        resp = stacky_server.do_events(fake_request)
+
+        self.assertEqual(resp.status_code, 200)
+        json_resp = json.loads(resp.content)
+        self.assertEqual(len(json_resp), 7)
         self.assertEqual(json_resp[0], ['Event Name'])
         self.assertEqual(json_resp[1], ['some.event.1'])
         self.assertEqual(json_resp[2], ['some.event.2'])
@@ -1349,6 +1373,24 @@ class StackyServerTestCase(StacktachBaseTestCase):
         json_resp = json.loads(resp.content)
         self.assertEqual(len(json_resp), 3)
         self._assert_on_search_nova(json_resp, raw1)
+        self.mox.VerifyAll()
+
+    def test_search_with_wrong_field_value_returns_400_error_and_a_message(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'field': 'tenant', 'value': 'tenant'}
+        models.RawData.objects.filter(tenant='tenant').AndRaise(FieldError)
+        self.mox.ReplayAll()
+
+        resp = stacky_server.search(fake_request)
+
+        self.assertEqual(resp.status_code, 400)
+        json_resp = json.loads(resp.content)
+        self.assertEquals(json_resp[0],[u'Error', u'Message'])
+        self.assertEquals(json_resp[1],
+                          [u'Bad Request', u"The requested field"
+        u" 'tenant' does not exist for the corresponding object.\nNote: "
+        u"The field names of database are case-sensitive."])
+
         self.mox.VerifyAll()
 
     def test_model_search_default_limit(self):

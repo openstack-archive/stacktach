@@ -83,6 +83,13 @@ def get_event_names(service='nova'):
     return _model_factory(service).values('event').distinct()
 
 
+def get_all_event_names():
+    services = ['nova', 'glance', 'generic']
+    events = []
+    for service in services:
+        events.extend(get_event_names(service))
+    return events
+
 def get_host_names():
     # TODO: We need to upgrade to Django 1.4 so we can get tenent id and
     # host and just do distinct on host name.
@@ -156,7 +163,13 @@ def do_deployments(request):
 
 
 def do_events(request):
-    events = get_event_names()
+    service = str(request.GET.get('service', 'all'))
+    print service
+    if service == 'all':
+        events = get_all_event_names()
+    else:
+        events = get_event_names(service=service)
+    print events
     results = [["Event Name"]]
     for event in events:
         results.append([event['event']])
@@ -600,5 +613,8 @@ def search(request):
             routing_key_status = routing_key_type(event.routing_key)
             results = event.search_results(results, when, routing_key_status)
         return rsp(json.dumps(results))
-    except ObjectDoesNotExist or FieldError:
-        return rsp([])
+    except ObjectDoesNotExist:
+        return error_response(404, 'Not Found', ["The requested object does not exist"])
+    except FieldError:
+        return error_response(400, 'Bad Request', "The requested field '%s' does not exist for the corresponding object.\n"
+                    "Note: The field names of database are case-sensitive." % field)
