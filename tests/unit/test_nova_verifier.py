@@ -386,23 +386,6 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
             "{ tenant : tenant } of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
-    def test_should_verify_flavor_is_of_type_integer(self):
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.instance_type_id = 'flavor'
-        self.mox.ReplayAll()
-
-        with self.assertRaises(WrongTypeException) as wt:
-            nova_verifier._verify_validity(exist, 'all')
-        exception = wt.exception
-        self.assertEqual(exception.field_name, 'instance_type_id')
-        self.assertEqual(
-            exception.reason,
-            "{ instance_type_id : flavor } of incorrect type for exist id 23")
-        self.mox.VerifyAll()
-
     def test_should_verify_launched_at_is_of_type_decimal(self):
         exist = self.mox.CreateMockAnything()
         exist.tenant = '3762854cd6f6435998188d5120e4c271'
@@ -608,7 +591,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.id = 23
         exist.launched_at = decimal.Decimal('1.1')
         exist.deleted_at = decimal.Decimal('5.1')
-        exist.instance_type_id = '4'
+        exist.instance_type_id = 'performance1-1'
         exist.rax_options = '12'
         exist.os_architecture = 'x64'
         exist.os_distro = 'com.microsoft.server'
