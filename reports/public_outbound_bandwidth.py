@@ -28,7 +28,7 @@ def __get_previous_period(time):
 def __get_instance_exists(beginning, ending):
     filters = {
         'audit_period_beginning__gte': beginning,
-        'audit_period_ending__lt': ending,
+        'audit_period_ending__lte': ending,
     }
     return models.InstanceExists.objects.filter(**filters)
 
