@@ -165,6 +165,8 @@ class InstanceUsage(models.Model):
                                          null=True,
                                          blank=True,
                                          db_index=True)
+    instance_flavor_id = models.CharField(max_length=100, null=True,
+                                          blank=True, db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
     os_architecture = models.TextField(null=True, blank=True)
@@ -227,6 +229,8 @@ class InstanceReconcile(models.Model):
                                         null=True,
                                         blank=True,
                                         db_index=True)
+    instance_flavor_id = models.CharField(max_length=100, null=True,
+                                          blank=True, db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
     os_architecture = models.TextField(null=True, blank=True)
@@ -293,6 +297,8 @@ class InstanceExists(models.Model):
     os_version = models.TextField(null=True, blank=True)
     rax_options = models.TextField(null=True, blank=True)
     bandwidth_public_out = models.BigIntegerField(default=0)
+    instance_flavor_id = models.CharField(max_length=100, null=True,
+                                          blank=True, db_index=True)
 
     def deployment(self):
         return self.raw.deployment

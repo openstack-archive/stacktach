@@ -79,6 +79,7 @@ class Reconciler(object):
             'launched_at': usage.launched_at,
             'deleted_at': deleted_at,
             'instance_type_id': usage.instance_type_id,
+            'instance_flavor_id': usage.instance_flavor_id,
             'source': 'reconciler:%s' % src,
             'tenant': usage.tenant,
             'os_architecture': usage.os_architecture,
@@ -93,6 +94,7 @@ class Reconciler(object):
 
         if (exists.launched_at != instance['launched_at'] or
                 exists.instance_type_id != instance['instance_type_id'] or
+                exists.instance_flavor_id != instance['instance_flavor_id'] or
                 exists.tenant != instance['tenant'] or
                 exists.os_architecture != instance['os_architecture'] or
                 exists.os_distro != instance['os_distro'] or

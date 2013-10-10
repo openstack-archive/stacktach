@@ -29,7 +29,8 @@ from stacktach import datetime_to_decimal as dt
 from stacktach import models
 from stacktach import stacky_server
 import utils
-from utils import INSTANCE_ID_1
+from utils import INSTANCE_ID_1, INSTANCE_TYPE_ID_1
+from utils import INSTANCE_FLAVOR_ID_1
 from utils import INSTANCE_ID_2
 from utils import REQUEST_ID_1
 
@@ -1062,7 +1063,8 @@ class StackyServerTestCase(StacktachBaseTestCase):
         usage = self.mox.CreateMockAnything()
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
-        usage.instance_type_id = 1
+        usage.instance_type_id = INSTANCE_TYPE_ID_1
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
@@ -1072,11 +1074,13 @@ class StackyServerTestCase(StacktachBaseTestCase):
         resp_json = json.loads(resp.content)
         self.assertEqual(len(resp_json), 2)
         self.assertEqual(resp_json[0], ["UUID", "Launched At",
-                                        "Instance Type Id"])
+                                        "Instance Type Id",
+                                        "Instance Flavor Id"])
         self.assertEqual(resp_json[1][0], INSTANCE_ID_1)
         time_str = dt.dt_from_decimal(usage.launched_at)
         self.assertEqual(resp_json[1][1], str(time_str))
-        self.assertEqual(resp_json[1][2], 1)
+        self.assertEqual(resp_json[1][2], INSTANCE_TYPE_ID_1)
+        self.assertEqual(resp_json[1][3], INSTANCE_FLAVOR_ID_1)
 
         self.mox.VerifyAll()
 
@@ -1089,7 +1093,8 @@ class StackyServerTestCase(StacktachBaseTestCase):
         usage = self.mox.CreateMockAnything()
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
-        usage.instance_type_id = 1
+        usage.instance_type_id = INSTANCE_TYPE_ID_1
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         results[None:50].AndReturn(results)
         results.__iter__().AndReturn([usage].__iter__())
         self.mox.ReplayAll()
@@ -1099,11 +1104,13 @@ class StackyServerTestCase(StacktachBaseTestCase):
         resp_json = json.loads(resp.content)
         self.assertEqual(len(resp_json), 2)
         self.assertEqual(resp_json[0], ["UUID", "Launched At",
-                                        "Instance Type Id"])
+                                        "Instance Type Id",
+                                        "Instance Flavor Id"])
         self.assertEqual(resp_json[1][0], INSTANCE_ID_1)
         time_str = dt.dt_from_decimal(usage.launched_at)
         self.assertEqual(resp_json[1][1], str(time_str))
-        self.assertEqual(resp_json[1][2], 1)
+        self.assertEqual(resp_json[1][2], INSTANCE_TYPE_ID_1)
+        self.assertEqual(resp_json[1][3], INSTANCE_FLAVOR_ID_1)
 
         self.mox.VerifyAll()
 
@@ -1199,7 +1206,8 @@ class StackyServerTestCase(StacktachBaseTestCase):
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
         usage.deleted_at = usage.launched_at + 10
-        usage.instance_type_id = 1
+        usage.instance_type_id = INSTANCE_TYPE_ID_1
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         usage.message_id = 'someid'
         usage.status = 'pending'
         results[None:50].AndReturn(results)
@@ -1211,13 +1219,18 @@ class StackyServerTestCase(StacktachBaseTestCase):
         resp_json = json.loads(resp.content)
         self.assertEqual(len(resp_json), 2)
         self.assertEqual(resp_json[0], ["UUID", "Launched At", "Deleted At",
-                                        "Instance Type Id", "Message ID",
+                                        "Instance Type Id",
+                                        "Instance Flavor Id", "Message ID",
                                         "Status"])
         self.assertEqual(resp_json[1][0], INSTANCE_ID_1)
         launch_time_str = dt.dt_from_decimal(usage.launched_at)
         self.assertEqual(resp_json[1][1], str(launch_time_str))
         delete_time_str = dt.dt_from_decimal(usage.deleted_at)
         self.assertEqual(resp_json[1][2], str(delete_time_str))
+        self.assertEqual(resp_json[1][3], INSTANCE_TYPE_ID_1)
+        self.assertEqual(resp_json[1][4], INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(resp_json[1][5], 'someid')
+        self.assertEqual(resp_json[1][6], 'pending')
         self.mox.VerifyAll()
 
     def test_do_list_usage_exists_with_instance(self):
@@ -1230,7 +1243,8 @@ class StackyServerTestCase(StacktachBaseTestCase):
         usage.instance = INSTANCE_ID_1
         usage.launched_at = utils.decimal_utc()
         usage.deleted_at = usage.launched_at + 10
-        usage.instance_type_id = 1
+        usage.instance_type_id = INSTANCE_TYPE_ID_1
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         usage.message_id = 'someid'
         usage.status = 'pending'
         results[None:50].AndReturn(results)
@@ -1242,13 +1256,18 @@ class StackyServerTestCase(StacktachBaseTestCase):
         resp_json = json.loads(resp.content)
         self.assertEqual(len(resp_json), 2)
         self.assertEqual(resp_json[0], ["UUID", "Launched At", "Deleted At",
-                                        "Instance Type Id", "Message ID",
+                                        "Instance Type Id",
+                                        "Instance Flavor Id", "Message ID",
                                         "Status"])
         self.assertEqual(resp_json[1][0], INSTANCE_ID_1)
         launch_time_str = dt.dt_from_decimal(usage.launched_at)
         self.assertEqual(resp_json[1][1], str(launch_time_str))
         delete_time_str = dt.dt_from_decimal(usage.deleted_at)
         self.assertEqual(resp_json[1][2], str(delete_time_str))
+        self.assertEqual(resp_json[1][3], INSTANCE_TYPE_ID_1)
+        self.assertEqual(resp_json[1][4], INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(resp_json[1][5], 'someid')
+        self.assertEqual(resp_json[1][6], 'pending')
         self.mox.VerifyAll()
 
     def test_do_list_usage_exists_bad_instance(self):

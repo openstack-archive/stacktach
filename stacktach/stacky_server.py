@@ -493,13 +493,15 @@ def do_list_usage_launches(request):
     else:
         launches = model_search(request, model, None)
 
-    results = [["UUID", "Launched At", "Instance Type Id"]]
+    results = [["UUID", "Launched At", "Instance Type Id",
+                "Instance Flavor Id"]]
 
     for launch in launches:
         launched = None
         if launch.launched_at:
             launched = str(dt.dt_from_decimal(launch.launched_at))
-        results.append([launch.instance, launched, launch.instance_type_id])
+        results.append([launch.instance, launched, launch.instance_type_id,
+                        launch.instance_flavor_id])
 
     return rsp(json.dumps(results))
 
@@ -551,7 +553,7 @@ def do_list_usage_exists(request):
         exists = model_search(request, model, None)
 
     results = [["UUID", "Launched At", "Deleted At", "Instance Type Id",
-                "Message ID", "Status"]]
+                "Instance Flavor Id", "Message ID", "Status"]]
 
     for exist in exists:
         launched = None
@@ -561,8 +563,8 @@ def do_list_usage_exists(request):
         if exist.deleted_at:
             deleted = str(dt.dt_from_decimal(exist.deleted_at))
         results.append([exist.instance, launched, deleted,
-                        exist.instance_type_id, exist.message_id,
-                        exist.status])
+                        exist.instance_type_id, exist.instance_flavor_id,
+                        exist.message_id, exist.status])
 
     return rsp(json.dumps(results))
 

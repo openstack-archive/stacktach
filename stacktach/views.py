@@ -176,6 +176,7 @@ def _process_usage_for_new_launch(raw, notification):
                      INSTANCE_EVENT['rebuild_start'],
                      INSTANCE_EVENT['rescue_start']]:
         usage.instance_type_id = notification.instance_type_id
+        usage.instance_flavor_id = notification.instance_flavor_id
 
     if raw.event in [INSTANCE_EVENT['rebuild_start'],
                      INSTANCE_EVENT['resize_prep_start'],
@@ -215,8 +216,10 @@ def _process_usage_for_updates(raw, notification):
 
     if raw.event == INSTANCE_EVENT['resize_revert_end']:
         usage.instance_type_id = notification.instance_type_id
+        usage.instance_flavor_id = notification.instance_flavor_id
     elif raw.event == INSTANCE_EVENT['resize_prep_end']:
         usage.instance_type_id = notification.new_instance_type_id
+        usage.instance_flavor_id = notification.instance_flavor_id
 
     usage.tenant = notification.tenant
     usage.rax_options = notification.rax_options
@@ -262,6 +265,7 @@ def _process_exists(raw, notification):
         ending = utils.str_time_to_unix(notification.audit_period_ending)
         values['audit_period_ending'] = ending
         values['instance_type_id'] = notification.instance_type_id
+        values['instance_flavor_id'] = notification.instance_flavor_id
         if usage:
             values['usage'] = usage
         values['raw'] = raw

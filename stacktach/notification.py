@@ -229,6 +229,7 @@ class NovaNotification(Notification):
         self.os_version = image_meta.get('org.openstack__1__os_version', '')
         self.rax_options = image_meta.get('com.rackspace__1__options', '')
         self.instance_type_id = self.payload.get('instance_type_id', None)
+        self.instance_flavor_id = self.payload.get('instance_flavor_id', None)
         self.new_instance_type_id = \
             self.payload.get('new_instance_type_id', None)
         self.launched_at = self.payload.get('launched_at', None)
