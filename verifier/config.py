@@ -91,3 +91,11 @@ def virtual_host():
 
 def validation_level():
     return config['validation_level']
+
+
+def nova_event_type():
+    return config.get('nova_event_type', 'compute.instance.exists.verified.old')
+
+
+def glance_event_type():
+    return config.get('glance_event_type', 'image.exists.verified.old')

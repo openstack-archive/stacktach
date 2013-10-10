@@ -173,7 +173,7 @@ class GlanceVerifier(Verifier):
                                    routing_keys=None):
         body = exist.raw.json
         json_body = json.loads(body)
-        json_body[1]['event_type'] = 'image.exists.verified.old'
+        json_body[1]['event_type'] = self.config.glance_event_type()
         json_body[1]['original_message_id'] = json_body[1]['message_id']
         json_body[1]['message_id'] = str(uuid.uuid4())
         if routing_keys is None:
