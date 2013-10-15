@@ -28,7 +28,7 @@
                 {
                     "queue": "stacktach_monitor_glance.error",
                     "routing_key": "monitor_glance.error"
-                },
+                }
             ]
         }
     },
