@@ -77,61 +77,40 @@ class ImageExistsTestCase(unittest.TestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
-    def test_find_should_return_records_with_date_and_status_in_audit_period(self):
+    def test_group_exists_with_date_status_in_audit_period_by_owner_rawid(self):
         end_max = datetime.utcnow()
         status = 'pending'
+        exist1 = self.mox.CreateMockAnything()
+        exist1.owner = "owner1"
+        exist1.raw_id = "1"
+        exist2 = self.mox.CreateMockAnything()
+        exist2.owner = "owner2"
+        exist2.raw_id = "2"
+        exist3 = self.mox.CreateMockAnything()
+        exist3.owner = "owner1"
+        exist3.raw_id = "1"
+        exist4 = self.mox.CreateMockAnything()
+        exist4.owner = "owner1"
+        exist4.raw_id = "3"
+
+        ordered_results = [exist1, exist3, exist4, exist2]
         unordered_results = self.mox.CreateMockAnything()
-        expected_results = [1, 2]
         related_results = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(ImageExists.objects, 'select_related')
         ImageExists.objects.select_related().AndReturn(related_results)
-        related_results.filter(audit_period_ending__lte=dt.dt_to_decimal(
-            end_max), status=status).AndReturn(unordered_results)
-        unordered_results.order_by('id').AndReturn(expected_results)
+        related_results.filter(
+            audit_period_ending__lte=dt.dt_to_decimal(end_max),
+            status=status).AndReturn(unordered_results)
+        unordered_results.order_by('owner').AndReturn(ordered_results)
         self.mox.ReplayAll()
 
-        results = ImageExists.find(end_max, status)
+        results = ImageExists.find_and_group_by_owner_and_raw_id(end_max,
+                                                                 status)
 
         self.mox.VerifyAll()
-        self.assertEqual(results, [1, 2])
-
-    def test_return_true_if_all_exists_for_owner_are_verified(self):
-        owner = "1"
-        audit_period_beginning = datetime(2013, 10, 10)
-        audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
-
-        results = self.mox.CreateMockAnything()
-        results.count().AndReturn(0)
-
-        self.mox.StubOutWithMock(ImageExists.objects, 'filter')
-        ImageExists.objects.filter(
-            mox.IgnoreArg(), owner=owner,
-            audit_period_beginning=audit_period_beginning,
-            audit_period_ending=audit_period_ending).AndReturn(results)
-        self.mox.ReplayAll()
-
-        self.assertTrue(models.ImageExists.are_all_exists_for_owner_verified(
-            owner, audit_period_beginning, audit_period_ending))
-        self.mox.VerifyAll()
-
-    def test_return_false_if_all_exists_for_owner_are_verified(self):
-        owner = "1"
-        audit_period_beginning = datetime(2013, 10, 10)
-        audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
-        results = self.mox.CreateMockAnything()
-        results.count().AndReturn(1)
-
-        self.mox.StubOutWithMock(ImageExists.objects, 'filter')
-        ImageExists.objects.filter(
-            mox.IgnoreArg(), owner=owner,
-            audit_period_beginning=audit_period_beginning,
-            audit_period_ending=audit_period_ending).AndReturn(results)
-        self.mox.ReplayAll()
-
-        self.assertFalse(ImageExists.are_all_exists_for_owner_verified(
-            owner=owner, audit_period_beginning=audit_period_beginning,
-            audit_period_ending=audit_period_ending))
-        self.mox.VerifyAll()
+        self.assertEqual(results, {'owner1-1': [exist1, exist3],
+                                   'owner1-3': [exist4],
+                                   'owner2-2': [exist2]})
 
 
 class InstanceExistsTestCase(unittest.TestCase):
