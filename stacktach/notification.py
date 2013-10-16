@@ -34,6 +34,7 @@ class Notification(object):
         self.publisher = self.body['publisher_id']
         self.event = self.body['event_type']
 
+
     @property
     def when(self):
         when = self.body.get('timestamp', None)
@@ -157,6 +158,7 @@ class GlanceNotification(Notification):
                 'audit_period_ending', None)
             audit_period_ending = audit_period_ending and \
                 utils.str_time_to_unix(audit_period_ending)
+            message_id = self.message_id
             images = self.payload.get('images', [])
         else:
             stacklog.warn("Received exists with invalid payload "
@@ -179,7 +181,8 @@ class GlanceNotification(Notification):
                     'audit_period_ending': audit_period_ending,
                     'owner': self.owner,
                     'size': image['size'],
-                    'raw': raw
+                    'raw': raw,
+                    'message_id': message_id
                 }
                 usage = db.get_image_usage(uuid=uuid)
                 values['usage'] = usage

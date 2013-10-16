@@ -487,6 +487,8 @@ class ImageExists(models.Model):
     send_status = models.IntegerField(default=0, db_index=True)
     owner = models.CharField(max_length=255, db_index=True, null=True)
     size = models.BigIntegerField(max_length=20)
+    message_id = models.CharField(max_length=50, null=True,
+                                  blank=True, db_index=True)
 
     def update_status(self, new_status):
         self.status = new_status

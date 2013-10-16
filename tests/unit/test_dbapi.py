@@ -33,6 +33,7 @@ import utils
 from utils import INSTANCE_ID_1
 from utils import MESSAGE_ID_1
 from utils import MESSAGE_ID_2
+from utils import MESSAGE_ID_3
 
 
 class DBAPITestCase(StacktachBaseTestCase):
@@ -43,8 +44,11 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(models, 'InstanceExists',
                                  use_mock_anything=True)
         models.InstanceExists.objects = self.mox.CreateMockAnything()
+        models.ImageExists.objects = self.mox.CreateMockAnything()
         models.InstanceExists.DoesNotExist = dne_exception
+        models.ImageExists.DoesNotExist = dne_exception
         models.InstanceExists.MultipleObjectsReturned = mor_exception
+        models.ImageExists.MultipleObjectsReturned = mor_exception
 
     def tearDown(self):
         self.mox.UnsetStubs()
@@ -508,39 +512,11 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(body.get("message"), msg)
         self.mox.VerifyAll()
 
-    def test_send_status_batch(self):
-        fake_request = self.mox.CreateMockAnything()
-        fake_request.method = 'PUT'
-        messages = {
-            MESSAGE_ID_1: 200,
-            MESSAGE_ID_2: 400
-        }
-        body_dict = {'messages': messages}
-        body = json.dumps(body_dict)
-        fake_request.body = body
-        self.mox.StubOutWithMock(transaction, 'commit_on_success')
-        trans_obj = self.mox.CreateMockAnything()
-        transaction.commit_on_success().AndReturn(trans_obj)
-        trans_obj.__enter__()
-        results1 = self.mox.CreateMockAnything()
-        models.InstanceExists.objects.select_for_update().AndReturn(results1)
-        exists1 = self.mox.CreateMockAnything()
-        results1.get(message_id=MESSAGE_ID_2).AndReturn(exists1)
-        exists1.save()
-        results2 = self.mox.CreateMockAnything()
-        models.InstanceExists.objects.select_for_update().AndReturn(results2)
-        exists2 = self.mox.CreateMockAnything()
-        results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
-        exists2.save()
-        trans_obj.__exit__(None, None, None)
-        self.mox.ReplayAll()
-
-    def test_send_status_batch_accepts_post(self):
+    def test_send_status_batch_accepts_post_when_version_is_not_given(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'POST'
         messages = {
-            MESSAGE_ID_1: 200,
-            MESSAGE_ID_2: 400
+            MESSAGE_ID_1: 201, MESSAGE_ID_2: 400
         }
         body_dict = {'messages': messages}
         body = json.dumps(body_dict)
@@ -567,11 +543,86 @@ class DBAPITestCase(StacktachBaseTestCase):
         exists1.send_status = 200
         self.mox.VerifyAll()
 
+    def test_send_status_batch_accepts_post_for_nova_and_glance_when_version_is_1(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'POST'
+        fake_request.GET = {'service': 'glance'}
+        messages = {
+            'nova': {MESSAGE_ID_3: 201},
+            'glance': {MESSAGE_ID_1: 201, MESSAGE_ID_2: 201}
+        }
+        body_dict = {'version': 1, 'messages': messages}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
+        results1 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results1)
+        exists1 = self.mox.CreateMockAnything()
+        results1.get(message_id=MESSAGE_ID_3).AndReturn(exists1)
+        exists1.save()
+        trans_obj.__exit__(None, None, None)
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
+        results1 = self.mox.CreateMockAnything()
+        models.ImageExists.objects.select_for_update().AndReturn(results1)
+        exists1A = self.mox.CreateMockAnything()
+        exists1B = self.mox.CreateMockAnything()
+        results1.filter(message_id=MESSAGE_ID_2).AndReturn([exists1A, exists1B])
+        exists1A.save()
+        exists1B.save()
+        results2 = self.mox.CreateMockAnything()
+        models.ImageExists.objects.select_for_update().AndReturn(results2)
+        exists2A = self.mox.CreateMockAnything()
+        exists2B = self.mox.CreateMockAnything()
+        results2.filter(message_id=MESSAGE_ID_1).AndReturn([exists2A, exists2B])
+        exists2A.save()
+        exists2B.save()
+        trans_obj.__exit__(None, None, None)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 200)
+        self.mox.VerifyAll()
+
+
+
+    def test_send_status_batch_accepts_post_when_version_is_0(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'POST'
+        messages = {MESSAGE_ID_1: 201, MESSAGE_ID_2: 201}
+        body_dict = {'version': 0, 'messages': messages}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
+        results1 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results1)
+        exists1 = self.mox.CreateMockAnything()
+        results1.get(message_id=MESSAGE_ID_2).AndReturn(exists1)
+        exists1.save()
+        results2 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results2)
+        exists2 = self.mox.CreateMockAnything()
+        results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
+        exists2.save()
+        trans_obj.__exit__(None, None, None)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 200)
+        self.mox.VerifyAll()
+
     def test_send_status_batch_not_found(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'PUT'
         messages = {
-            MESSAGE_ID_1: 200,
+            MESSAGE_ID_1: '201',
         }
         body_dict = {'messages': messages}
         body = json.dumps(body_dict)
@@ -593,7 +644,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(resp.status_code, 404)
         body = json.loads(resp.content)
         self.assertEqual(body.get("status"), 404)
-        msg = "Could not find Exists record with message_id = '%s'"
+        msg = "Could not find Exists record with message_id = '%s' for nova"
         msg = msg % MESSAGE_ID_1
         self.assertEqual(body.get("message"), msg)
         self.mox.VerifyAll()
@@ -602,7 +653,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'PUT'
         messages = {
-            MESSAGE_ID_1: 200,
+            MESSAGE_ID_1: 201,
         }
         body_dict = {'messages': messages}
         body = json.dumps(body_dict)
@@ -624,7 +675,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(resp.status_code, 500)
         body = json.loads(resp.content)
         self.assertEqual(body.get("status"), 500)
-        msg = "Multiple Exists records with message_id = '%s'"
+        msg = "Multiple Exists records with message_id = '%s' for nova"
         msg = msg % MESSAGE_ID_1
         self.assertEqual(body.get("message"), msg)
         self.mox.VerifyAll()
@@ -643,6 +694,7 @@ class DBAPITestCase(StacktachBaseTestCase):
 
     def test_send_status_batch_no_body(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service': 'nova'}
         fake_request.method = 'PUT'
         fake_request.body = None
         self.mox.ReplayAll()
@@ -670,6 +722,7 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_send_status_batch_bad_body(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'PUT'
+        fake_request.GET = {'service': 'nova'}
         body_dict = {'bad': 'body'}
         fake_request.body = json.dumps(body_dict)
         self.mox.ReplayAll()
