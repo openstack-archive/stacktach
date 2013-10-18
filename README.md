@@ -34,9 +34,9 @@ StackTach has three primary components:
 Of course, this is only suitable for playing around. If you want to get serious about deploying StackTach you should set up a proper webserver and database on standalone servers. There is a lot of data that gets collected by StackTach (depending on your deployment size) ... be warned. Keep an eye on DB size.
 
 #### The Config Files
-There are two config files for StackTach. The first one tells us where the second one is. A sample of these two files is in `./etc/sample_*`
+There are two config files for StackTach. The first one tells us where the second one is. A sample of these two files is in `./etc/sample_*`. Create a local copy of these files and populate them with the appropriate config values as described below.
 
-The `sample_stacktach_config.sh` shell script defines the necessary environment variables StackTach needs. Most of these are just information about the database (assuming MySql) but some are a little different.
+The `sample_stacktach_config.sh` shell script defines the necessary environment variables StackTach needs. Most of these are just information about the database (assuming MySql) but some are a little different. **Remember to source the local copy of the `sample_stacktach_config.sh` shell script to set up the necessary environment variables.**
 
 If your db host is not on the same machine, you'll need to set this flag. Otherwise the empty string is fine.
 
@@ -72,7 +72,7 @@ But that's not much fun. A deployment entry would look like this:
 
 where, *name* is whatever you want to call your deployment, and *rabbit_<>* are the connectivity details for your rabbit server. It should be the same information in your `nova.conf` file that OpenStack is using. Note, json has no concept of comments, so using `#`, `//` or `/* */` as a comment won't work.
 
-By default, Nova uses emphemeral queues. If you are using durable queues, be sure to change the necessary flag here.
+By default, Nova uses ephemeral queues. If you are using durable queues, be sure to change the necessary flag here.
 
 You can add as many deployments as you like. 
 
