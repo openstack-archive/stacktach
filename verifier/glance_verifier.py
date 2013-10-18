@@ -116,30 +116,26 @@ def _verify_for_delete(exist, delete=None):
 
     if delete:
         if not base_verifier._verify_date_field(
-                delete.created_at, exist.created_at, same_second=True):
-            raise FieldMismatch('created_at', exist.created_at,
-                                delete.created_at)
-
-        if not base_verifier._verify_date_field(
                 delete.deleted_at, exist.deleted_at, same_second=True):
             raise FieldMismatch('deleted_at', exist.deleted_at,
                                 delete.deleted_at)
 
 
-def _verify(exist):
-    verified = False
-    try:
-        _verify_for_usage(exist)
-        _verify_for_delete(exist)
-        _verify_validity(exist)
+def _verify(exists):
+    verified = True
+    for exist in exists:
+        try:
+            _verify_for_usage(exist)
+            _verify_for_delete(exist)
+            _verify_validity(exist)
 
-        verified = True
-        exist.mark_verified()
-    except Exception, e:
-        exist.mark_failed(reason=e.__class__.__name__)
-        LOG.exception("glance: %s" % e)
+            exist.mark_verified()
+        except Exception, e:
+            verified = False
+            exist.mark_failed(reason=e.__class__.__name__)
+            LOG.exception("glance: %s" % e)
 
-    return verified, exist
+    return verified, exists[0]
 
 
 class GlanceVerifier(Verifier):
@@ -147,18 +143,21 @@ class GlanceVerifier(Verifier):
         super(GlanceVerifier, self).__init__(config, pool=pool)
 
     def verify_for_range(self, ending_max, callback=None):
-        exists = models.ImageExists.find(
-            ending_max=ending_max, status=models.ImageExists.PENDING)
-        count = exists.count()
+        exists_grouped_by_owner_and_rawid = \
+            models.ImageExists.find_and_group_by_owner_and_raw_id(
+                ending_max=ending_max,
+                status=models.ImageExists.PENDING)
+        count = len(exists_grouped_by_owner_and_rawid)
         added = 0
         update_interval = datetime.timedelta(seconds=30)
         next_update = datetime.datetime.utcnow() + update_interval
-        LOG.info("glance: Adding %s exists to queue." % count)
+        LOG.info("glance: Adding %s per-owner exists to queue." % count)
         while added < count:
-            for exist in exists[0:1000]:
-                exist.status = models.ImageExists.VERIFYING
-                exist.save()
-                result = self.pool.apply_async(_verify, args=(exist,),
+            for exists in exists_grouped_by_owner_and_rawid.values():
+                for exist in exists:
+                    exist.status = models.ImageExists.VERIFYING
+                    exist.save()
+                result = self.pool.apply_async(_verify, args=(exists,),
                                                callback=callback)
                 self.results.append(result)
                 added += 1

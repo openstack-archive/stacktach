@@ -407,87 +407,99 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_should_verify_exists_for_usage_and_delete(self):
-        exist = self.mox.CreateMockAnything()
+        exist1 = self.mox.CreateMockAnything()
+        exist2 = self.mox.CreateMockAnything()
+
         self.mox.StubOutWithMock(glance_verifier, '_verify_for_usage')
-        glance_verifier._verify_for_usage(exist)
         self.mox.StubOutWithMock(glance_verifier, '_verify_for_delete')
-        glance_verifier._verify_for_delete(exist)
         self.mox.StubOutWithMock(glance_verifier, '_verify_validity')
-        glance_verifier._verify_validity(exist)
-        exist.mark_verified()
+        for exist in [exist1, exist2]:
+            glance_verifier._verify_for_usage(exist)
+            glance_verifier._verify_for_delete(exist)
+            glance_verifier._verify_validity(exist)
+            exist.mark_verified()
         self.mox.ReplayAll()
 
-        verified, exist = glance_verifier._verify(exist)
+        verified, exist = glance_verifier._verify([exist1, exist2])
 
         self.mox.VerifyAll()
         self.assertTrue(verified)
 
+    def test_verify_exist_marks_exist_failed_if_field_mismatch_exception(self):
+        exist1 = self.mox.CreateMockAnything()
+        exist2 = self.mox.CreateMockAnything()
 
-    def test_verify_exist_marks_exist_as_failed_if_field_mismatch_exception_is_raised(self):
-        exist = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(glance_verifier, '_verify_for_usage')
+        self.mox.StubOutWithMock(glance_verifier, '_verify_for_delete')
+        self.mox.StubOutWithMock(glance_verifier, '_verify_validity')
+
         field_mismatch_exc = FieldMismatch('field', 'expected', 'actual')
-        glance_verifier._verify_for_usage(exist).AndRaise(exception=field_mismatch_exc)
-        exist.mark_failed(reason='FieldMismatch')
+        glance_verifier._verify_for_usage(exist1).AndRaise(
+            exception=field_mismatch_exc)
+        exist1.mark_failed(reason='FieldMismatch')
+
+        glance_verifier._verify_for_usage(exist2)
+        glance_verifier._verify_for_delete(exist2)
+        glance_verifier._verify_validity(exist2)
+        exist2.mark_verified()
         self.mox.ReplayAll()
 
-        verified, exist = glance_verifier._verify(exist)
-
+        verified, exist = glance_verifier._verify([exist1, exist2])
         self.mox.VerifyAll()
         self.assertFalse(verified)
 
     def test_verify_for_range_without_callback(self):
         when_max = datetime.utcnow()
-        results = self.mox.CreateMockAnything()
-        models.ImageExists.PENDING = 'pending'
         models.ImageExists.VERIFYING = 'verifying'
+        models.ImageExists.PENDING = 'pending'
         self.mox.StubOutWithMock(models.ImageExists, 'find')
-        models.ImageExists.find(
-            ending_max=when_max,
-            status=models.ImageExists.PENDING).AndReturn(results)
-        results.count().AndReturn(2)
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
-        results.__getslice__(0, 1000).AndReturn(results)
-        results.__iter__().AndReturn([exist1, exist2].__iter__())
+        exist3 = self.mox.CreateMockAnything()
+        results = {'owner1': [exist1, exist2], 'owner2': [exist3]}
+        models.ImageExists.find_and_group_by_owner_and_raw_id(
+            ending_max=when_max,
+            status=models.ImageExists.PENDING).AndReturn(results)
         exist1.save()
         exist2.save()
-        self.pool.apply_async(glance_verifier._verify, args=(exist1,),
-                              callback=None)
-        self.pool.apply_async(glance_verifier._verify, args=(exist2,),
+        exist3.save()
+        self.pool.apply_async(glance_verifier._verify,
+                              args=([exist1, exist2],), callback=None)
+        self.pool.apply_async(glance_verifier._verify, args=([exist3],),
                               callback=None)
         self.mox.ReplayAll()
 
         self.glance_verifier.verify_for_range(when_max)
         self.assertEqual(exist1.status, 'verifying')
         self.assertEqual(exist2.status, 'verifying')
+        self.assertEqual(exist3.status, 'verifying')
         self.mox.VerifyAll()
 
     def test_verify_for_range_with_callback(self):
         callback = self.mox.CreateMockAnything()
         when_max = datetime.utcnow()
-        results = self.mox.CreateMockAnything()
         models.ImageExists.PENDING = 'pending'
         models.ImageExists.VERIFYING = 'verifying'
-        models.ImageExists.find(
-            ending_max=when_max,
-            status=models.ImageExists.PENDING).AndReturn(results)
-        results.count().AndReturn(2)
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
-        results.__getslice__(0, 1000).AndReturn(results)
-        results.__iter__().AndReturn([exist1, exist2].__iter__())
+        exist3 = self.mox.CreateMockAnything()
+        results = {'owner1': [exist1, exist2], 'owner2': [exist3]}
+        models.ImageExists.find_and_group_by_owner_and_raw_id(
+            ending_max=when_max,
+            status=models.ImageExists.PENDING).AndReturn(results)
         exist1.save()
         exist2.save()
-        self.pool.apply_async(glance_verifier._verify, args=(exist1,),
+        exist3.save()
+        self.pool.apply_async(glance_verifier._verify, args=([exist1, exist2],),
                               callback=callback)
-        self.pool.apply_async(glance_verifier._verify, args=(exist2,),
+        self.pool.apply_async(glance_verifier._verify, args=([exist3],),
                               callback=callback)
         self.mox.ReplayAll()
         self.glance_verifier.verify_for_range(
             when_max, callback=callback)
         self.assertEqual(exist1.status, 'verifying')
         self.assertEqual(exist2.status, 'verifying')
+        self.assertEqual(exist3.status, 'verifying')
         self.mox.VerifyAll()
 
     def test_send_verified_notification_routing_keys(self):
@@ -504,6 +516,9 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         ]
         exist_str = json.dumps(exist_dict)
         exist.raw.json = exist_str
+        exist.audit_period_beginning = datetime(2013, 10, 10)
+        exist.audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        exist.owner = "1"
         self.mox.StubOutWithMock(uuid, 'uuid4')
         uuid.uuid4().AndReturn('some_other_uuid')
         self.mox.StubOutWithMock(kombu.pools, 'producers')
@@ -541,6 +556,9 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         ]
         exist_str = json.dumps(exist_dict)
         exist.raw.json = exist_str
+        exist.audit_period_beginning = datetime(2013, 10, 10)
+        exist.audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        exist.owner = "1"
         self.mox.StubOutWithMock(kombu.pools, 'producers')
         self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
         producer = self.mox.CreateMockAnything()
@@ -561,4 +579,3 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.glance_verifier.send_verified_notification(exist, exchange,
                                                         connection)
         self.mox.VerifyAll()
-
