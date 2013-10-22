@@ -5,26 +5,28 @@ from stacktach import datetime_to_decimal as dt
 
 
 def str_time_to_unix(when):
-    if 'T' in when:
-        try:
-            # Old way of doing it
-            when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S.%f")
-        except ValueError:
-            try:
-                # Old way of doing it, no millis
-                when = datetime.datetime.strptime(when, "%Y-%m-%dT%H:%M:%S")
-            except Exception, e:
-                print "BAD DATE: ", e
+    if 'Z' in when:
+        when = _try_parse(when, ["%Y-%m-%dT%H:%M:%SZ", "%Y-%m-%dT%H:%M:%S.%fZ"])
+    elif 'T' in when:
+        when = _try_parse(when, ["%Y-%m-%dT%H:%M:%S.%f", "%Y-%m-%dT%H:%M:%S"])
     else:
-        try:
-            when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S.%f")
-        except ValueError:
-            try:
-                when = datetime.datetime.strptime(when, "%Y-%m-%d %H:%M:%S")
-            except Exception, e:
-                print "BAD DATE: ", e
+        when = _try_parse(when, ["%Y-%m-%d %H:%M:%S.%f", "%Y-%m-%d %H:%M:%S"])
 
     return dt.dt_to_decimal(when)
+
+
+def _try_parse(when, formats):
+    last_exception = None
+    for format in formats:
+        try:
+            when = datetime.datetime.strptime(when, format)
+            parsed = True
+        except Exception, e:
+            parsed = False
+            last_exception = e
+        if parsed:
+            return when
+    print "Bad DATE ", last_exception
 
 
 def is_uuid_like(val):
