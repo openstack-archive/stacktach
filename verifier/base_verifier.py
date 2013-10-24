@@ -167,11 +167,15 @@ class Verifier(object):
                 self.config.userid(), self.config.password(),
                 "librabbitmq", self.config.virtual_host()) as conn:
                 def callback(result):
-                    (verified, exist) = result
-                    if verified:
-                        self.send_verified_notification(
-                            exist, conn, exchange, routing_keys=routing_keys)
-
+                    try:
+                        (verified, exist) = result
+                        if verified:
+                            self.send_verified_notification(
+                                exist, conn, exchange,
+                                routing_keys=routing_keys)
+                    except Exception, e:
+                        msg = "ERROR in Callback %s: %s" % (exchange_name, e)
+                        LOG.exception(msg, e)
                 try:
                     self._run(callback=callback)
                 except Exception, e:

@@ -1108,6 +1108,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         connection = self.mox.CreateMockAnything()
         exchange = self.mox.CreateMockAnything()
         exist = self.mox.CreateMockAnything()
+        exist.id = 1
         exist.raw = self.mox.CreateMockAnything()
         exist_dict = [
             'monitor.info',
@@ -1122,6 +1123,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         uuid.uuid4().AndReturn('some_other_uuid')
         self.mox.StubOutWithMock(kombu.pools, 'producers')
         self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
+        models.InstanceExists.objects.get(id=exist.id).AndReturn(exist)
         routing_keys = ['notifications.info', 'monitor.info']
         for key in routing_keys:
             producer = self.mox.CreateMockAnything()
@@ -1145,6 +1147,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         connection = self.mox.CreateMockAnything()
         exchange = self.mox.CreateMockAnything()
         exist = self.mox.CreateMockAnything()
+        exist.id = 1
         exist.raw = self.mox.CreateMockAnything()
         exist_dict = [
             'monitor.info',
@@ -1157,6 +1160,7 @@ class NovaVerifierTestCase(StacktachBaseTestCase):
         exist.raw.json = exist_str
         self.mox.StubOutWithMock(kombu.pools, 'producers')
         self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
+        models.InstanceExists.objects.get(id=exist.id).AndReturn(exist)
         producer = self.mox.CreateMockAnything()
         producer.channel = self.mox.CreateMockAnything()
         kombu.pools.producers[connection].AndReturn(producer)

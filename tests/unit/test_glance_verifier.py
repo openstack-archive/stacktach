@@ -54,6 +54,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         models.ImageDeletes.objects = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(models, 'ImageExists',
                                  use_mock_anything=True)
+        models.ImageExists.objects = self.mox.CreateMockAnything()
 
     def tearDown(self):
         self.mox.UnsetStubs()
@@ -506,6 +507,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         connection = self.mox.CreateMockAnything()
         exchange = self.mox.CreateMockAnything()
         exist = self.mox.CreateMockAnything()
+        exist.id = 1
         exist.raw = self.mox.CreateMockAnything()
         exist_dict = [
             'monitor.info',
@@ -523,6 +525,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         uuid.uuid4().AndReturn('some_other_uuid')
         self.mox.StubOutWithMock(kombu.pools, 'producers')
         self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
+        models.ImageExists.objects.get(id=exist.id).AndReturn(exist)
         routing_keys = ['notifications.info', 'monitor.info']
         for key in routing_keys:
             producer = self.mox.CreateMockAnything()
@@ -546,6 +549,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         connection = self.mox.CreateMockAnything()
         exchange = self.mox.CreateMockAnything()
         exist = self.mox.CreateMockAnything()
+        exist.id = 1
         exist.raw = self.mox.CreateMockAnything()
         exist_dict = [
             'monitor.info',
@@ -561,6 +565,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         exist.owner = "1"
         self.mox.StubOutWithMock(kombu.pools, 'producers')
         self.mox.StubOutWithMock(kombu.common, 'maybe_declare')
+        models.ImageExists.objects.get(id=exist.id).AndReturn(exist)
         producer = self.mox.CreateMockAnything()
         producer.channel = self.mox.CreateMockAnything()
         kombu.pools.producers[connection].AndReturn(producer)
