@@ -16,6 +16,10 @@ def _safe_get(Model, **kwargs):
     return object
 
 
+def get_deployment(id):
+    return _safe_get(models.Deployment, id=id)
+
+
 def get_or_create_deployment(name):
     return models.Deployment.objects.get_or_create(name=name)
 

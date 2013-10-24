@@ -168,10 +168,10 @@ class ConsumerTestCase(StacktachBaseTestCase):
             "services": ["nova"],
             "topics": {"nova": self._test_topics()}
         }
-        self.mox.StubOutWithMock(db, 'get_or_create_deployment')
+        self.mox.StubOutWithMock(db, 'get_deployment')
         deployment = self.mox.CreateMockAnything()
-        db.get_or_create_deployment(config['name'])\
-          .AndReturn((deployment, True))
+        deployment.id = 1
+        db.get_deployment(deployment.id).AndReturn(deployment)
         self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
         params = dict(hostname=config['rabbit_host'],
                       port=config['rabbit_port'],
@@ -193,7 +193,7 @@ class ConsumerTestCase(StacktachBaseTestCase):
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config, exchange)
+        worker.run(config, deployment.id, exchange)
         self.mox.VerifyAll()
 
     def test_run_queue_args(self):
@@ -210,10 +210,10 @@ class ConsumerTestCase(StacktachBaseTestCase):
             "services": ["nova"],
             "topics": {"nova": self._test_topics()}
         }
-        self.mox.StubOutWithMock(db, 'get_or_create_deployment')
+        self.mox.StubOutWithMock(db, 'get_deployment')
         deployment = self.mox.CreateMockAnything()
-        db.get_or_create_deployment(config['name'])\
-          .AndReturn((deployment, True))
+        deployment.id = 1
+        db.get_deployment(deployment.id).AndReturn(deployment)
         self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
         params = dict(hostname=config['rabbit_host'],
                       port=config['rabbit_port'],
@@ -236,5 +236,5 @@ class ConsumerTestCase(StacktachBaseTestCase):
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config, exchange)
+        worker.run(config, deployment.id, exchange)
         self.mox.VerifyAll()
