@@ -231,6 +231,42 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
         self.assertEquals(notification.bandwidth_public_out, 0)
 
 
+    def test_bandwidth_public_out_is_set_to_blank_object_if_none_in_json(self):
+        body = {
+            "event_type": "compute.instance.exists",
+            '_context_request_id': REQUEST_ID_1,
+            '_context_project_id': TENANT_ID_1,
+            "timestamp": TIMESTAMP_1,
+            "publisher_id": "compute.global.preprod-ord.ohthree.com",
+            "payload": {
+                'instance_id': INSTANCE_ID_1,
+                "status": "saving",
+                "container_format": "ovf",
+                "properties": {
+                    "image_type": "snapshot",
+                },
+                "bandwidth": None,
+                "tenant": "5877054",
+                "old_state": 'old_state',
+                "old_task_state": 'old_task',
+                "image_meta": {
+                    "org.openstack__1__architecture": 'os_arch',
+                    "org.openstack__1__os_distro": 'os_distro',
+                    "org.openstack__1__os_version": 'os_version',
+                    "com.rackspace__1__options": 'rax_opt',
+                },
+                "state": 'state',
+                "new_task_state": 'task'
+            }
+        }
+        deployment = "1"
+        routing_key = "monitor.info"
+        json_body = json.dumps([routing_key, body])
+        notification = NovaNotification(body, deployment, routing_key,
+                                        json_body)
+        self.assertEquals(notification.bandwidth_public_out, 0)
+
+
 class GlanceNotificationTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
