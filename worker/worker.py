@@ -142,7 +142,7 @@ def exit_or_sleep(exit=False):
     time.sleep(5)
 
 
-def run(deployment_config, exchange):
+def run(deployment_config, deployment_id, exchange):
     name = deployment_config['name']
     host = deployment_config.get('rabbit_host', 'localhost')
     port = deployment_config.get('rabbit_port', 5672)
@@ -154,7 +154,7 @@ def run(deployment_config, exchange):
     exit_on_exception = deployment_config.get('exit_on_exception', False)
     topics = deployment_config.get('topics', {})
 
-    deployment, new = db.get_or_create_deployment(name)
+    deployment = db.get_deployment(deployment_id)
 
     print "Starting worker for '%s %s'" % (name, exchange)
     LOG.info("%s: %s %s %s %s %s" % (name, exchange, host, port, user_id,
