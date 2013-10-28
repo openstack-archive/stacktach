@@ -111,13 +111,24 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
-    def test_get_host_names(self):
+    def test_get_host_names_for_nova(self):
         result = self.mox.CreateMockAnything()
         models.RawData.objects.values('host').AndReturn(result)
         result.distinct().AndReturn(result)
         self.mox.ReplayAll()
 
-        event_names = stacky_server.get_host_names()
+        event_names = stacky_server.get_host_names('nova')
+        self.assertEqual(event_names, result)
+
+        self.mox.VerifyAll()
+
+    def test_get_host_names_for_glance(self):
+        result = self.mox.CreateMockAnything()
+        models.GlanceRawData.objects.values('host').AndReturn(result)
+        result.distinct().AndReturn(result)
+        self.mox.ReplayAll()
+
+        event_names = stacky_server.get_host_names('glance')
         self.assertEqual(event_names, result)
 
         self.mox.VerifyAll()
@@ -281,11 +292,12 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
     def test_do_hosts(self):
         fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service': 'service'}
         host1 = {'host': 'www.demo.com'}
         host2 = {'host': 'www.example.com'}
         hosts = [host1, host2]
         self.mox.StubOutWithMock(stacky_server, 'get_host_names')
-        stacky_server.get_host_names().AndReturn(hosts)
+        stacky_server.get_host_names('service').AndReturn(hosts)
         self.mox.ReplayAll()
 
         resp = stacky_server.do_hosts(fake_request)

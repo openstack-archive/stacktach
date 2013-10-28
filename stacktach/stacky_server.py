@@ -90,12 +90,12 @@ def get_all_event_names():
         events.extend(get_event_names(service))
     return events
 
-def get_host_names():
+def get_host_names(service):
     # TODO: We need to upgrade to Django 1.4 so we can get tenent id and
     # host and just do distinct on host name.
     # like: values('host', 'tenant_id').distinct('host')
     # This will be more meaningful. Host by itself isn't really.
-    return models.RawData.objects.values('host').distinct()
+    return _model_factory(service).values('host').distinct()
 
 
 def routing_key_type(key):
@@ -164,12 +164,10 @@ def do_deployments(request):
 
 def do_events(request):
     service = str(request.GET.get('service', 'all'))
-    print service
     if service == 'all':
         events = get_all_event_names()
     else:
         events = get_event_names(service=service)
-    print events
     results = [["Event Name"]]
     for event in events:
         results.append([event['event']])
@@ -177,7 +175,8 @@ def do_events(request):
 
 
 def do_hosts(request):
-    hosts = get_host_names()
+    service = str(request.GET.get('service', 'nova'))
+    hosts = get_host_names(service)
     results = [["Host Name"]]
     for host in hosts:
         results.append([host['host']])
