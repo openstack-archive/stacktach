@@ -80,6 +80,7 @@ if __name__ == '__main__':
 
         verifier.run()
 
+    verifier_config.load()
     for exchange in verifier_config.topics().keys():
         process = Process(target=make_and_start_verifier, args=(exchange,))
         process.start()

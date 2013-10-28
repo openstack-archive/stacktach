@@ -31,6 +31,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from verifier import base_verifier
+from verifier import config
 from verifier import NullFieldException
 from stacktach import models
 from stacktach import datetime_to_decimal as dt
@@ -43,14 +44,17 @@ LOG = stacklog.get_logger('verifier')
 
 
 def _verify_field_mismatch(exists, launch):
+    flavor_field_name = config.flavor_field_name()
     if not base_verifier._verify_date_field(
             launch.launched_at, exists.launched_at, same_second=True):
         raise FieldMismatch('launched_at', exists.launched_at,
                             launch.launched_at)
 
-    if launch.instance_type_id != exists.instance_type_id:
-        raise FieldMismatch('instance_type_id', exists.instance_type_id,
-                            launch.instance_type_id)
+    if getattr(launch, flavor_field_name) != \
+            getattr(exists, flavor_field_name):
+        raise FieldMismatch(flavor_field_name,
+                            getattr(exists, flavor_field_name),
+                            getattr(launch, flavor_field_name))
 
     if launch.tenant != exists.tenant:
         raise FieldMismatch('tenant', exists.tenant,
@@ -146,10 +150,13 @@ def _verify_for_delete(exist, delete=None,
 
 
 def _verify_basic_validity(exist):
-    fields = {exist.tenant: 'tenant',
-              exist.launched_at: 'launched_at',
-              exist.instance_type_id: 'instance_type_id'}
-    for (field_value, field_name) in fields.items():
+    flavor_field_name = config.flavor_field_name()
+    fields = {
+        'tenant': exist.tenant,
+        'launched_at': exist.launched_at,
+        flavor_field_name: getattr(exist, flavor_field_name)
+    }
+    for (field_name, field_value) in fields.items():
         if field_value is None:
             raise NullFieldException(field_name, exist.id)
     base_verifier._is_hex_owner_id('tenant', exist.tenant, exist.id)
@@ -242,7 +249,6 @@ def _verify(exist, validation_level):
     try:
         if not exist.launched_at:
             raise VerificationException("Exists without a launched_at")
-
         _verify_validity(exist, validation_level)
         _verify_for_launch(exist)
         _verify_for_delete(exist)
