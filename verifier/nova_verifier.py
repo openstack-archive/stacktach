@@ -267,7 +267,12 @@ class NovaVerifier(base_verifier.Verifier):
 
     def send_verified_notification(self, exist, connection, exchange,
                                    routing_keys=None):
-        body = exist.raw.json
+        # NOTE (apmelton)
+        # The exist we're provided from the callback may have cached queries
+        # from before it was serialized. We don't want to use them as
+        # they could have been lost somewhere in the process forking.
+        # So, grab a new InstanceExists object from the database and use it.
+        body = models.InstanceExists.objects.get(id=exist.id).raw.json
         json_body = json.loads(body)
         json_body[1]['event_type'] = 'compute.instance.exists.verified.old'
         json_body[1]['original_message_id'] = json_body[1]['message_id']
