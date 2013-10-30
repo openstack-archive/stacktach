@@ -367,12 +367,15 @@ def post_process_genericrawdata(raw, notification):
 
 
 def _post_process_raw_data(rows, highlight=None):
+    deployments = models.Deployment.objects.all()
+    dep_dict = dict((dep.id, dep) for dep in deployments)
     for row in rows:
         if "error" in row.routing_key:
             row.is_error = True
         if highlight and row.id == int(highlight):
             row.highlight = True
         row.fwhen = dt.dt_from_decimal(row.when)
+        row.deployment = dep_dict[row.deployment_id]
 
 
 def _default_context(request, deployment_id=0):
@@ -412,7 +415,7 @@ def details(request, deployment_id, column, row_id):
     c = _default_context(request, deployment_id)
     row = models.RawData.objects.get(pk=row_id)
     value = getattr(row, column)
-    rows = models.RawData.objects.select_related()
+    rows = models.RawData.objects
     if deployment_id:
         rows = rows.filter(deployment=deployment_id)
     if column != 'when':
@@ -448,7 +451,7 @@ def latest_raw(request, deployment_id):
     c = _default_context(request, deployment_id)
     then = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
     thend = dt.dt_to_decimal(then)
-    query = models.RawData.objects.select_related().filter(when__gt=thend)
+    query = models.RawData.objects.filter(when__gt=thend)
     if deployment_id > 0:
         query = query.filter(deployment=deployment_id)
     rows = query.order_by('-when')[:20]
@@ -469,7 +472,7 @@ def search(request, deployment_id):
         updates = False
     rows = None
     if column != None and value != None:
-        rows = models.RawData.objects.select_related()
+        rows = models.RawData.objects
         if deployment_id and int(deployment_id) != 0:
             rows = rows.filter(deployment=deployment_id)
         rows = rows.filter(**{column: value})
