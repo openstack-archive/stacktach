@@ -231,21 +231,19 @@ def _process_usage_for_updates(raw, notification):
 
 
 def _process_delete(raw, notification):
-    instance_id = notification.instance
-    deleted_at = utils.str_time_to_unix(notification.deleted_at)
-    values = {
-        'instance': instance_id,
-        'deleted_at': deleted_at,
-    }
-    (delete, new) = STACKDB.get_or_create_instance_delete(**values)
-    delete.raw = raw
+    if notification.launched_at and notification.launched_at != '':
+        instance_id = notification.instance
+        deleted_at = utils.str_time_to_unix(notification.deleted_at)
+        launched_at = utils.str_time_to_unix(notification.launched_at)
+        values = {
+            'instance': instance_id,
+            'deleted_at': deleted_at,
+            'launched_at': launched_at
+        }
+        (delete, new) = STACKDB.get_or_create_instance_delete(**values)
+        delete.raw = raw
 
-    launched_at = notification.launched_at
-    if launched_at and launched_at != '':
-        launched_at = utils.str_time_to_unix(launched_at)
-        delete.launched_at = launched_at
-
-    STACKDB.save(delete)
+        STACKDB.save(delete)
 
 
 def _process_exists(raw, notification):
