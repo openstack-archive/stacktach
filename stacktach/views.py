@@ -154,7 +154,6 @@ INSTANCE_EVENT = {
     'rebuild_start': 'compute.instance.rebuild.start',
     'rebuild_end': 'compute.instance.rebuild.end',
     'resize_prep_start': 'compute.instance.resize.prep.start',
-    'resize_prep_end': 'compute.instance.resize.prep.end',
     'resize_revert_start': 'compute.instance.resize.revert.start',
     'resize_revert_end': 'compute.instance.resize.revert.end',
     'resize_finish_end': 'compute.instance.finish_resize.end',
@@ -189,6 +188,18 @@ def _process_usage_for_new_launch(raw, notification):
         #     though, because we may have already received the end event
         usage.launched_at = utils.str_time_to_unix(notification.launched_at)
 
+    if raw.event in [INSTANCE_EVENT['resize_prep_start'],
+                     INSTANCE_EVENT['resize_revert_start']] and\
+            usage.instance_type_id is None and\
+            usage.instance_flavor_id is None:
+        # Grab the flavor details and populate them if they aren't
+        #     already. This should happen just in case we get an exists
+        #     mid resize/revert. That can happen if the action spans
+        #     multiple audit periods, or if the compute node is restarted
+        #     mid action and another resize is kicked off.
+        usage.instance_type_id = notification.instance_type_id
+        usage.instance_flavor_id = notification.instance_flavor_id
+
     usage.tenant = notification.tenant
     usage.rax_options = notification.rax_options
     usage.os_architecture = notification.os_architecture
@@ -214,11 +225,9 @@ def _process_usage_for_updates(raw, notification):
                      INSTANCE_EVENT['rescue_end']]:
         usage.launched_at = utils.str_time_to_unix(notification.launched_at)
 
-    if raw.event == INSTANCE_EVENT['resize_revert_end']:
+    if raw.event in [INSTANCE_EVENT['resize_revert_end'],
+                     INSTANCE_EVENT['resize_finish_end']]:
         usage.instance_type_id = notification.instance_type_id
-        usage.instance_flavor_id = notification.instance_flavor_id
-    elif raw.event == INSTANCE_EVENT['resize_prep_end']:
-        usage.instance_type_id = notification.new_instance_type_id
         usage.instance_flavor_id = notification.instance_flavor_id
 
     usage.tenant = notification.tenant
@@ -312,7 +321,6 @@ USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['rescue_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['create_end']: _process_usage_for_updates,
     INSTANCE_EVENT['rebuild_end']: _process_usage_for_updates,
-    INSTANCE_EVENT['resize_prep_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
     INSTANCE_EVENT['rescue_end']: _process_usage_for_updates,

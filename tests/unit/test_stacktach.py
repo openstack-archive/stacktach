@@ -26,6 +26,7 @@ import mox
 import utils
 from utils import BANDWIDTH_PUBLIC_OUTBOUND
 from utils import INSTANCE_FLAVOR_ID_1
+from utils import INSTANCE_FLAVOR_ID_2
 from utils import INSTANCE_ID_1
 from utils import OS_VERSION_1
 from utils import OS_ARCH_1
@@ -321,6 +322,7 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         notification.instance = INSTANCE_ID_1
         notification.request_id = REQUEST_ID_1
         notification.instance_type_id = INSTANCE_TYPE_ID_1
+        notification.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         return notification
 
     def test_process_usage_for_new_launch_create_start(self):
@@ -632,18 +634,15 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
-    def _create_notification_with_new_instance_type_id(self):
+    def test_process_usage_for_updates_finish_resize_end(self):
         notification = self._create_mock_notification()
-        notification.new_instance_type_id = INSTANCE_TYPE_ID_2
-        return notification
-
-    def test_process_usage_for_updates_prep_end(self):
-        notification = self._create_notification_with_new_instance_type_id()
         raw = self.mox.CreateMockAnything()
-        raw.event = 'compute.instance.resize.prep.end'
+        raw.event = 'compute.instance.finish_resize.end'
 
         usage = self.mox.CreateMockAnything()
         usage.launched_at = None
+        usage.instance_type_id = INSTANCE_TYPE_ID_2
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_2
         views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
                                                    request_id=REQUEST_ID_1) \
             .AndReturn((usage, True))
@@ -652,7 +651,8 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         views._process_usage_for_updates(raw, notification)
 
-        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_2)
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
         self.assertEquals(usage.tenant, TENANT_ID_1)
         self.assertEquals(usage.os_architecture, OS_ARCH_1)
         self.assertEquals(usage.os_version, OS_VERSION_1)
