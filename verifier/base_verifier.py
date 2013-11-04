@@ -34,6 +34,10 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
+from django.db import close_connection
+from django.db import reset_queries
+from django.core import exceptions
+
 from verifier import WrongTypeException
 
 from stacktach import stacklog, message_service
@@ -167,15 +171,31 @@ class Verifier(object):
                 self.config.userid(), self.config.password(),
                 "librabbitmq", self.config.virtual_host()) as conn:
                 def callback(result):
-                    try:
-                        (verified, exist) = result
-                        if verified:
-                            self.send_verified_notification(
-                                exist, conn, exchange,
-                                routing_keys=routing_keys)
-                    except Exception, e:
-                        msg = "ERROR in Callback %s: %s" % (exchange_name, e)
-                        LOG.exception(msg, e)
+                    attempt = 0
+                    while attempt < 2:
+                        try:
+                            (verified, exist) = result
+                            if verified:
+                                self.send_verified_notification(
+                                    exist, conn, exchange,
+                                    routing_keys=routing_keys)
+                            break
+                        except exceptions.ObjectDoesNotExist:
+                            if attempt < 1:
+                                LOG.warn("ObjectDoesNotExist in callback, "
+                                         "attempting to reconnect and try "
+                                         "again.")
+                                close_connection()
+                                reset_queries()
+                            else:
+                                LOG.error("ObjectDoesNotExist in callback "
+                                          "again, giving up.")
+                        except Exception, e:
+                            msg = "ERROR in Callback %s: %s" % (exchange_name,
+                                                                e)
+                            LOG.exception(msg)
+                            break
+                        attempt += 1
                 try:
                     self._run(callback=callback)
                 except Exception, e:
