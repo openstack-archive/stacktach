@@ -95,6 +95,9 @@ class StacktachBaseTestCase(unittest.TestCase):
     def assertIsInstance(self, obj, cls, msg=None):
         self.assertTrue(isinstance(obj, cls), msg)
 
+    def assertIs(self, expr1, expr2, msg=None):
+        self.assertTrue(expr1 is expr2, msg)
+
     def assertRaises(self, excClass, callableObj=None, *args, **kwargs):
         context = _AssertRaisesContext(excClass, self)
         if callableObj is None:
