@@ -29,7 +29,7 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
                                    os.pardir, os.pardir))
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
-
+from stacktach import stacklog
 from stacktach import reconciler
 from verifier import nova_verifier
 from verifier import glance_verifier
@@ -42,11 +42,16 @@ except ImportError:
     pass
 
 process = None
-
+log_listener = None
 processes = []
 
 
+def _get_parent_logger():
+    return stacklog.get_logger('verifier', is_parent=True)
+
+
 def kill_time(signal, frame):
+    log_listener.end()
     print "dying ..."
     for process in processes:
         process.terminate()
@@ -81,6 +86,7 @@ if __name__ == '__main__':
         verifier.run()
 
     verifier_config.load()
+    log_listener = stacklog.LogListener(_get_parent_logger()).start()
     for exchange in verifier_config.topics().keys():
         process = Process(target=make_and_start_verifier, args=(exchange,))
         process.start()

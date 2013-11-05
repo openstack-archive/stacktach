@@ -21,12 +21,14 @@ from datetime import datetime
 
 import decimal
 import json
+import logging
 import uuid
 import kombu
 
 import mox
 
 from stacktach import datetime_to_decimal as dt
+from stacktach import stacklog
 from stacktach import models
 from tests.unit import StacktachBaseTestCase
 from utils import IMAGE_UUID_1
@@ -59,6 +61,12 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
         self.verifier = None
+
+    def _setup_mock_logger(self):
+        mock_logger = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(stacklog, 'get_logger')
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        return mock_logger
 
     def test_verify_usage_should_not_raise_exception_on_success(self):
         exist = self.mox.CreateMockAnything()
@@ -427,6 +435,11 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.assertTrue(verified)
 
     def test_verify_exist_marks_exist_failed_if_field_mismatch_exception(self):
+        mock_logger = self._setup_mock_logger()
+        self.mox.StubOutWithMock(mock_logger, 'info')
+        mock_logger.exception("glance: Expected field to be 'expected' "
+                              "got 'actual'")
+
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
 
@@ -450,6 +463,10 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.assertFalse(verified)
 
     def test_verify_for_range_without_callback(self):
+        mock_logger = self._setup_mock_logger()
+        self.mox.StubOutWithMock(mock_logger, 'info')
+        mock_logger.info('glance: Adding 2 per-owner exists to queue.')
+
         when_max = datetime.utcnow()
         models.ImageExists.VERIFYING = 'verifying'
         models.ImageExists.PENDING = 'pending'
@@ -477,6 +494,10 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_for_range_with_callback(self):
+        mock_logger = self._setup_mock_logger()
+        self.mox.StubOutWithMock(mock_logger, 'info')
+        mock_logger.info('glance: Adding 2 per-owner exists to queue.')
+
         callback = self.mox.CreateMockAnything()
         when_max = datetime.utcnow()
         models.ImageExists.PENDING = 'pending'

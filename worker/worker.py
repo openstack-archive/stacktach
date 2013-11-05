@@ -34,12 +34,14 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
-from stacktach import db, message_service
+from stacktach import db
+from stacktach import message_service
 from stacktach import stacklog
 from stacktach import views
 
-stacklog.set_default_logger_name('worker')
-LOG = stacklog.get_logger()
+
+def _get_child_logger():
+    return stacklog.get_logger('worker', is_parent=False)
 
 
 class Consumer(kombu.mixins.ConsumerMixin):
@@ -58,9 +60,10 @@ class Consumer(kombu.mixins.ConsumerMixin):
         self.exchange = exchange
 
     def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
-        return message_service.create_exchange(name, exchange_type=type, exclusive=exclusive,
-                                     durable=self.durable,
-                                     auto_delete=auto_delete)
+        return message_service.create_exchange(name, exchange_type=type,
+                                               exclusive=exclusive,
+                                               durable=self.durable,
+                                               auto_delete=auto_delete)
 
     def _create_queue(self, name, nova_exchange, routing_key, exclusive=False,
                      auto_delete=False):
@@ -115,7 +118,7 @@ class Consumer(kombu.mixins.ConsumerMixin):
             per_message = 0
             if self.total_processed:
                 per_message = idiff / self.total_processed
-            LOG.debug("%20s %20s %6dk/%6dk ram, "
+            _get_child_logger().debug("%20s %20s %6dk/%6dk ram, "
                       "%3d/%4d msgs @ %6dk/msg" %
                       (self.name, self.exchange, diff, idiff, self.processed,
                       self.total_processed, per_message))
@@ -126,9 +129,8 @@ class Consumer(kombu.mixins.ConsumerMixin):
         try:
             self._process(message)
         except Exception, e:
-            LOG.debug("Problem: %s\nFailed message body:\n%s" %
-                      (e, json.loads(str(message.body)))
-                      )
+            _get_child_logger().debug("Problem: %s\nFailed message body:\n%s" %
+                      (e, json.loads(str(message.body))))
             raise
 
 
@@ -153,12 +155,13 @@ def run(deployment_config, deployment_id, exchange):
     queue_arguments = deployment_config.get('queue_arguments', {})
     exit_on_exception = deployment_config.get('exit_on_exception', False)
     topics = deployment_config.get('topics', {})
+    logger = _get_child_logger()
 
     deployment = db.get_deployment(deployment_id)
 
     print "Starting worker for '%s %s'" % (name, exchange)
-    LOG.info("%s: %s %s %s %s %s" % (name, exchange, host, port, user_id,
-                                     virtual_host))
+    logger.info("%s: %s %s %s %s %s" %
+                (name, exchange, host, port, user_id, virtual_host))
 
     params = dict(hostname=host,
                   port=port,
@@ -170,7 +173,7 @@ def run(deployment_config, deployment_id, exchange):
     # continue_running() is used for testing
     while continue_running():
         try:
-            LOG.debug("Processing on '%s %s'" % (name, exchange))
+            logger.debug("Processing on '%s %s'" % (name, exchange))
             with kombu.connection.BrokerConnection(**params) as conn:
                 try:
                     consumer = Consumer(name, conn, deployment, durable,
@@ -178,18 +181,19 @@ def run(deployment_config, deployment_id, exchange):
                                         topics[exchange])
                     consumer.run()
                 except Exception as e:
-                    LOG.error("!!!!Exception!!!!")
-                    LOG.exception("name=%s, exchange=%s, exception=%s. "
-                                  "Reconnecting in 5s" %
-                                    (name, exchange, e))
+                    logger.error("!!!!Exception!!!!")
+                    logger.exception(
+                        "name=%s, exchange=%s, exception=%s. "
+                        "Reconnecting in 5s" % (name, exchange, e))
                     exit_or_sleep(exit_on_exception)
-            LOG.debug("Completed processing on '%s %s'" % (name, exchange))
-        except:
-            LOG.error("!!!!Exception!!!!")
+            logger.debug("Completed processing on '%s %s'" %
+                                      (name, exchange))
+        except Exception:
+            logger.error("!!!!Exception!!!!")
             e = sys.exc_info()[0]
             msg = "Uncaught exception: deployment=%s, exchange=%s, " \
                   "exception=%s. Retrying in 5s"
-            LOG.exception(msg % (name, exchange, e))
+            logger.exception(msg % (name, exchange, e))
             exit_or_sleep(exit_on_exception)
 
 POST_PROCESS_METHODS = {
