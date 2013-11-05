@@ -29,6 +29,7 @@ import kombu.pools
 import mox
 
 from stacktach import datetime_to_decimal as dt
+from stacktach import stacklog
 from stacktach import models
 from tests.unit import StacktachBaseTestCase
 from utils import make_verifier_config
@@ -632,6 +633,11 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.verifier = nova_verifier.NovaVerifier(config,
             pool=self.pool, reconciler=self.reconciler)
 
+    def _create_mock_logger(self):
+        mock_logger = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(stacklog, 'get_logger')
+        return mock_logger
+
     def tearDown(self):
         self.mox.UnsetStubs()
         self.verifier = None
@@ -719,6 +725,10 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_fail_with_reconciled_data_exception(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.exception("nova: message")
+
         exist = self.mox.CreateMockAnything()
         exist.launched_at = decimal.Decimal('1.1')
         self.mox.StubOutWithMock(nova_verifier, '_verify_for_launch')
@@ -728,7 +738,7 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         nova_verifier._verify_for_launch(exist).AndRaise(verify_exception)
         self.mox.StubOutWithMock(nova_verifier, '_verify_with_reconciled_data')
         nova_verifier._verify_with_reconciled_data(exist)\
-                  .AndRaise(Exception())
+                  .AndRaise(Exception("message"))
         exist.mark_failed(reason='Exception')
         self.mox.ReplayAll()
         result, exists = nova_verifier._verify(exist, 'none')
@@ -754,12 +764,16 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_exception_during_launch(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.exception("nova: message")
+
         exist = self.mox.CreateMockAnything()
         exist.launched_at = decimal.Decimal('1.1')
         self.mox.StubOutWithMock(nova_verifier, '_verify_for_launch')
         self.mox.StubOutWithMock(nova_verifier, '_verify_for_delete')
         self.mox.StubOutWithMock(exist, 'mark_failed')
-        nova_verifier._verify_for_launch(exist).AndRaise(Exception())
+        nova_verifier._verify_for_launch(exist).AndRaise(Exception("message"))
         exist.mark_failed(reason='Exception')
         self.mox.ReplayAll()
         result, exists = nova_verifier._verify(exist, 'none')
@@ -767,44 +781,29 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_exception_during_delete(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.exception("nova: message")
+
         exist = self.mox.CreateMockAnything()
         exist.launched_at = decimal.Decimal('1.1')
         self.mox.StubOutWithMock(nova_verifier, '_verify_for_launch')
         self.mox.StubOutWithMock(nova_verifier, '_verify_for_delete')
         self.mox.StubOutWithMock(exist, 'mark_failed')
         nova_verifier._verify_for_launch(exist)
-        nova_verifier._verify_for_delete(exist).AndRaise(Exception())
+        nova_verifier._verify_for_delete(exist).AndRaise(Exception("message"))
         exist.mark_failed(reason='Exception')
         self.mox.ReplayAll()
         result, exists = nova_verifier._verify(exist, 'none')
         self.assertFalse(result)
         self.mox.VerifyAll()
 
-    def test_verify_for_range_without_callback(self):
-        when_max = datetime.datetime.utcnow()
-        results = self.mox.CreateMockAnything()
-        models.InstanceExists.PENDING = 'pending'
-        models.InstanceExists.VERIFYING = 'verifying'
-        models.InstanceExists.find(
-            ending_max=when_max, status='pending').AndReturn(results)
-        results.count().AndReturn(2)
-        exist1 = self.mox.CreateMockAnything()
-        exist2 = self.mox.CreateMockAnything()
-        results.__getslice__(0, 1000).AndReturn(results)
-        results.__iter__().AndReturn([exist1, exist2].__iter__())
-        exist1.update_status('verifying')
-        exist2.update_status('verifying')
-        exist1.save()
-        exist2.save()
-        self.pool.apply_async(nova_verifier._verify, args=(exist1, 'all'),
-                              callback=None)
-        self.pool.apply_async(nova_verifier._verify, args=(exist2, 'all'),
-                              callback=None)
-        self.mox.ReplayAll()
-        self.verifier.verify_for_range(when_max)
-        self.mox.VerifyAll()
 
     def test_verify_for_range_without_callback(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.info('nova: Adding 2 exists to queue.')
+
         when_max = datetime.datetime.utcnow()
         results = self.mox.CreateMockAnything()
         models.InstanceExists.PENDING = 'pending'
@@ -829,6 +828,10 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_for_range_with_callback(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.info("nova: Adding 2 exists to queue.")
+
         callback = self.mox.CreateMockAnything()
         when_max = datetime.datetime.utcnow()
         results = self.mox.CreateMockAnything()

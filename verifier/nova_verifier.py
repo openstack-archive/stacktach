@@ -34,13 +34,17 @@ from verifier import base_verifier
 from verifier import config
 from verifier import NullFieldException
 from stacktach import models
+from stacktach import stacklog
 from stacktach import datetime_to_decimal as dt
 from verifier import FieldMismatch
 from verifier import AmbiguousResults
 from verifier import NotFound
 from verifier import VerificationException
-from stacktach import stacklog, message_service
-LOG = stacklog.get_logger('verifier')
+from stacktach import message_service
+
+
+def _get_child_logger():
+    return stacklog.get_logger('verifier', is_parent=False)
 
 
 def _verify_field_mismatch(exists, launch):
@@ -178,13 +182,6 @@ def _verify_optional_validity(exist):
     base_verifier._is_alphanumeric('os_distro', exist.os_distro, exist.id)
     base_verifier._is_alphanumeric('os_version', exist.os_version, exist.id)
 
-def verify_fields_not_null(exist_id, null_value, fields):
-
-    for (field_value, field_name) in fields.items():
-        print "value: %s, name = %s" % (field_value, field_name)
-        if field_value == null_value:
-            raise NullFieldException(field_name, exist_id)
-
 
 def _verify_validity(exist, validation_level):
     if validation_level == 'none':
@@ -240,7 +237,7 @@ def _attempt_reconciled_verify(exist, orig_e):
         exist.mark_failed(reason=str(rec_e))
     except Exception, rec_e:
         exist.mark_failed(reason=rec_e.__class__.__name__)
-        LOG.exception("nova: %s" % rec_e)
+        _get_child_logger().exception("nova: %s" % rec_e)
     return verified
 
 
@@ -260,7 +257,7 @@ def _verify(exist, validation_level):
         verified = _attempt_reconciled_verify(exist, orig_e)
     except Exception, e:
         exist.mark_failed(reason=e.__class__.__name__)
-        LOG.exception("nova: %s" % e)
+        _get_child_logger().exception("nova: %s" % e)
 
     return verified, exist
 
@@ -298,7 +295,7 @@ class NovaVerifier(base_verifier.Verifier):
         added = 0
         update_interval = datetime.timedelta(seconds=30)
         next_update = datetime.datetime.utcnow() + update_interval
-        LOG.info("nova: Adding %s exists to queue." % count)
+        _get_child_logger().info("nova: Adding %s exists to queue." % count)
         while added < count:
             for exist in exists[0:1000]:
                 exist.update_status(models.InstanceExists.VERIFYING)
@@ -312,7 +309,7 @@ class NovaVerifier(base_verifier.Verifier):
                 if datetime.datetime.utcnow() > next_update:
                     values = ((added,) + self.clean_results())
                     msg = "nova: N: %s, P: %s, S: %s, E: %s" % values
-                    LOG.info(msg)
+                    _get_child_logger().info(msg)
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
 

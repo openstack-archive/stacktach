@@ -9,16 +9,22 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
-from stacktach import db
+from stacktach import db, stacklog
 from django.db import close_connection
 
 import worker.worker as worker
 from worker import config
 
 processes = []
+log_listener = None
+
+
+def _get_parent_logger():
+    return stacklog.get_logger('worker', is_parent=True)
 
 
 def kill_time(signal, frame):
+    log_listener.end()
     print "dying ..."
     for process in processes:
         process.terminate()
@@ -30,7 +36,7 @@ def kill_time(signal, frame):
 
 
 if __name__ == '__main__':
-
+    log_listener = stacklog.LogListener(_get_parent_logger()).start()
     for deployment in config.deployments():
         if deployment.get('enabled', True):
             db_deployment, new = db.get_or_create_deployment(deployment['name'])

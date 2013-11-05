@@ -37,9 +37,13 @@ from verifier import base_verifier
 from verifier import NullFieldException
 from verifier import NotFound
 from stacktach import datetime_to_decimal as dt
+from stacktach import stacklog
+from stacktach import message_service
 import datetime
-from stacktach import stacklog, message_service
-LOG = stacklog.get_logger('verifier')
+
+
+def _get_child_logger():
+    return stacklog.get_logger('verifier', is_parent=False)
 
 
 def _verify_field_mismatch(exists, usage):
@@ -133,7 +137,7 @@ def _verify(exists):
         except Exception, e:
             verified = False
             exist.mark_failed(reason=e.__class__.__name__)
-            LOG.exception("glance: %s" % e)
+            _get_child_logger().exception("glance: %s" % e)
 
     return verified, exists[0]
 
@@ -151,7 +155,7 @@ class GlanceVerifier(Verifier):
         added = 0
         update_interval = datetime.timedelta(seconds=30)
         next_update = datetime.datetime.utcnow() + update_interval
-        LOG.info("glance: Adding %s per-owner exists to queue." % count)
+        _get_child_logger().info("glance: Adding %s per-owner exists to queue." % count)
         while added < count:
             for exists in exists_grouped_by_owner_and_rawid.values():
                 for exist in exists:
@@ -164,7 +168,7 @@ class GlanceVerifier(Verifier):
                 if datetime.datetime.utcnow() > next_update:
                     values = ((added,) + self.clean_results())
                     msg = "glance: N: %s, P: %s, S: %s, E: %s" % values
-                    LOG.info(msg)
+                    _get_child_logger().info(msg)
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
 
