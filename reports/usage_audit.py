@@ -33,6 +33,9 @@ def _audit_for_exists(exists_query):
     (success, unsent, redirect,
      client_error, server_error) = _send_status_queries(verified)
 
+    (success_rec, unsent_rec, redirect_rec,
+     client_error_rec, server_error_rec) = _send_status_queries(reconciled)
+
     report = {
         'count': exists_query.count(),
         'verified': verified.count(),
@@ -46,6 +49,13 @@ def _audit_for_exists(exists_query):
             'redirect': redirect.count(),
             'client_error': client_error.count(),
             'server_error': server_error.count(),
+        },
+        'send_status_rec': {
+            'success': success_rec.count(),
+            'unsent': unsent_rec.count(),
+            'redirect': redirect_rec.count(),
+            'client_error': client_error_rec.count(),
+            'server_error': server_error_rec.count(),
         }
     }
 
