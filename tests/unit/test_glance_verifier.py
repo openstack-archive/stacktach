@@ -462,25 +462,41 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
         self.assertFalse(verified)
 
-    def test_verify_for_range_without_callback(self):
+
+    def test_verify_for_range_without_callback_for_sent_unverified(self):
         mock_logger = self._setup_mock_logger()
         self.mox.StubOutWithMock(mock_logger, 'info')
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
         mock_logger.info('glance: Adding 2 per-owner exists to queue.')
-
+        mock_logger.info('glance: Adding 2 per-owner exists to queue.')
         when_max = datetime.utcnow()
         models.ImageExists.VERIFYING = 'verifying'
         models.ImageExists.PENDING = 'pending'
+        models.ImageExists.SENT_VERIFYING = 'sent_verifying'
+        models.ImageExists.SENT_UNVERIFIED = 'sent_unverified'
         self.mox.StubOutWithMock(models.ImageExists, 'find')
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
         exist3 = self.mox.CreateMockAnything()
+        exist4 = self.mox.CreateMockAnything()
+        exist5 = self.mox.CreateMockAnything()
         results = {'owner1': [exist1, exist2], 'owner2': [exist3]}
+        sent_results = {'owner1': [exist4], 'owner2': [exist5]}
+        models.ImageExists.find_and_group_by_owner_and_raw_id(
+            ending_max=when_max,
+            status=models.ImageExists.SENT_UNVERIFIED).AndReturn(sent_results)
         models.ImageExists.find_and_group_by_owner_and_raw_id(
             ending_max=when_max,
             status=models.ImageExists.PENDING).AndReturn(results)
         exist1.save()
         exist2.save()
         exist3.save()
+        exist4.save()
+        exist5.save()
+        self.pool.apply_async(glance_verifier._verify,
+                              args=([exist4],), callback=None)
+        self.pool.apply_async(glance_verifier._verify, args=([exist5],),
+                              callback=None)
         self.pool.apply_async(glance_verifier._verify,
                               args=([exist1, exist2],), callback=None)
         self.pool.apply_async(glance_verifier._verify, args=([exist3],),
@@ -491,21 +507,29 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.assertEqual(exist1.status, 'verifying')
         self.assertEqual(exist2.status, 'verifying')
         self.assertEqual(exist3.status, 'verifying')
+        self.assertEqual(exist4.status, 'sent_verifying')
+        self.assertEqual(exist5.status, 'sent_verifying')
         self.mox.VerifyAll()
 
     def test_verify_for_range_with_callback(self):
         mock_logger = self._setup_mock_logger()
         self.mox.StubOutWithMock(mock_logger, 'info')
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.info('glance: Adding 0 per-owner exists to queue.')
         mock_logger.info('glance: Adding 2 per-owner exists to queue.')
-
         callback = self.mox.CreateMockAnything()
         when_max = datetime.utcnow()
+        models.ImageExists.SENT_VERIFYING = 'sent_verifying'
+        models.ImageExists.SENT_UNVERIFIED = 'sent_unverified'
         models.ImageExists.PENDING = 'pending'
         models.ImageExists.VERIFYING = 'verifying'
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
         exist3 = self.mox.CreateMockAnything()
         results = {'owner1': [exist1, exist2], 'owner2': [exist3]}
+        models.ImageExists.find_and_group_by_owner_and_raw_id(
+            ending_max=when_max,
+            status=models.ImageExists.SENT_UNVERIFIED).AndReturn([])
         models.ImageExists.find_and_group_by_owner_and_raw_id(
             ending_max=when_max,
             status=models.ImageExists.PENDING).AndReturn(results)
