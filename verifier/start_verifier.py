@@ -86,7 +86,8 @@ if __name__ == '__main__':
         verifier.run()
 
     verifier_config.load()
-    log_listener = stacklog.LogListener(_get_parent_logger()).start()
+    log_listener = stacklog.LogListener(_get_parent_logger())
+    log_listener.start()
     for exchange in verifier_config.topics().keys():
         process = Process(target=make_and_start_verifier, args=(exchange,))
         process.start()
