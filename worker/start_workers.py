@@ -36,7 +36,8 @@ def kill_time(signal, frame):
 
 
 if __name__ == '__main__':
-    log_listener = stacklog.LogListener(_get_parent_logger()).start()
+    log_listener = stacklog.LogListener(_get_parent_logger())
+    log_listener.start()
     for deployment in config.deployments():
         if deployment.get('enabled', True):
             db_deployment, new = db.get_or_create_deployment(deployment['name'])

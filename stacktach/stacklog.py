@@ -180,7 +180,8 @@ class LogListener:
     def end(self):
         self.queue.put_nowait(None)
         self.thread.join()
-        self.logger.handler.close()
+        for handler in self.logger.handlers:
+            handler.close()
 
 
 def get_queue(logger_name):
