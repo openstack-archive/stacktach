@@ -47,6 +47,9 @@ setup_environment()
 from stacktach import stacklog
 
 stacklog.set_default_logger_location("/tmp/%s.log")
+default_logger = stacklog.get_logger()
+worker_logger = stacklog.get_logger('worker')
+verifier_logger = stacklog.get_logger('verifier')
 
 
 class _AssertRaisesContext(object):

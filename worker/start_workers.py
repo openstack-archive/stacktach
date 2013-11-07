@@ -17,6 +17,7 @@ from worker import config
 
 processes = []
 log_listener = None
+stacklog.set_default_logger_name('worker')
 
 
 def _get_parent_logger():

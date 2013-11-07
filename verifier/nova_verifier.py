@@ -42,6 +42,8 @@ from verifier import NotFound
 from verifier import VerificationException
 from stacktach import message_service
 
+stacklog.set_default_logger_name('verifier')
+
 
 def _get_child_logger():
     return stacklog.get_logger('verifier', is_parent=False)

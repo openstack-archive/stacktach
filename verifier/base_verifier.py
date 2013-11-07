@@ -42,6 +42,8 @@ from django.core import exceptions
 from verifier import WrongTypeException
 from stacktach import stacklog
 
+stacklog.set_default_logger_name('verifier')
+
 
 def _get_child_logger():
     return stacklog.get_logger('verifier', is_parent=False)

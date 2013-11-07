@@ -39,6 +39,8 @@ from stacktach import message_service
 from stacktach import stacklog
 from stacktach import views
 
+stacklog.set_default_logger_name('worker')
+
 
 def _get_child_logger():
     return stacklog.get_logger('worker', is_parent=False)

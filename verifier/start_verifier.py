@@ -44,7 +44,7 @@ except ImportError:
 process = None
 log_listener = None
 processes = []
-
+stacklog.set_default_logger_name('verifier')
 
 def _get_parent_logger():
     return stacklog.get_logger('verifier', is_parent=True)
