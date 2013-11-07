@@ -33,7 +33,7 @@ class StacklogTestCase(StacktachBaseTestCase):
 
     def test_get_logger_should_use_default_name_when_name_not_specified(self):
         logger = stacklog.get_logger(None, is_parent=True)
-        self.assertEquals(logger.name, 'stacktach-default')
+        self.assertEquals(logger.name, stacklog.default_logger_name)
 
         stacklog.set_default_logger_name('default')
         logger = stacklog.get_logger(None, is_parent=True)

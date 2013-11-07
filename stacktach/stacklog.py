@@ -86,19 +86,19 @@ def get_logger(name=None, is_parent=True):
 def warn(msg, name=None):
     if name is None:
         name = default_logger_name
-    get_logger(name=name).warn(msg)
+    get_logger(name=name, is_parent=False).warn(msg)
 
 
 def error(msg, name=None):
     if name is None:
         name = default_logger_name
-    get_logger(name=name).error(msg)
+    get_logger(name=name, is_parent=False).error(msg)
 
 
 def info(msg, name=None):
     if name is None:
         name = default_logger_name
-    get_logger(name=name).info(msg)
+    get_logger(name=name, is_parent=False).info(msg)
 
 
 def _create_timed_rotating_logger(name):

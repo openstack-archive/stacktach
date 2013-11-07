@@ -1,5 +1,11 @@
 from django.conf.urls import patterns, url
 
+from stacktach import stacklog
+
+stacklog.set_default_logger_name('stacktach-web')
+web_logger = stacklog.get_logger('stacktach-web')
+web_logger_listener = stacklog.LogListener(web_logger)
+web_logger_listener.start()
 
 urlpatterns = patterns('',
     url(r'^$', 'stacktach.views.welcome', name='welcome'),

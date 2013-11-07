@@ -302,9 +302,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
     def setup_mock_log(self, name=None):
         if name is None:
-            stacklog.get_logger(name=mox.IgnoreArg()).AndReturn(self.log)
+            stacklog.get_logger(name=mox.IgnoreArg(),
+                                is_parent=False).AndReturn(self.log)
         else:
-            stacklog.get_logger(name=name).AndReturn(self.log)
+            stacklog.get_logger(name=name,
+                                is_parent=False).AndReturn(self.log)
 
     def test_all_instance_events_have_mapping(self):
         for key, value in views.INSTANCE_EVENT.items():
