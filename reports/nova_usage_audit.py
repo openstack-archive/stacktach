@@ -31,6 +31,7 @@ import usage_audit
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 from stacktach.reconciler import Reconciler
+from stacktach import stacklog
 
 OLD_LAUNCHES_QUERY = """
 select stacktach_instanceusage.id,
@@ -267,6 +268,11 @@ if __name__ == '__main__':
                         type=str,
                         default='/etc/stacktach/reconciler-config.json')
     args = parser.parse_args()
+
+    stacklog.set_default_logger_name('nova_usage_audit')
+    parent_logger = stacklog.get_logger('nova_usage_audit', is_parent=True)
+    log_listener = stacklog.LogListener(parent_logger)
+    log_listener.start()
 
     if args.reconcile:
         with open(args.reconciler_config) as f:
