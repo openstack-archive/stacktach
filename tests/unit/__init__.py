@@ -47,6 +47,9 @@ setup_environment()
 from stacktach import stacklog
 
 stacklog.set_default_logger_location("/tmp/%s.log")
+default_logger = stacklog.get_logger()
+worker_logger = stacklog.get_logger('worker')
+verifier_logger = stacklog.get_logger('verifier')
 
 
 class _AssertRaisesContext(object):
@@ -94,6 +97,9 @@ class StacktachBaseTestCase(unittest.TestCase):
 
     def assertIsInstance(self, obj, cls, msg=None):
         self.assertTrue(isinstance(obj, cls), msg)
+
+    def assertIs(self, expr1, expr2, msg=None):
+        self.assertTrue(expr1 is expr2, msg)
 
     def assertRaises(self, excClass, callableObj=None, *args, **kwargs):
         context = _AssertRaisesContext(excClass, self)

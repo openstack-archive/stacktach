@@ -16,6 +16,7 @@ import datetime
 import copy
 
 from django.db import models
+from django.db.models import Q
 
 from stacktach import datetime_to_decimal as dt
 
@@ -164,6 +165,8 @@ class InstanceUsage(models.Model):
                                          null=True,
                                          blank=True,
                                          db_index=True)
+    instance_flavor_id = models.CharField(max_length=100, null=True,
+                                          blank=True, db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
     os_architecture = models.TextField(null=True, blank=True)
@@ -226,6 +229,8 @@ class InstanceReconcile(models.Model):
                                         null=True,
                                         blank=True,
                                         db_index=True)
+    instance_flavor_id = models.CharField(max_length=100, null=True,
+                                          blank=True, db_index=True)
     tenant = models.CharField(max_length=50, null=True, blank=True,
                               db_index=True)
     os_architecture = models.TextField(null=True, blank=True)
@@ -292,6 +297,8 @@ class InstanceExists(models.Model):
     os_version = models.TextField(null=True, blank=True)
     rax_options = models.TextField(null=True, blank=True)
     bandwidth_public_out = models.BigIntegerField(default=0)
+    instance_flavor_id = models.CharField(max_length=100, null=True,
+                                          blank=True, db_index=True)
 
     def deployment(self):
         return self.raw.deployment
@@ -485,10 +492,19 @@ class ImageExists(models.Model):
         self.status = new_status
 
     @staticmethod
-    def find(ending_max, status):
+    def find_and_group_by_owner_and_raw_id(ending_max, status):
         params = {'audit_period_ending__lte': dt.dt_to_decimal(ending_max),
                   'status': status}
-        return ImageExists.objects.select_related().filter(**params).order_by('id')
+        ordered_exists = ImageExists.objects.select_related().\
+            filter(**params).order_by('owner')
+        result = {}
+        for exist in ordered_exists:
+            key = "%s-%s" % (exist.owner, exist.raw_id)
+            if key in result:
+                result[key].append(exist)
+            else:
+                result[key] = [exist]
+        return result
 
     def mark_verified(self):
         self.status = InstanceExists.VERIFIED

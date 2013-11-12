@@ -3,6 +3,7 @@ import time
 from django.db import transaction
 import mox
 from stacktach import message_service
+from stacktach import stacklog
 from tests.unit import StacktachBaseTestCase
 from tests.unit.utils import HOST, PORT, VIRTUAL_HOST, USERID, PASSWORD, TICK_TIME, SETTLE_TIME, SETTLE_UNITS
 from tests.unit.utils import make_verifier_config
@@ -139,6 +140,8 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_run_notifications(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
         self._mock_exchange_create_and_connect(self.verifier_with_notifications)
         self.mox.StubOutWithMock(self.verifier_with_notifications, '_run')
         self.verifier_with_notifications._run(callback=mox.Not(mox.Is(None)))
@@ -147,6 +150,8 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_run_notifications_with_routing_keys(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
         self._mock_exchange_create_and_connect(self.verifier_with_notifications)
         self.mox.StubOutWithMock(self.verifier_with_notifications, '_run')
         self.verifier_with_notifications._run(callback=mox.Not(mox.Is(None)))
@@ -155,6 +160,8 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_run_no_notifications(self):
+        mock_logger = self._create_mock_logger()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
         self.mox.StubOutWithMock(self.verifier_without_notifications, '_run')
         self.verifier_without_notifications._run()
         self.mox.ReplayAll()
@@ -162,6 +169,11 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_run_full_no_notifications(self):
+        mock_logger = self._create_mock_logger()
+        mock_logger.info('None: N: None, P: 0, S: 2, E: 0')
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+
         self.mox.StubOutWithMock(transaction, 'commit_on_success')
         tran = self.mox.CreateMockAnything()
         tran.__enter__().AndReturn(tran)
@@ -196,7 +208,17 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
+    def _create_mock_logger(self):
+        mock_logger = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(stacklog, 'get_logger')
+        return mock_logger
+
     def test_run_full(self):
+        mock_logger = self._create_mock_logger()
+        mock_logger.info('exchange: N: None, P: 0, S: 2, E: 0')
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+
         self.mox.StubOutWithMock(transaction, 'commit_on_success')
         tran = self.mox.CreateMockAnything()
         tran.__enter__().AndReturn(tran)

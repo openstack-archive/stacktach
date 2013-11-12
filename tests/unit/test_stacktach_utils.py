@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import mox
+import decimal
 
 from stacktach import utils as stacktach_utils
 from utils import INSTANCE_ID_1
@@ -61,3 +62,32 @@ class StacktachUtilsTestCase(StacktachBaseTestCase):
     def test_is_message_id_like_invalid(self):
         uuid = "$-^&#$"
         self.assertFalse(stacktach_utils.is_request_id_like(uuid))
+
+    def test_str_time_to_unix(self):
+        self.assertEqual(
+            stacktach_utils.str_time_to_unix("2013-05-15T11:51:11Z"),
+            decimal.Decimal('1368618671'))
+
+        self.assertEqual(
+            stacktach_utils.str_time_to_unix("2013-05-15T11:51:11.123Z"),
+            decimal.Decimal('1368618671.123'))
+
+        self.assertEqual(
+            stacktach_utils.str_time_to_unix("2013-05-15T11:51:11"),
+            decimal.Decimal('1368618671'))
+
+        self.assertEqual(
+            stacktach_utils.str_time_to_unix("2013-05-15T11:51:11.123"),
+            decimal.Decimal('1368618671.123'))
+
+        self.assertEqual(
+            stacktach_utils.str_time_to_unix("2013-05-15 11:51:11"),
+            decimal.Decimal('1368618671'))
+
+        self.assertEqual(
+            stacktach_utils.str_time_to_unix("2013-05-15 11:51:11.123"),
+            decimal.Decimal('1368618671.123'))
+
+        with self.assertRaises(Exception):
+            stacktach_utils.str_time_to_unix("invalid date"),
+            decimal.Decimal('1368618671')

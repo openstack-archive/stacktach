@@ -29,8 +29,12 @@ except ImportError:
     pass
 
 config = None
-with open(config_filename, "r") as f:
-    config = json.load(f)
+
+
+def load():
+    global config
+    with open(config_filename, "r") as f:
+        config = json.load(f)
 
 
 def enable_notifications():
@@ -91,3 +95,15 @@ def virtual_host():
 
 def validation_level():
     return config['validation_level']
+
+
+def nova_event_type():
+    return config.get('nova_event_type', 'compute.instance.exists.verified.old')
+
+
+def glance_event_type():
+    return config.get('glance_event_type', 'image.exists.verified.old')
+
+
+def flavor_field_name():
+    return config['flavor_field_name']

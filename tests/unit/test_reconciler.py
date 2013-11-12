@@ -31,7 +31,8 @@ from stacktach.reconciler import nova
 from stacktach.reconciler import utils as rec_utils
 from tests.unit import StacktachBaseTestCase
 from tests.unit import utils
-from tests.unit.utils import INSTANCE_ID_1
+from tests.unit.utils import INSTANCE_ID_1, INSTANCE_TYPE_ID_1
+from tests.unit.utils import INSTANCE_FLAVOR_ID_1
 from tests.unit.utils import TENANT_ID_1
 
 region_mapping = {
@@ -90,7 +91,8 @@ class ReconcilerTestCase(StacktachBaseTestCase):
         usage.instance = INSTANCE_ID_1
         launched_at = beginning_d - (60*60)
         usage.launched_at = launched_at
-        usage.instance_type_id = 1
+        usage.instance_type_id = INSTANCE_TYPE_ID_1
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         usage.tenant = TENANT_ID_1
         usage.os_architecture = DEFAULT_OS_ARCH
         usage.os_distro = DEFAULT_OS_DISTRO
@@ -108,7 +110,9 @@ class ReconcilerTestCase(StacktachBaseTestCase):
 
     def _fake_reconciler_instance(self, uuid=INSTANCE_ID_1, launched_at=None,
                                   deleted_at=None, deleted=False,
-                                  instance_type_id=1, tenant=TENANT_ID_1,
+                                  instance_type_id=INSTANCE_TYPE_ID_1,
+                                  instance_flavor_id=INSTANCE_FLAVOR_ID_1,
+                                  tenant=TENANT_ID_1,
                                   os_arch=DEFAULT_OS_ARCH,
                                   os_distro=DEFAULT_OS_DISTRO,
                                   os_verison=DEFAULT_OS_VERSION,
@@ -120,6 +124,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
             'deleted_at': deleted_at,
             'deleted': deleted,
             'instance_type_id': instance_type_id,
+            'instance_flavor_id': instance_flavor_id,
             'tenant': tenant,
             'os_architecture': os_arch,
             'os_distro': os_distro,
@@ -194,6 +199,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
             'launched_at': launch.launched_at,
             'deleted_at': deleted_at,
             'instance_type_id': launch.instance_type_id,
+            'instance_flavor_id': launch.instance_flavor_id,
             'source': 'reconciler:mocked_client',
             'tenant': TENANT_ID_1,
             'os_architecture': DEFAULT_OS_ARCH,
@@ -216,7 +222,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
         launch = self.mox.CreateMockAnything()
         launch.instance = INSTANCE_ID_1
         launch.launched_at = beginning_d - (60*60)
-        launch.instance_type_id = 1
+        launch.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         models.InstanceUsage.objects.get(id=launch_id).AndReturn(launch)
         deployment = self.mox.CreateMockAnything()
         launch.deployment().AndReturn(deployment)
@@ -233,9 +239,9 @@ class ReconcilerTestCase(StacktachBaseTestCase):
         launch_id = 1
         beginning_d = utils.decimal_utc()
         launch = self.mox.CreateMockAnything()
-        launch.instance = INSTANCE_ID_1
+        launch.instance = INSTANCE_FLAVOR_ID_1
         launch.launched_at = beginning_d - (60*60)
-        launch.instance_type_id = 1
+        launch.instance_flavor_id = 1
         models.InstanceUsage.objects.get(id=launch_id).AndReturn(launch)
         launch.deployment().AndReturn(None)
         self.mox.ReplayAll()
@@ -255,6 +261,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
             'launched_at': exists.launched_at,
             'deleted_at': exists.deleted_at,
             'instance_type_id': exists.instance_type_id,
+            'instance_flavor_id': exists.instance_flavor_id,
             'source': 'reconciler:mocked_client',
             'tenant': TENANT_ID_1,
             'os_architecture': DEFAULT_OS_ARCH,
@@ -285,6 +292,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
             'launched_at': exists.launched_at,
             'deleted_at': exists.deleted_at,
             'instance_type_id': exists.instance_type_id,
+            'instance_flavor_id': exists.instance_flavor_id,
             'source': 'reconciler:mocked_client',
             'tenant': TENANT_ID_1,
             'os_architecture': DEFAULT_OS_ARCH,
@@ -306,7 +314,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
         exists.instance = INSTANCE_ID_1
         launched_at = beginning_d - (60*60)
         exists.launched_at = launched_at
-        exists.instance_type_id = 1
+        exists.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         exists.deleted_at = beginning_d
         deployment = self.mox.CreateMockAnything()
         exists.deployment().AndReturn(deployment)
@@ -327,7 +335,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
         exists.instance = INSTANCE_ID_1
         launched_at = beginning_d - (60*60)
         exists.launched_at = launched_at
-        exists.instance_type_id = 1
+        exists.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         exists.deleted_at = beginning_d
         deployment = self.mox.CreateMockAnything()
         exists.deployment().AndReturn(deployment)
@@ -346,7 +354,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
         exists.instance = INSTANCE_ID_1
         launched_at = beginning_d - (60*60)
         exists.launched_at = launched_at
-        exists.instance_type_id = 1
+        exists.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         exists.deleted_at = None
         deployment = self.mox.CreateMockAnything()
         exists.deployment().AndReturn(deployment)
@@ -365,7 +373,7 @@ class ReconcilerTestCase(StacktachBaseTestCase):
         exists.instance = INSTANCE_ID_1
         launched_at = beginning_d - (60*60)
         exists.launched_at = launched_at
-        exists.instance_type_id = 1
+        exists.instance_flavor_id = INSTANCE_FLAVOR_ID_1
         exists.deleted_at = None
         exists.deployment().AndReturn(None)
         ex = exceptions.NotFound()
@@ -465,14 +473,17 @@ class NovaJSONBridgeClientTestCase(StacktachBaseTestCase):
         response.json().AndReturn(result)
 
     def _fake_instance(self, uuid=INSTANCE_ID_1, launched_at=None,
-                      terminated_at=None, deleted=0, instance_type_id=1,
-                      project_id=TENANT_ID_1):
+                       terminated_at=None, deleted=0,
+                       instance_type_id=INSTANCE_TYPE_ID_1,
+                       instance_flavor_id=INSTANCE_FLAVOR_ID_1,
+                       project_id=TENANT_ID_1):
         return {
             'uuid': uuid,
             'launched_at': launched_at,
             'terminated_at': terminated_at,
             'deleted': deleted,
             'instance_type_id': instance_type_id,
+            'flavorid': instance_flavor_id,
             'project_id': project_id
         }
 
@@ -488,8 +499,9 @@ class NovaJSONBridgeClientTestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
         instance = self.client.get_instance('RegionOne', INSTANCE_ID_1)
         self.assertIsNotNone(instance)
-        self.assertEqual(instance['id'], INSTANCE_ID_1)
-        self.assertEqual(instance['instance_type_id'], '1')
+        self.assertEqual(instance['id'], INSTANCE_ID_1 )
+        self.assertEqual(instance['instance_type_id'], INSTANCE_TYPE_ID_1)
+        self.assertEqual(instance['instance_flavor_id'], INSTANCE_FLAVOR_ID_1)
         launched_at_dec = stackutils.str_time_to_unix(launched_at)
         self.assertEqual(instance['launched_at'], launched_at_dec)
         terminated_at_dec = stackutils.str_time_to_unix(terminated_at)
@@ -528,7 +540,7 @@ class NovaJSONBridgeClientTestCase(StacktachBaseTestCase):
                                             get_metadata=True)
         self.assertIsNotNone(instance)
         self.assertEqual(instance['id'], INSTANCE_ID_1)
-        self.assertEqual(instance['instance_type_id'], '1')
+        self.assertEqual(instance['instance_flavor_id'], INSTANCE_FLAVOR_ID_1)
         launched_at_dec = stackutils.str_time_to_unix(launched_at)
         self.assertEqual(instance['launched_at'], launched_at_dec)
         terminated_at_dec = stackutils.str_time_to_unix(terminated_at)

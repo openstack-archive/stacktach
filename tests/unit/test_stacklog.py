@@ -1,10 +1,8 @@
-import glob
 import logging
-import os
 import mox
 from stacktach import stacklog
-from stacktach.stacklog import ExchangeLogger
 from tests.unit import StacktachBaseTestCase
+
 
 class StacklogTestCase(StacktachBaseTestCase):
     def setUp(self):
@@ -13,88 +11,47 @@ class StacklogTestCase(StacktachBaseTestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
-    def test_get_logger_should_get_exchange_logger_if_exchange_provided(self):
-        filename = 'filename'
-        logger = stacklog.get_logger(filename, 'nova')
-        self.assertIsInstance(logger, ExchangeLogger)
-        for file in glob.glob('{0}.log*'.format(filename)):
-            os.remove(file)
+    def test_get_logger_should_create_timed_rotating_logger_for_parent(self):
+        logger_name = 'logger'
+        logger = stacklog.get_logger(logger_name, is_parent=True)
+        self.assertIsInstance(
+            logger.handlers[0], logging.handlers.TimedRotatingFileHandler)
+        self.assertEquals(logger.handlers[0].when, 'MIDNIGHT')
+        self.assertEquals(logger.handlers[0].interval, 86400)
+        self.assertEquals(logger.handlers[0].backupCount, 3)
+        self.assertEqual(logger.name, 'logger')
+        self.assertEquals(logger.level, logging.DEBUG)
 
-    def test_get_logger_should_get_default_logger_if_exchange_not_provided(self):
-        filename = 'default_logger'
-        logger = stacklog.get_logger(filename)
-        self.assertIsInstance(logger, logging.Logger)
-        for file in glob.glob('{0}.log*'.format(filename)):
-            os.remove(file)
+    def test_get_logger_should_create_queue_logger_for_child(self):
+        logger_name = 'logger'
+        stacklog.get_logger(logger_name, is_parent=True)
+        child_logger = stacklog.get_logger(logger_name, is_parent=False)
+        self.assertIsInstance(
+            child_logger.handlers[0], stacklog.QueueHandler)
+        self.assertEqual(child_logger.name, 'child_logger')
+        self.assertEquals(child_logger.level, logging.DEBUG)
 
+    def test_get_logger_should_use_default_name_when_name_not_specified(self):
+        logger = stacklog.get_logger(None, is_parent=True)
+        self.assertEquals(logger.name, stacklog.default_logger_name)
 
-class ExchangeLoggerTestCase(StacktachBaseTestCase):
-    def setUp(self):
-        self.mox = mox.Mox()
+        stacklog.set_default_logger_name('default')
+        logger = stacklog.get_logger(None, is_parent=True)
+        self.assertEquals(logger.name, 'default')
 
-    def tearDown(self):
-        self.mox.UnsetStubs()
+    def test_get_logger_raise_exception_when_child_created_before_parent(self):
+        with self.assertRaises(stacklog.ParentLoggerDoesNotExist):
+            stacklog.get_logger('logger', is_parent=False)
 
-    def _setup_logger_mocks(self, name='name'):
-        mock_logger = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(logging, 'getLogger')
-        logging.getLogger(stacklog.__name__).AndReturn(mock_logger)
-        mock_logger.setLevel(logging.DEBUG)
-        self.mox.StubOutClassWithMocks(logging.handlers,
-                                       'TimedRotatingFileHandler')
-        filename = "/tmp/{0}.log".format(name)
-        handler = logging.handlers.TimedRotatingFileHandler(
-            filename, backupCount=3, interval=1, when='midnight')
-        self.mox.StubOutClassWithMocks(logging, 'Formatter')
-        mock_formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-        handler.setFormatter(mock_formatter)
-        mock_logger.addHandler(handler)
-        mock_logger.handlers = [handler]
-        handler.doRollover()
-        return mock_logger
+    def test_get_logger_should_return_existing_parent_logger_if_present(self):
+        logger_1 = stacklog.get_logger('logger', is_parent=True)
+        logger_2 = stacklog.get_logger('logger', is_parent=True)
 
-    def test_exchange_logger_should_append_exchange_name_to_info(self):
-        mock_logger = self._setup_logger_mocks()
-        mock_logger.info('exchange: Log %s', 'args', xyz='xyz')
-        self.mox.ReplayAll()
+        self.assertIs(logger_1, logger_2)
 
-        log = ExchangeLogger('exchange', 'name')
-        log.info("Log %s", 'args', xyz='xyz')
-        self.mox.VerifyAll()
+    def test_get_logger_should_return_existing_child_logger_if_present(self):
+        stacklog.get_logger('logger', is_parent=True)
+        child_logger_1 = stacklog.get_logger('logger', is_parent=False)
+        child_logger_2 = stacklog.get_logger('logger', is_parent=False)
 
-    def test_exchange_logger_should_append_exchange_name_to_warn(self):
-        mock_logger = self._setup_logger_mocks()
-        mock_logger.warn('exchange: Log %s', 'args', xyz='xyz')
-        self.mox.ReplayAll()
-
-        logger = ExchangeLogger('exchange', 'name')
-        logger.warn("Log %s", 'args', xyz='xyz')
-        self.mox.VerifyAll()
-
-    def test_exchange_logger_should_append_exchange_name_to_error(self):
-        mock_logger = self._setup_logger_mocks()
-        mock_logger.error('exchange: Log %s', 'args', xyz='xyz')
-        self.mox.ReplayAll()
-
-        logger = ExchangeLogger('exchange', 'name')
-        logger.error("Log %s", 'args', xyz='xyz')
-        self.mox.VerifyAll()
-
-    def test_exchange_logger_should_append_exchange_name_to_exception(self):
-        mock_logger = self._setup_logger_mocks()
-        mock_logger.error('exchange: Log %s', 'args', xyz='xyz')
-        self.mox.ReplayAll()
-
-        logger = ExchangeLogger('exchange', 'name')
-        logger.exception("Log %s", 'args', xyz='xyz')
-        self.mox.VerifyAll()
-
-    def test_exchange_logger_should_use_default_name_if_not_provided(self):
-        self._setup_logger_mocks('stacktach-default')
-        self.mox.ReplayAll()
-
-        ExchangeLogger('exchange')
-        self.mox.VerifyAll()
-
-
+        self.assertIs(child_logger_1, child_logger_2)

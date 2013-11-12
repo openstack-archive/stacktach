@@ -90,12 +90,12 @@ def get_all_event_names():
         events.extend(get_event_names(service))
     return events
 
-def get_host_names():
+def get_host_names(service):
     # TODO: We need to upgrade to Django 1.4 so we can get tenent id and
     # host and just do distinct on host name.
     # like: values('host', 'tenant_id').distinct('host')
     # This will be more meaningful. Host by itself isn't really.
-    return models.RawData.objects.values('host').distinct()
+    return _model_factory(service).values('host').distinct()
 
 
 def routing_key_type(key):
@@ -164,12 +164,10 @@ def do_deployments(request):
 
 def do_events(request):
     service = str(request.GET.get('service', 'all'))
-    print service
     if service == 'all':
         events = get_all_event_names()
     else:
         events = get_event_names(service=service)
-    print events
     results = [["Event Name"]]
     for event in events:
         results.append([event['event']])
@@ -177,7 +175,8 @@ def do_events(request):
 
 
 def do_hosts(request):
-    hosts = get_host_names()
+    service = str(request.GET.get('service', 'nova'))
+    hosts = get_host_names(service)
     results = [["Host Name"]]
     for host in hosts:
         results.append([host['host']])
@@ -493,13 +492,15 @@ def do_list_usage_launches(request):
     else:
         launches = model_search(request, model, None)
 
-    results = [["UUID", "Launched At", "Instance Type Id"]]
+    results = [["UUID", "Launched At", "Instance Type Id",
+                "Instance Flavor Id"]]
 
     for launch in launches:
         launched = None
         if launch.launched_at:
             launched = str(dt.dt_from_decimal(launch.launched_at))
-        results.append([launch.instance, launched, launch.instance_type_id])
+        results.append([launch.instance, launched, launch.instance_type_id,
+                        launch.instance_flavor_id])
 
     return rsp(json.dumps(results))
 
@@ -551,7 +552,7 @@ def do_list_usage_exists(request):
         exists = model_search(request, model, None)
 
     results = [["UUID", "Launched At", "Deleted At", "Instance Type Id",
-                "Message ID", "Status"]]
+                "Instance Flavor Id", "Message ID", "Status"]]
 
     for exist in exists:
         launched = None
@@ -561,8 +562,8 @@ def do_list_usage_exists(request):
         if exist.deleted_at:
             deleted = str(dt.dt_from_decimal(exist.deleted_at))
         results.append([exist.instance, launched, deleted,
-                        exist.instance_type_id, exist.message_id,
-                        exist.status])
+                        exist.instance_type_id, exist.instance_flavor_id,
+                        exist.message_id, exist.status])
 
     return rsp(json.dumps(results))
 

@@ -30,6 +30,9 @@ IMAGE_UUID_1 = "12345678-6352-4dbc-8271-96cc54bf14cd"
 INSTANCE_ID_1 = "08f685d9-6352-4dbc-8271-96cc54bf14cd"
 INSTANCE_ID_2 = "515adf96-41d3-b86d-5467-e584edc61dab"
 
+INSTANCE_FLAVOR_ID_1 = "performance1-120"
+INSTANCE_FLAVOR_ID_2 = "performance2-120"
+
 INSTANCE_TYPE_ID_1 = "12345"
 INSTANCE_TYPE_ID_2 = '54321'
 
@@ -66,6 +69,9 @@ PORT = '5672'
 VIRTUAL_HOST = '/'
 USERID = 'rabbit'
 PASSWORD = 'password'
+NOVA_VERIFIER_EVENT_TYPE = 'compute.instance.exists.verified.old'
+GLANCE_VERIFIER_EVENT_TYPE = 'image.exists.verified.old'
+FLAVOR_FIELD_NAME = 'flavor_field_name'
 
 def decimal_utc(t = datetime.datetime.utcnow()):
     return dt.dt_to_decimal(t)
@@ -152,7 +158,8 @@ def create_tracker(mox, request_id, lifecycle, start, last_timing=None,
 
 class FakeVerifierConfig(object):
     def __init__(self, host, port, virtual_host, userid, password, tick_time,
-                 settle_time, settle_units, durable_queue, topics, notifs):
+                 settle_time, settle_units, durable_queue, topics, notifs,
+                 nova_event_type, glance_event_type, flavor_field_name):
         self.host = lambda: host
         self.port = lambda: port
         self.virtual_host = lambda: virtual_host
@@ -166,11 +173,17 @@ class FakeVerifierConfig(object):
         self.topics = lambda: topics
         self.enable_notifications = lambda: notifs
         self.validation_level = lambda: 'all'
+        self.nova_event_type = lambda: nova_event_type
+        self.glance_event_type = lambda: glance_event_type
+        self.flavor_field_name = lambda: flavor_field_name
 
 
 def make_verifier_config(notifs):
         topics = {'exchange': ['notifications.info']}
         config = FakeVerifierConfig(HOST, PORT, VIRTUAL_HOST, USERID,
                                     PASSWORD, TICK_TIME, SETTLE_TIME,
-                                    SETTLE_UNITS, True, topics, notifs)
+                                    SETTLE_UNITS, True, topics, notifs,
+                                    NOVA_VERIFIER_EVENT_TYPE,
+                                    GLANCE_VERIFIER_EVENT_TYPE,
+                                    FLAVOR_FIELD_NAME)
         return config

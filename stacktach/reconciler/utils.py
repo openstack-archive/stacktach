@@ -6,6 +6,7 @@ def empty_reconciler_instance():
         'deleted': False,
         'deleted_at': None,
         'instance_type_id': None,
+        'instance_flavor_id': None,
         'os_architecture': '',
         'os_distro': '',
         'os_version': '',

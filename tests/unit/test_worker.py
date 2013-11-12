@@ -23,7 +23,7 @@ import json
 import kombu
 import mox
 
-from stacktach import db
+from stacktach import db, stacklog
 from stacktach import views
 import worker.worker as worker
 from tests.unit import StacktachBaseTestCase
@@ -35,6 +35,12 @@ class ConsumerTestCase(StacktachBaseTestCase):
 
     def tearDown(self):
         self.mox.UnsetStubs()
+
+    def _setup_mock_logger(self):
+        mock_logger = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(stacklog, 'get_logger')
+        stacklog.get_logger('worker', is_parent=False).AndReturn(mock_logger)
+        return mock_logger
 
     def _test_topics(self):
         return [
@@ -103,7 +109,6 @@ class ConsumerTestCase(StacktachBaseTestCase):
         self.assertEqual(actual_queue, queue)
         self.mox.VerifyAll()
 
-
     def test_create_queue_with_queue_args(self):
         self.mox.StubOutClassWithMocks(kombu, 'Queue')
         exchange = self.mox.CreateMockAnything()
@@ -157,6 +162,14 @@ class ConsumerTestCase(StacktachBaseTestCase):
         worker.POST_PROCESS_METHODS["RawData"] = old_handler
 
     def test_run(self):
+        mock_logger = self._setup_mock_logger()
+        self.mox.StubOutWithMock(mock_logger, 'info')
+        mock_logger.info('east_coast.prod.global: nova 10.0.0.1 5672 rabbit /')
+        self.mox.StubOutWithMock(mock_logger, 'debug')
+        mock_logger.debug("Processing on 'east_coast.prod.global nova'")
+        mock_logger.debug("Completed processing on "
+                          "'east_coast.prod.global nova'")
+
         config = {
             'name': 'east_coast.prod.global',
             'durable_queue': False,
@@ -168,10 +181,10 @@ class ConsumerTestCase(StacktachBaseTestCase):
             "services": ["nova"],
             "topics": {"nova": self._test_topics()}
         }
-        self.mox.StubOutWithMock(db, 'get_or_create_deployment')
+        self.mox.StubOutWithMock(db, 'get_deployment')
         deployment = self.mox.CreateMockAnything()
-        db.get_or_create_deployment(config['name'])\
-          .AndReturn((deployment, True))
+        deployment.id = 1
+        db.get_deployment(deployment.id).AndReturn(deployment)
         self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
         params = dict(hostname=config['rabbit_host'],
                       port=config['rabbit_port'],
@@ -193,10 +206,18 @@ class ConsumerTestCase(StacktachBaseTestCase):
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config, exchange)
+        worker.run(config, deployment.id, exchange)
         self.mox.VerifyAll()
 
     def test_run_queue_args(self):
+        mock_logger = self._setup_mock_logger()
+        self.mox.StubOutWithMock(mock_logger, 'info')
+        mock_logger.info("east_coast.prod.global: nova 10.0.0.1 5672 rabbit /")
+        self.mox.StubOutWithMock(mock_logger, 'debug')
+        mock_logger.debug("Processing on 'east_coast.prod.global nova'")
+        mock_logger.debug("Completed processing on "
+                          "'east_coast.prod.global nova'")
+
         config = {
             'name': 'east_coast.prod.global',
             'durable_queue': False,
@@ -210,10 +231,10 @@ class ConsumerTestCase(StacktachBaseTestCase):
             "services": ["nova"],
             "topics": {"nova": self._test_topics()}
         }
-        self.mox.StubOutWithMock(db, 'get_or_create_deployment')
+        self.mox.StubOutWithMock(db, 'get_deployment')
         deployment = self.mox.CreateMockAnything()
-        db.get_or_create_deployment(config['name'])\
-          .AndReturn((deployment, True))
+        deployment.id = 1
+        db.get_deployment(deployment.id).AndReturn(deployment)
         self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
         params = dict(hostname=config['rabbit_host'],
                       port=config['rabbit_port'],
@@ -236,5 +257,5 @@ class ConsumerTestCase(StacktachBaseTestCase):
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config, exchange)
+        worker.run(config, deployment.id, exchange)
         self.mox.VerifyAll()

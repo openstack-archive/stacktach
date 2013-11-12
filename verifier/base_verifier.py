@@ -27,6 +27,7 @@ import time
 import multiprocessing
 
 from django.db import transaction
+from stacktach import message_service
 
 
 POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
@@ -34,10 +35,18 @@ POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
 if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
-from verifier import WrongTypeException
+from django.db import close_connection
+from django.db import reset_queries
+from django.core import exceptions
 
-from stacktach import stacklog, message_service
-LOG = stacklog.get_logger('verifier')
+from verifier import WrongTypeException
+from stacktach import stacklog
+
+stacklog.set_default_logger_name('verifier')
+
+
+def _get_child_logger():
+    return stacklog.get_logger('verifier', is_parent=False)
 
 
 def _has_field(d1, d2, field1, field2=None):
@@ -151,10 +160,11 @@ class Verifier(object):
                 if self.reconciler:
                     self.reconcile_failed()
                 msg = "%s: N: %s, P: %s, S: %s, E: %s" % values
-                LOG.info(msg)
+                _get_child_logger().info(msg)
             time.sleep(tick_time)
 
     def run(self):
+        logger = _get_child_logger()
         if self.enable_notifications:
             exchange_name = self.exchange()
             exchange = message_service.create_exchange(
@@ -167,15 +177,31 @@ class Verifier(object):
                 self.config.userid(), self.config.password(),
                 "librabbitmq", self.config.virtual_host()) as conn:
                 def callback(result):
-                    try:
-                        (verified, exist) = result
-                        if verified:
-                            self.send_verified_notification(
-                                exist, conn, exchange,
-                                routing_keys=routing_keys)
-                    except Exception, e:
-                        msg = "ERROR in Callback %s: %s" % (exchange_name, e)
-                        LOG.exception(msg, e)
+                    attempt = 0
+                    while attempt < 2:
+                        try:
+                            (verified, exist) = result
+                            if verified:
+                                self.send_verified_notification(
+                                    exist, conn, exchange,
+                                    routing_keys=routing_keys)
+                            break
+                        except exceptions.ObjectDoesNotExist:
+                            if attempt < 1:
+                                logger.warn("ObjectDoesNotExist in callback, "
+                                         "attempting to reconnect and try "
+                                         "again.")
+                                close_connection()
+                                reset_queries()
+                            else:
+                                logger.error("ObjectDoesNotExist in callback "
+                                          "again, giving up.")
+                        except Exception, e:
+                            msg = "ERROR in Callback %s: %s" % (exchange_name,
+                                                                e)
+                            logger.exception(msg)
+                            break
+                        attempt += 1
                 try:
                     self._run(callback=callback)
                 except Exception, e:
