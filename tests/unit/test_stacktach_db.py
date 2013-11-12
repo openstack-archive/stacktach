@@ -59,9 +59,10 @@ class StacktachDBTestCase(StacktachBaseTestCase):
 
     def setup_mock_log(self, name=None):
         if name is None:
-            stacklog.get_logger(name=mox.IgnoreArg()).AndReturn(self.log)
+            stacklog.get_logger(name=mox.IgnoreArg(),
+                                is_parent=False).AndReturn(self.log)
         else:
-            stacklog.get_logger(name=name).AndReturn(self.log)
+            stacklog.get_logger(name=name, is_parent=False).AndReturn(self.log)
 
     def test_safe_get(self):
         Model = self.mox.CreateMockAnything()

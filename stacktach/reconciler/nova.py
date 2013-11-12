@@ -4,7 +4,9 @@ from stacktach import utils as stackutils
 from stacktach.reconciler import exceptions
 from stacktach.reconciler.utils import empty_reconciler_instance
 
-GET_INSTANCE_QUERY = "SELECT * FROM instances where uuid ='%s';"
+GET_INSTANCE_QUERY = \
+    "SELECT i.*, it.flavorid FROM instances i INNER JOIN " \
+    "instance_types it on i.instance_type_id = it.id where i.uuid ='%s';"
 
 METADATA_MAPPING = {
     'image_org.openstack__1__architecture': 'os_architecture',
@@ -51,6 +53,7 @@ class JSONBridgeClient(object):
             'id': instance['uuid'],
             'tenant': instance['project_id'],
             'instance_type_id': str(instance['instance_type_id']),
+            'instance_flavor_id': str(instance['flavorid']),
         })
 
         if instance['launched_at'] is not None:

@@ -31,26 +31,36 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from verifier import base_verifier
+from verifier import config
 from verifier import NullFieldException
 from stacktach import models
+from stacktach import stacklog
 from stacktach import datetime_to_decimal as dt
 from verifier import FieldMismatch
 from verifier import AmbiguousResults
 from verifier import NotFound
 from verifier import VerificationException
-from stacktach import stacklog, message_service
-LOG = stacklog.get_logger('verifier')
+from stacktach import message_service
+
+stacklog.set_default_logger_name('verifier')
+
+
+def _get_child_logger():
+    return stacklog.get_logger('verifier', is_parent=False)
 
 
 def _verify_field_mismatch(exists, launch):
+    flavor_field_name = config.flavor_field_name()
     if not base_verifier._verify_date_field(
             launch.launched_at, exists.launched_at, same_second=True):
         raise FieldMismatch('launched_at', exists.launched_at,
                             launch.launched_at)
 
-    if launch.instance_type_id != exists.instance_type_id:
-        raise FieldMismatch('instance_type_id', exists.instance_type_id,
-                            launch.instance_type_id)
+    if getattr(launch, flavor_field_name) != \
+            getattr(exists, flavor_field_name):
+        raise FieldMismatch(flavor_field_name,
+                            getattr(exists, flavor_field_name),
+                            getattr(launch, flavor_field_name))
 
     if launch.tenant != exists.tenant:
         raise FieldMismatch('tenant', exists.tenant,
@@ -146,10 +156,13 @@ def _verify_for_delete(exist, delete=None,
 
 
 def _verify_basic_validity(exist):
-    fields = {exist.tenant: 'tenant',
-              exist.launched_at: 'launched_at',
-              exist.instance_type_id: 'instance_type_id'}
-    for (field_value, field_name) in fields.items():
+    flavor_field_name = config.flavor_field_name()
+    fields = {
+        'tenant': exist.tenant,
+        'launched_at': exist.launched_at,
+        flavor_field_name: getattr(exist, flavor_field_name)
+    }
+    for (field_name, field_value) in fields.items():
         if field_value is None:
             raise NullFieldException(field_name, exist.id)
     base_verifier._is_hex_owner_id('tenant', exist.tenant, exist.id)
@@ -170,13 +183,6 @@ def _verify_optional_validity(exist):
     base_verifier._is_alphanumeric('os_architecture', exist.os_architecture, exist.id)
     base_verifier._is_alphanumeric('os_distro', exist.os_distro, exist.id)
     base_verifier._is_alphanumeric('os_version', exist.os_version, exist.id)
-
-def verify_fields_not_null(exist_id, null_value, fields):
-
-    for (field_value, field_name) in fields.items():
-        print "value: %s, name = %s" % (field_value, field_name)
-        if field_value == null_value:
-            raise NullFieldException(field_name, exist_id)
 
 
 def _verify_validity(exist, validation_level):
@@ -233,7 +239,7 @@ def _attempt_reconciled_verify(exist, orig_e):
         exist.mark_failed(reason=str(rec_e))
     except Exception, rec_e:
         exist.mark_failed(reason=rec_e.__class__.__name__)
-        LOG.exception("nova: %s" % rec_e)
+        _get_child_logger().exception("nova: %s" % rec_e)
     return verified
 
 
@@ -242,7 +248,6 @@ def _verify(exist, validation_level):
     try:
         if not exist.launched_at:
             raise VerificationException("Exists without a launched_at")
-
         _verify_validity(exist, validation_level)
         _verify_for_launch(exist)
         _verify_for_delete(exist)
@@ -254,7 +259,7 @@ def _verify(exist, validation_level):
         verified = _attempt_reconciled_verify(exist, orig_e)
     except Exception, e:
         exist.mark_failed(reason=e.__class__.__name__)
-        LOG.exception("nova: %s" % e)
+        _get_child_logger().exception("nova: %s" % e)
 
     return verified, exist
 
@@ -274,7 +279,7 @@ class NovaVerifier(base_verifier.Verifier):
         # So, grab a new InstanceExists object from the database and use it.
         body = models.InstanceExists.objects.get(id=exist.id).raw.json
         json_body = json.loads(body)
-        json_body[1]['event_type'] = 'compute.instance.exists.verified.old'
+        json_body[1]['event_type'] = self.config.nova_event_type()
         json_body[1]['original_message_id'] = json_body[1]['message_id']
         json_body[1]['message_id'] = str(uuid.uuid4())
         if routing_keys is None:
@@ -292,7 +297,7 @@ class NovaVerifier(base_verifier.Verifier):
         added = 0
         update_interval = datetime.timedelta(seconds=30)
         next_update = datetime.datetime.utcnow() + update_interval
-        LOG.info("nova: Adding %s exists to queue." % count)
+        _get_child_logger().info("nova: Adding %s exists to queue." % count)
         while added < count:
             for exist in exists[0:1000]:
                 exist.update_status(models.InstanceExists.VERIFYING)
@@ -306,7 +311,7 @@ class NovaVerifier(base_verifier.Verifier):
                 if datetime.datetime.utcnow() > next_update:
                     values = ((added,) + self.clean_results())
                     msg = "nova: N: %s, P: %s, S: %s, E: %s" % values
-                    LOG.info(msg)
+                    _get_child_logger().info(msg)
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
 

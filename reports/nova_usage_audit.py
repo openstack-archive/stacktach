@@ -26,11 +26,12 @@ import os
 
 sys.path.append(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach'))
 
-from django.db.models import F
+import usage_audit
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 from stacktach.reconciler import Reconciler
+from stacktach import stacklog
 
 OLD_LAUNCHES_QUERY = """
 select stacktach_instanceusage.id,
@@ -123,98 +124,6 @@ def _audit_launches_to_exists(launches, exists, beginning):
     return fails
 
 
-def _status_queries(exists_query):
-    verified = exists_query.filter(status=models.InstanceExists.VERIFIED)
-    reconciled = exists_query.filter(status=models.InstanceExists.RECONCILED)
-    fail = exists_query.filter(status=models.InstanceExists.FAILED)
-    pending = exists_query.filter(status=models.InstanceExists.PENDING)
-    verifying = exists_query.filter(status=models.InstanceExists.VERIFYING)
-
-    return verified, reconciled, fail, pending, verifying
-
-
-def _send_status_queries(exists_query):
-    unsent = exists_query.filter(send_status=0)
-    success = exists_query.filter(send_status__gte=200,
-                                  send_status__lt=300)
-    redirect = exists_query.filter(send_status__gte=300,
-                                   send_status__lt=400)
-    client_error = exists_query.filter(send_status__gte=400,
-                                       send_status__lt=500)
-    server_error = exists_query.filter(send_status__gte=500,
-                                       send_status__lt=600)
-    return success, unsent, redirect, client_error, server_error
-
-
-def _audit_for_exists(exists_query):
-    (verified, reconciled,
-     fail, pending, verifying) = _status_queries(exists_query)
-
-    (success, unsent, redirect,
-     client_error, server_error) = _send_status_queries(verified)
-
-    (success_rec, unsent_rec, redirect_rec,
-     client_error_rec, server_error_rec) = _send_status_queries(reconciled)
-
-    report = {
-        'count': exists_query.count(),
-        'verified': verified.count(),
-        'reconciled': reconciled.count(),
-        'failed': fail.count(),
-        'pending': pending.count(),
-        'verifying': verifying.count(),
-        'send_status': {
-            'success': success.count(),
-            'unsent': unsent.count(),
-            'redirect': redirect.count(),
-            'client_error': client_error.count(),
-            'server_error': server_error.count(),
-        },
-        'send_status_rec': {
-            'success': success_rec.count(),
-            'unsent': unsent_rec.count(),
-            'redirect': redirect_rec.count(),
-            'client_error': client_error_rec.count(),
-            'server_error': server_error_rec.count(),
-        }
-    }
-
-    return report
-
-
-def _verifier_audit_for_day(beginning, ending):
-    summary = {}
-
-    filters = {
-        'raw__when__gte': beginning,
-        'raw__when__lte': ending,
-        'audit_period_ending': F('audit_period_beginning') + (60*60*24)
-    }
-    periodic_exists = models.InstanceExists.objects.filter(**filters)
-
-    summary['periodic'] = _audit_for_exists(periodic_exists)
-
-    filters = {
-        'raw__when__gte': beginning,
-        'raw__when__lte': ending,
-        'audit_period_ending__lt': F('audit_period_beginning') + (60*60*24)
-    }
-    instant_exists = models.InstanceExists.objects.filter(**filters)
-
-    summary['instantaneous'] = _audit_for_exists(instant_exists)
-
-    filters = {
-        'raw__when__gte': beginning,
-        'raw__when__lte': ending,
-        'status': models.InstanceExists.FAILED
-    }
-    failed = models.InstanceExists.objects.filter(**filters)
-    detail = []
-    for exist in failed:
-        detail.append(['Exist', exist.id, exist.fail_reason])
-    return summary, detail
-
-
 def _launch_audit_for_period(beginning, ending):
     launches_dict = {}
     new_launches = _get_new_launches(beginning, ending)
@@ -278,7 +187,6 @@ def _launch_audit_for_period(beginning, ending):
     launch_to_exists_fails = _audit_launches_to_exists(launches_dict,
                                                        exists_dict,
                                                        beginning)
-
     return launch_to_exists_fails, new_launches.count(), len(old_launches_dict)
 
 
@@ -287,8 +195,9 @@ def audit_for_period(beginning, ending):
     ending_decimal = dt.dt_to_decimal(ending)
 
     (verify_summary,
-     verify_detail) = _verifier_audit_for_day(beginning_decimal,
-                                              ending_decimal)
+     verify_detail) = usage_audit._verifier_audit_for_day(beginning_decimal,
+                                                          ending_decimal,
+                                                          models.InstanceExists)
     detail, new_count, old_count = _launch_audit_for_period(beginning_decimal,
                                                             ending_decimal)
 
@@ -307,29 +216,6 @@ def audit_for_period(beginning, ending):
     }
 
     return summary, details
-
-
-def get_previous_period(time, period_length):
-    if period_length == 'day':
-        last_period = time - datetime.timedelta(days=1)
-        start = datetime.datetime(year=last_period.year,
-                                  month=last_period.month,
-                                  day=last_period.day)
-        end = datetime.datetime(year=time.year,
-                                month=time.month,
-                                day=time.day)
-        return start, end
-    elif period_length == 'hour':
-        last_period = time - datetime.timedelta(hours=1)
-        start = datetime.datetime(year=last_period.year,
-                                  month=last_period.month,
-                                  day=last_period.day,
-                                  hour=last_period.hour)
-        end = datetime.datetime(year=time.year,
-                                month=time.month,
-                                day=time.day,
-                                hour=time.hour)
-        return start, end
 
 
 def store_results(start, end, summary, details):
@@ -383,6 +269,11 @@ if __name__ == '__main__':
                         default='/etc/stacktach/reconciler-config.json')
     args = parser.parse_args()
 
+    stacklog.set_default_logger_name('nova_usage_audit')
+    parent_logger = stacklog.get_logger('nova_usage_audit', is_parent=True)
+    log_listener = stacklog.LogListener(parent_logger)
+    log_listener.start()
+
     if args.reconcile:
         with open(args.reconciler_config) as f:
             reconciler_config = json.load(f)
@@ -393,7 +284,7 @@ if __name__ == '__main__':
     else:
         time = datetime.datetime.utcnow()
 
-    start, end = get_previous_period(time, args.period_length)
+    start, end = usage_audit.get_previous_period(time, args.period_length)
 
     summary, details = audit_for_period(start, end)
 

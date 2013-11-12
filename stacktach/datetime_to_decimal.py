@@ -1,7 +1,6 @@
 import calendar
 import datetime
 import decimal
-import time
 
 
 def dt_to_decimal(utc):
