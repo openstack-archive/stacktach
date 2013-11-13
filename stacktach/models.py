@@ -437,6 +437,10 @@ class ImageUsage(models.Model):
     size = models.BigIntegerField(max_length=20)
     last_raw = models.ForeignKey(GlanceRawData, null=True)
 
+    @property
+    def launched_at(self):
+        return self.created_at
+
 
 class ImageDeletes(models.Model):
     uuid = models.CharField(max_length=50, db_index=True)

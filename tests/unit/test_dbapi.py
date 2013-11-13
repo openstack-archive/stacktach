@@ -326,12 +326,26 @@ class DBAPITestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
-    def test_list_usage_exists_no_custom_filters(self):
+    def test_list_usage_exists_no_custom_filters_for_nova(self):
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {}
+        fake_request.GET = {'service': 'glance'}
         self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         objects = self.mox.CreateMockAnything()
-        dbapi.get_db_objects(models.InstanceExists, fake_request, 'id',
+        dbapi.get_db_objects(models.ImageExists, fake_request, 'id',
+                             custom_filters={}).AndReturn(objects)
+        self.mox.StubOutWithMock(dbapi, '_convert_model_list')
+        dbapi._convert_model_list(objects, dbapi._exists_extra_values)
+        self.mox.ReplayAll()
+        resp = dbapi.list_usage_exists(fake_request)
+        self.assertEqual(resp.status_code, 200)
+        self.mox.VerifyAll()
+
+    def test_list_usage_exists_no_custom_filters_for_glance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.GET = {'service': 'glance'}
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
+        objects = self.mox.CreateMockAnything()
+        dbapi.get_db_objects(models.ImageExists, fake_request, 'id',
                              custom_filters={}).AndReturn(objects)
         self.mox.StubOutWithMock(dbapi, '_convert_model_list')
         dbapi._convert_model_list(objects, dbapi._exists_extra_values)
@@ -361,15 +375,16 @@ class DBAPITestCase(StacktachBaseTestCase):
         fake_request = self.mox.CreateMockAnything()
         date = str(datetime.datetime.utcnow())
         fake_request.GET = {'received_max': date}
-        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         unix_date = stacktach_utils.str_time_to_unix(date)
         custom_filters = {'received_max': {'raw__when__lte': unix_date}}
         objects = self.mox.CreateMockAnything()
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         dbapi.get_db_objects(models.InstanceExists, fake_request, 'id',
                              custom_filters=custom_filters).AndReturn(objects)
         self.mox.StubOutWithMock(dbapi, '_convert_model_list')
         dbapi._convert_model_list(objects, dbapi._exists_extra_values)
         self.mox.ReplayAll()
+
         resp = dbapi.list_usage_exists(fake_request)
         self.assertEqual(resp.status_code, 200)
         self.mox.VerifyAll()
@@ -733,4 +748,176 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(body.get('status'), 400)
         msg = "'messages' missing from request body"
         self.assertEqual(body.get('message'), msg)
+        self.mox.VerifyAll()
+
+    def test_list_usage_launches_without_service(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {}
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
+        mock_objects = self.mox.CreateMockAnything()
+        launches = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_convert_model_list')
+        dbapi._convert_model_list(mock_objects).AndReturn(launches)
+        dbapi.get_db_objects(models.InstanceUsage, fake_request, 'launched_at').AndReturn(mock_objects)
+        self.mox.ReplayAll()
+
+        resp = dbapi.list_usage_launches(fake_request)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'launches': launches})
+        self.mox.VerifyAll()
+
+    def test_list_usage_launches_for_glance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'glance'}
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
+        mock_objects = self.mox.CreateMockAnything()
+        launches = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_convert_model_list')
+        dbapi._convert_model_list(mock_objects).AndReturn(launches)
+        dbapi.get_db_objects(models.ImageUsage, fake_request, 'created_at').AndReturn(mock_objects)
+        self.mox.ReplayAll()
+
+        resp = dbapi.list_usage_launches(fake_request)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'launches': launches})
+        self.mox.VerifyAll()
+
+    def test_list_usage_launches_for_nova(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'nova'}
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
+        mock_objects = self.mox.CreateMockAnything()
+        launches = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_convert_model_list')
+        dbapi._convert_model_list(mock_objects).AndReturn(launches)
+        dbapi.get_db_objects(models.InstanceUsage, fake_request, 'launched_at').AndReturn(mock_objects)
+        self.mox.ReplayAll()
+
+        resp = dbapi.list_usage_launches(fake_request)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'launches': launches})
+        self.mox.VerifyAll()
+
+    def test_get_usage_launch_with_no_service(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {}
+        launch = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
+        dbapi._get_model_by_id(models.InstanceUsage, 1).AndReturn(launch)
+        self.mox.ReplayAll()
+
+        resp = dbapi.get_usage_launch(fake_request, 1)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'launch': {'a': 1}})
+        self.mox.VerifyAll()
+
+    def test_get_usage_launch_for_nova(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'nova'}
+        launch = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
+        dbapi._get_model_by_id(models.InstanceUsage, 1).AndReturn(launch)
+        self.mox.ReplayAll()
+
+        resp = dbapi.get_usage_launch(fake_request, 1)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'launch': {'a': 1}})
+        self.mox.VerifyAll()
+
+    def test_get_usage_launch_for_glance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'glance'}
+        launch = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
+        dbapi._get_model_by_id(models.ImageUsage, 1).AndReturn(launch)
+        self.mox.ReplayAll()
+
+        resp = dbapi.get_usage_launch(fake_request, 1)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'launch': {'a': 1}})
+        self.mox.VerifyAll()
+
+    def test_get_usage_delete_for_nova(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'nova'}
+        delete = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
+        dbapi._get_model_by_id(models.InstanceDeletes, 1).AndReturn(delete)
+        self.mox.ReplayAll()
+
+        resp = dbapi.get_usage_delete(fake_request, 1)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'delete': {'a': 1}})
+        self.mox.VerifyAll()
+
+    def test_get_usage_delete_for_glance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'glance'}
+        delete = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
+        dbapi._get_model_by_id(models.ImageDeletes, 1).AndReturn(delete)
+        self.mox.ReplayAll()
+
+        resp = dbapi.get_usage_delete(fake_request, 1)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'delete': {'a': 1}})
+        self.mox.VerifyAll()
+
+    def test_list_usage_deletes_with_no_service(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {}
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
+        mock_objects = self.mox.CreateMockAnything()
+        deletes = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_convert_model_list')
+        dbapi._convert_model_list(mock_objects).AndReturn(deletes)
+        dbapi.get_db_objects(models.InstanceDeletes, fake_request, 'launched_at').AndReturn(mock_objects)
+        self.mox.ReplayAll()
+
+        resp = dbapi.list_usage_deletes(fake_request)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'deletes': deletes})
+        self.mox.VerifyAll()
+
+    def test_list_usage_deletes_for_nova(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'nova'}
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
+        mock_objects = self.mox.CreateMockAnything()
+        deletes = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_convert_model_list')
+        dbapi._convert_model_list(mock_objects).AndReturn(deletes)
+        dbapi.get_db_objects(models.InstanceDeletes, fake_request, 'launched_at').AndReturn(mock_objects)
+        self.mox.ReplayAll()
+
+        resp = dbapi.list_usage_deletes(fake_request)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'deletes': deletes})
+        self.mox.VerifyAll()
+
+    def test_list_usage_deletes_for_glance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': 'glance'}
+        self.mox.StubOutWithMock(dbapi, 'get_db_objects')
+        mock_objects = self.mox.CreateMockAnything()
+        deletes = {'a': 1}
+        self.mox.StubOutWithMock(dbapi, '_convert_model_list')
+        dbapi._convert_model_list(mock_objects).AndReturn(deletes)
+        dbapi.get_db_objects(models.ImageDeletes, fake_request, 'deleted_at').AndReturn(mock_objects)
+        self.mox.ReplayAll()
+
+        resp = dbapi.list_usage_deletes(fake_request)
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(json.loads(resp.content), {'deletes': deletes})
         self.mox.VerifyAll()
