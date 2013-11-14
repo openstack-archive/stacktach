@@ -79,6 +79,13 @@ def _log_api_exception(cls, ex, request):
         stacklog.error(msg)
 
 
+def _exists_model_factory(service):
+    if service == 'glance':
+        return models.ImageExists
+    elif service == 'nova':
+        return models.InstanceExists
+
+
 def api_call(func):
 
     @functools.wraps(func)
@@ -193,27 +200,52 @@ def exists_send_status(request, message_id):
             raise BadRequestException(message=msg)
 
 
-def _exists_send_status_batch(request):
+def _find_exists_with_message_id(msg_id, exists_model, service):
+    if service == 'glance':
+        return exists_model.objects.select_for_update().filter(
+            message_id=msg_id)
+    elif service == 'nova':
+        return [models.InstanceExists.objects.select_for_update()
+                .get(message_id=msg_id)]
 
+
+def _ping_processing_with_service(pings, service):
+    exists_model = _exists_model_factory(service)
+    with transaction.commit_on_success():
+        for msg_id, status_code in pings.items():
+            try:
+                exists = _find_exists_with_message_id(msg_id, exists_model,
+                                                      service)
+                for exists in exists:
+                    exists.send_status = status_code
+                    exists.save()
+            except exists_model.DoesNotExist:
+                msg = "Could not find Exists record with message_id = '%s' for %s"
+                msg = msg % (msg_id, service)
+                raise NotFoundException(message=msg)
+            except exists_model.MultipleObjectsReturned:
+                msg = "Multiple Exists records with message_id = '%s' for %s"
+                msg = msg % (msg_id, service)
+                raise APIException(message=msg)
+
+
+def _exists_send_status_batch(request):
     body = json.loads(request.body)
     if body.get('messages') is not None:
         messages = body['messages']
-        with transaction.commit_on_success():
-            for msg_id, status in messages.items():
-                try:
-                    exist = models.InstanceExists.objects\
-                                                 .select_for_update()\
-                                                 .get(message_id=msg_id)
-                    exist.send_status = status
-                    exist.save()
-                except models.InstanceExists.DoesNotExist:
-                    msg = "Could not find Exists record with message_id = '%s'"
-                    msg = msg % msg_id
-                    raise NotFoundException(message=msg)
-                except models.InstanceExists.MultipleObjectsReturned:
-                    msg = "Multiple Exists records with message_id = '%s'"
-                    msg = msg % msg_id
-                    raise APIException(message=msg)
+        version = body.get('version', 0)
+        if version == 0:
+            service = 'nova'
+            nova_pings = messages
+            if nova_pings:
+                _ping_processing_with_service(nova_pings, service)
+        if version == 1:
+            nova_pings = messages['nova']
+            glance_pings = messages['glance']
+            if nova_pings:
+                _ping_processing_with_service(nova_pings, 'nova')
+            if glance_pings:
+                _ping_processing_with_service(glance_pings, 'glance')
     else:
         msg = "'messages' missing from request body"
         raise BadRequestException(message=msg)
