@@ -13,7 +13,7 @@ class MigrationsTestCase(StacktachBaseTestCase):
         migrations_file = migrations.__file__
         migrations_dir = migrations_file[:-len('__init__.py')-1]
 
-        migr_match = re.compile('[0-9]{4}.*.py')
+        migr_match = re.compile('^[0-9]{4}.*.py$')
         files = [f for f in listdir(migrations_dir)
                  if re.match(migr_match, f)]
 
