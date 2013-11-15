@@ -22,11 +22,6 @@ class MigrationsTestCase(StacktachBaseTestCase):
             migr_list = migrs.get(migr_number, [])
             migr_list.append(f)
             migrs[migr_number] = migr_list
-
-        dups = []
-        for num in migrs:
-            if len(migrs[num]) > 1:
-                dups.append(num)
-
-        msg = "Duplicate migrations found for number(s) %s" % ' '.join(dups)
-        self.assertEqual(len(dups), 0, msg)
+            if len(migr_list) > 1:
+                msg = "Duplicate migrations found for number %s." % migr_number
+                self.fail(msg)
