@@ -234,6 +234,7 @@ class NovaNotification(Notification):
             self.payload.get('new_instance_type_id', None)
         self.launched_at = self.payload.get('launched_at', None)
         self.deleted_at = self.payload.get('deleted_at', None)
+        self.terminated_at = self.payload.get('terminated_at', None)
         self.audit_period_beginning = self.payload.get(
             'audit_period_beginning', None)
         self.audit_period_ending = self.payload.get(
