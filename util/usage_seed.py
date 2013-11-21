@@ -84,6 +84,25 @@ def get_previous_period(time, period_length):
         return start, end
 # end yanked from reports/nova_usage_audit.py
 
+inst_types = {}
+
+
+def get_instance_type(type_id):
+    global inst_types
+    context = RequestContext('1', '1', is_admin=True)
+    if type_id in inst_types:
+        return inst_types[type_id]
+    else:
+        inst_type = sqlapi.model_query(context, novamodels.InstanceTypes)\
+                          .filter_by(id=type_id).first()
+        inst_types[type_id] = inst_type
+        return inst_type
+
+
+def get_metadata(instance_uuid):
+    context = RequestContext('1', '1', is_admin=True)
+    return sqlapi.instance_system_metadata_get(context, instance_uuid)
+
 
 def _usage_for_instance(instance, task=None):
     usage = {
@@ -91,6 +110,15 @@ def _usage_for_instance(instance, task=None):
         'tenant': instance['project_id'],
         'instance_type_id': instance.get('instance_type_id'),
     }
+
+    instance_type = get_instance_type(instance.get('instance_type_id'))
+    usage['instance_flavor_id'] = instance_type['flavorid']
+
+    metadata = get_metadata(instance['uuid'])
+    usage['os_architecture'] = metadata.get('image_org.openstack__1__architecture')
+    usage['os_distro'] = metadata.get('image_org.openstack__1__os_distro')
+    usage['os_version'] = metadata.get('image_org.openstack__1__os_version')
+    usage['rax_options'] = metadata.get('com.rackspace__1__options')
 
     launched_at = instance.get('launched_at')
     if launched_at is not None:
