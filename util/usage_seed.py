@@ -118,7 +118,7 @@ def _usage_for_instance(instance, task=None):
     usage['os_architecture'] = metadata.get('image_org.openstack__1__architecture')
     usage['os_distro'] = metadata.get('image_org.openstack__1__os_distro')
     usage['os_version'] = metadata.get('image_org.openstack__1__os_version')
-    usage['rax_options'] = metadata.get('com.rackspace__1__options')
+    usage['rax_options'] = metadata.get('image_com.rackspace__1__options')
 
     launched_at = instance.get('launched_at')
     if launched_at is not None:
