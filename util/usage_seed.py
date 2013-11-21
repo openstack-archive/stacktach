@@ -38,13 +38,6 @@ import sys
 
 from oslo.config import cfg
 CONF = cfg.CONF
-CONF.config_file = "/etc/nova/nova.conf"
-
-if __name__ == '__main__':
-    if len(sys.argv) != 3:
-        print "Proper Usage: usage_seed.py [period_length] [sql_connection]"
-        sys.exit(1)
-    CONF.sql_connection = sys.argv[2]
 
 from nova.compute import task_states
 from nova.context import RequestContext
@@ -59,6 +52,12 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
 
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
+
+if __name__ == '__main__':
+    if len(sys.argv) != 3:
+        print "Proper Usage: usage_seed.py [period_length] [sql_connection]"
+        sys.exit(1)
+    CONF.set_override("connection", sys.argv[2], group='database')
 
 
 # start yanked from reports/nova_usage_audit.py
@@ -106,7 +105,7 @@ def _usage_for_instance(instance, task=None):
 def _delete_for_instance(instance):
     delete = {
         'instance': instance['uuid'],
-        'deleted_at': dt.dt_to_decimal(instance.get('terminated_at')),
+        'deleted_at': dt.dt_to_decimal(instance.get('deleted_at')),
     }
 
     launched_at = instance.get('launched_at')
