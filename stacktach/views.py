@@ -242,7 +242,11 @@ def _process_usage_for_updates(raw, notification):
 def _process_delete(raw, notification):
     if notification.launched_at and notification.launched_at != '':
         instance_id = notification.instance
-        deleted_at = utils.str_time_to_unix(notification.deleted_at)
+        deleted_at = None
+        if notification.deleted_at:
+            deleted_at = utils.str_time_to_unix(notification.deleted_at)
+        elif notification.terminated_at:
+            deleted_at = utils.str_time_to_unix(notification.terminated_at)
         launched_at = utils.str_time_to_unix(notification.launched_at)
         values = {
             'instance': instance_id,
