@@ -109,7 +109,7 @@ def _create_timed_rotating_logger(name):
     logger.setLevel(logging.DEBUG)
     handler = TimedRotatingFileHandlerWithCurrentTimestamp(
         default_logger_location % name, when='midnight', interval=1,
-        backupCount=3)
+        backupCount=6)
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
