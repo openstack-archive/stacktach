@@ -328,10 +328,10 @@ class DBAPITestCase(StacktachBaseTestCase):
 
     def test_list_usage_exists_no_custom_filters_for_nova(self):
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'service': 'glance'}
+        fake_request.GET = {}
         self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         objects = self.mox.CreateMockAnything()
-        dbapi.get_db_objects(models.ImageExists, fake_request, 'id',
+        dbapi.get_db_objects(models.InstanceExists, fake_request, 'id',
                              custom_filters={}).AndReturn(objects)
         self.mox.StubOutWithMock(dbapi, '_convert_model_list')
         dbapi._convert_model_list(objects, dbapi._exists_extra_values)
@@ -342,7 +342,7 @@ class DBAPITestCase(StacktachBaseTestCase):
 
     def test_list_usage_exists_no_custom_filters_for_glance(self):
         fake_request = self.mox.CreateMockAnything()
-        fake_request.GET = {'service': 'glance'}
+        fake_request.GET = {}
         self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         objects = self.mox.CreateMockAnything()
         dbapi.get_db_objects(models.ImageExists, fake_request, 'id',
@@ -350,7 +350,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(dbapi, '_convert_model_list')
         dbapi._convert_model_list(objects, dbapi._exists_extra_values)
         self.mox.ReplayAll()
-        resp = dbapi.list_usage_exists(fake_request)
+        resp = dbapi.list_usage_exists_glance(fake_request)
         self.assertEqual(resp.status_code, 200)
         self.mox.VerifyAll()
 
@@ -770,7 +770,7 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_list_usage_launches_for_glance(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'glance'}
+        fake_request.GET = {}
         self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         mock_objects = self.mox.CreateMockAnything()
         launches = {'a': 1}
@@ -779,15 +779,15 @@ class DBAPITestCase(StacktachBaseTestCase):
         dbapi.get_db_objects(models.ImageUsage, fake_request, 'created_at').AndReturn(mock_objects)
         self.mox.ReplayAll()
 
-        resp = dbapi.list_usage_launches(fake_request)
+        resp = dbapi.list_usage_images(fake_request)
         self.assertEqual(resp.status_code, 200)
-        self.assertEqual(json.loads(resp.content), {'launches': launches})
+        self.assertEqual(json.loads(resp.content), {'images': launches})
         self.mox.VerifyAll()
 
     def test_list_usage_launches_for_nova(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'nova'}
+        fake_request.GET = {}
         self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         mock_objects = self.mox.CreateMockAnything()
         launches = {'a': 1}
@@ -818,7 +818,7 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_get_usage_launch_for_nova(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'nova'}
+        fake_request.GET = {}
         launch = {'a': 1}
         self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
         dbapi._get_model_by_id(models.InstanceUsage, 1).AndReturn(launch)
@@ -832,13 +832,13 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_get_usage_launch_for_glance(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'glance'}
+        fake_request.GET = {}
         launch = {'a': 1}
         self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
         dbapi._get_model_by_id(models.ImageUsage, 1).AndReturn(launch)
         self.mox.ReplayAll()
 
-        resp = dbapi.get_usage_launch(fake_request, 1)
+        resp = dbapi.get_usage_image(fake_request, 1)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(json.loads(resp.content), {'launch': {'a': 1}})
         self.mox.VerifyAll()
@@ -846,7 +846,7 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_get_usage_delete_for_nova(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'nova'}
+        fake_request.GET = {}
         delete = {'a': 1}
         self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
         dbapi._get_model_by_id(models.InstanceDeletes, 1).AndReturn(delete)
@@ -860,13 +860,13 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_get_usage_delete_for_glance(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'glance'}
+        fake_request.GET = {}
         delete = {'a': 1}
         self.mox.StubOutWithMock(dbapi, '_get_model_by_id')
         dbapi._get_model_by_id(models.ImageDeletes, 1).AndReturn(delete)
         self.mox.ReplayAll()
 
-        resp = dbapi.get_usage_delete(fake_request, 1)
+        resp = dbapi.get_usage_delete_glance(fake_request, 1)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(json.loads(resp.content), {'delete': {'a': 1}})
         self.mox.VerifyAll()
@@ -891,7 +891,7 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_list_usage_deletes_for_nova(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'nova'}
+        fake_request.GET = {}
         self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         mock_objects = self.mox.CreateMockAnything()
         deletes = {'a': 1}
@@ -908,7 +908,7 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_list_usage_deletes_for_glance(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'service': 'glance'}
+        fake_request.GET = {}
         self.mox.StubOutWithMock(dbapi, 'get_db_objects')
         mock_objects = self.mox.CreateMockAnything()
         deletes = {'a': 1}
@@ -917,7 +917,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         dbapi.get_db_objects(models.ImageDeletes, fake_request, 'deleted_at').AndReturn(mock_objects)
         self.mox.ReplayAll()
 
-        resp = dbapi.list_usage_deletes(fake_request)
+        resp = dbapi.list_usage_deletes_glance(fake_request)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(json.loads(resp.content), {'deletes': deletes})
         self.mox.VerifyAll()

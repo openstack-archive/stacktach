@@ -121,27 +121,48 @@ def _deletes_model_factory(service):
     if service == 'glance':
         return {'klass': models.ImageDeletes, 'order_by': 'deleted_at'}
 
-
 @api_call
 def list_usage_launches(request):
-    service = request.GET.get('service', 'nova')
+    return {'launches': list_usage_launches_with_service(request, 'nova')}
+
+@api_call
+def list_usage_images(request):
+    return { 'images': list_usage_launches_with_service(request, 'glance')}
+
+
+def list_usage_launches_with_service(request, service):
     model = _usage_model_factory(service)
     objects = get_db_objects(model['klass'], request,
                              model['order_by'])
     dicts = _convert_model_list(objects)
-    return {'launches': dicts}
+    return dicts
 
+
+def get_usage_launch_with_service(launch_id, service):
+    model = _usage_model_factory(service)
+    return {'launch': _get_model_by_id(model['klass'], launch_id)}
 
 @api_call
 def get_usage_launch(request, launch_id):
-    service = request.GET.get('service', 'nova')
-    model = _usage_model_factory(service)
-    return {'launch': _get_model_by_id(model['klass'], launch_id)}
+    return get_usage_launch_with_service(launch_id, 'nova')
+
+
+@api_call
+def get_usage_image(request, image_id):
+    return get_usage_launch_with_service(image_id, 'glance')
 
 
 @api_call
 def list_usage_deletes(request):
-    service = request.GET.get('service', 'nova')
+    return list_usage_deletes_with_service(request, 'nova')
+
+
+@api_call
+def list_usage_deletes_glance(request):
+    return list_usage_deletes_with_service(request, 'glance')
+
+
+def list_usage_deletes_with_service(request, service):
     model = _deletes_model_factory(service)
     objects = get_db_objects(model['klass'], request,
                              model['order_by'])
@@ -151,8 +172,13 @@ def list_usage_deletes(request):
 
 @api_call
 def get_usage_delete(request, delete_id):
-    service = request.GET.get('service', 'nova')
-    model = _deletes_model_factory(service)
+    model = _deletes_model_factory('nova')
+    return {'delete': _get_model_by_id(model['klass'], delete_id)}
+
+
+@api_call
+def get_usage_delete_glance(request, delete_id):
+    model = _deletes_model_factory('glance')
     return {'delete': _get_model_by_id(model['klass'], delete_id)}
 
 
@@ -163,7 +189,15 @@ def _exists_extra_values(exist):
 
 @api_call
 def list_usage_exists(request):
-    service = request.GET.get('service', 'nova')
+    return list_usage_exists_with_service(request, 'nova')
+
+
+@api_call
+def list_usage_exists_glance(request):
+    return list_usage_exists_with_service(request, 'glance')
+
+
+def list_usage_exists_with_service(request, service):
     model = _exists_model_factory(service)
     try:
         custom_filters = {}
@@ -190,6 +224,11 @@ def list_usage_exists(request):
 @api_call
 def get_usage_exist(request, exist_id):
     return {'exist': _get_model_by_id(models.InstanceExists, exist_id,
+                                      _exists_extra_values)}
+
+@api_call
+def get_usage_exist_glance(request, exist_id):
+    return {'exist': _get_model_by_id(models.ImageExists, exist_id,
                                       _exists_extra_values)}
 
 
