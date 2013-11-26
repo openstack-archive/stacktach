@@ -636,6 +636,33 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
+    def test_process_usage_for_updates_finish_resize_start(self):
+        notification = self._create_mock_notification()
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.finish_resize.start'
+
+        usage = self.mox.CreateMockAnything()
+        usage.launched_at = None
+        usage.instance_type_id = INSTANCE_TYPE_ID_2
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_2
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+            .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_updates(raw, notification)
+
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+
+        self.mox.VerifyAll()
+
     def test_process_usage_for_updates_finish_resize_end(self):
         notification = self._create_mock_notification()
         raw = self.mox.CreateMockAnything()
