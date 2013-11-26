@@ -156,6 +156,7 @@ INSTANCE_EVENT = {
     'resize_prep_start': 'compute.instance.resize.prep.start',
     'resize_revert_start': 'compute.instance.resize.revert.start',
     'resize_revert_end': 'compute.instance.resize.revert.end',
+    'resize_finish_start': 'compute.instance.finish_resize.start',
     'resize_finish_end': 'compute.instance.finish_resize.end',
     'rescue_start': 'compute.instance.rescue.start',
     'rescue_end': 'compute.instance.rescue.end',
@@ -226,6 +227,7 @@ def _process_usage_for_updates(raw, notification):
         usage.launched_at = utils.str_time_to_unix(notification.launched_at)
 
     if raw.event in [INSTANCE_EVENT['resize_revert_end'],
+                     INSTANCE_EVENT['resize_finish_start'],
                      INSTANCE_EVENT['resize_finish_end']]:
         usage.instance_type_id = notification.instance_type_id
         usage.instance_flavor_id = notification.instance_flavor_id
@@ -325,6 +327,7 @@ USAGE_PROCESS_MAPPING = {
     INSTANCE_EVENT['rescue_start']: _process_usage_for_new_launch,
     INSTANCE_EVENT['create_end']: _process_usage_for_updates,
     INSTANCE_EVENT['rebuild_end']: _process_usage_for_updates,
+    INSTANCE_EVENT['resize_finish_start']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_finish_end']: _process_usage_for_updates,
     INSTANCE_EVENT['resize_revert_end']: _process_usage_for_updates,
     INSTANCE_EVENT['rescue_end']: _process_usage_for_updates,

@@ -18,7 +18,7 @@ class StacklogTestCase(StacktachBaseTestCase):
             logger.handlers[0], logging.handlers.TimedRotatingFileHandler)
         self.assertEquals(logger.handlers[0].when, 'MIDNIGHT')
         self.assertEquals(logger.handlers[0].interval, 86400)
-        self.assertEquals(logger.handlers[0].backupCount, 3)
+        self.assertEquals(logger.handlers[0].backupCount, 6)
         self.assertEqual(logger.name, 'logger')
         self.assertEquals(logger.level, logging.DEBUG)
 
