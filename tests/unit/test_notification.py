@@ -545,6 +545,7 @@ class GlanceExistsNotificationTestCase(StacktachBaseTestCase):
             "event_type": "image.exists",
             "timestamp": "2013-06-20 18:31:57.939614",
             "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "message_id": "d14cfa51-6a0e-4cf8-9130-804738be96d2",
             "payload": {
                 "audit_period_beginning": audit_period_beginning,
                 "audit_period_ending": audit_period_ending,
@@ -587,7 +588,8 @@ class GlanceExistsNotificationTestCase(StacktachBaseTestCase):
                 audit_period_ending=utils.str_time_to_unix(audit_period_ending),
                 size=size,
                 uuid=uuid,
-                usage=None).AndReturn(raw)
+                usage=None,
+                message_id="d14cfa51-6a0e-4cf8-9130-804738be96d2").AndReturn(raw)
 
         self.mox.ReplayAll()
 
@@ -609,6 +611,7 @@ class GlanceExistsNotificationTestCase(StacktachBaseTestCase):
             "event_type": "image.exists",
             "timestamp": "2013-06-20 18:31:57.939614",
             "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "message_id": "d14cfa51-6a0e-4cf8-9130-804738be96d2",
             "payload": {
                 "audit_period_beginning": audit_period_beginning,
                 "audit_period_ending": audit_period_ending,
@@ -654,7 +657,8 @@ class GlanceExistsNotificationTestCase(StacktachBaseTestCase):
                 uuid=uuid,
                 usage=None,
                 delete=delete,
-                deleted_at=utils.str_time_to_unix(deleted_at)).AndReturn(raw)
+                deleted_at=utils.str_time_to_unix(deleted_at),
+                message_id="d14cfa51-6a0e-4cf8-9130-804738be96d2").AndReturn(raw)
 
         self.mox.ReplayAll()
 

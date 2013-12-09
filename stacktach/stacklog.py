@@ -21,9 +21,12 @@
 import logging
 import logging.handlers
 import multiprocessing
+import os
+import re
 import threading
 import traceback
 import sys
+import time
 
 LOGGERS = {}
 LOGGER_QUEUE_MAP = {}
@@ -104,9 +107,9 @@ def info(msg, name=None):
 def _create_timed_rotating_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    handler = logging.handlers.TimedRotatingFileHandler(
-        default_logger_location % name,
-        when='midnight', interval=1, backupCount=3)
+    handler = TimedRotatingFileHandlerWithCurrentTimestamp(
+        default_logger_location % name, when='midnight', interval=1,
+        backupCount=6)
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
@@ -186,3 +189,55 @@ class LogListener:
 
 def get_queue(logger_name):
     return LOGGER_QUEUE_MAP[logger_name]
+
+
+class TimedRotatingFileHandlerWithCurrentTimestamp(
+        logging.handlers.TimedRotatingFileHandler):
+
+    def __init__(self, filename, when='h', interval=1, backupCount=0,
+                 encoding=None, delay=False, utc=False):
+        logging.handlers.TimedRotatingFileHandler.__init__(
+            self, filename, when, interval, backupCount, encoding, delay, utc)
+        self.suffix = "%Y-%m-%d_%H-%M-%S"
+        self.extMatch = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}$")
+
+    def doRollover(self):
+        """Exactly the same as TimedRotatingFileHandler's doRollover() except
+        that the current date/time stamp is appended to the filename rather
+        than the start date/time stamp, when the rollover happens."""
+        currentTime = int(time.time())
+        if self.stream:
+            self.stream.close()
+            self.stream = None
+        if self.utc:
+            timeTuple = time.gmtime(currentTime)
+        else:
+            timeTuple = time.localtime(currentTime)
+        dfn = self.baseFilename + "." + time.strftime(self.suffix, timeTuple)
+        if os.path.exists(dfn):
+            os.remove(dfn)
+        os.rename(self.baseFilename, dfn)
+        if self.backupCount > 0:
+            # find the oldest log file and delete it
+            #s = glob.glob(self.baseFilename + ".20*")
+            #if len(s) > self.backupCount:
+            #    s.sort()
+            #    os.remove(s[0])
+            for s in self.getFilesToDelete():
+                os.remove(s)
+        #print "%s -> %s" % (self.baseFilename, dfn)
+        self.mode = 'w'
+        self.stream = self._open()
+        newRolloverAt = self.computeRollover(currentTime)
+        while newRolloverAt <= currentTime:
+            newRolloverAt = newRolloverAt + self.interval
+        #If DST changes and midnight or weekly rollover, adjust for this.
+        if (self.when == 'MIDNIGHT' or self.when.startswith('W')) and not self.utc:
+            dstNow = time.localtime(currentTime)[-1]
+            dstAtRollover = time.localtime(newRolloverAt)[-1]
+            if dstNow != dstAtRollover:
+                if not dstNow:  # DST kicks in before next rollover, so we need to deduct an hour
+                    newRolloverAt = newRolloverAt - 3600
+                else:           # DST bows out before next rollover, so we need to add an hour
+                    newRolloverAt = newRolloverAt + 3600
+        self.rolloverAt = newRolloverAt
