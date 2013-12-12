@@ -79,13 +79,6 @@ def _log_api_exception(cls, ex, request):
         stacklog.error(msg)
 
 
-def _exists_model_factory(service):
-    if service == 'glance':
-        return models.ImageExists
-    elif service == 'nova':
-        return models.InstanceExists
-
-
 def api_call(func):
 
     @functools.wraps(func)
@@ -108,28 +101,85 @@ def api_call(func):
     return handled
 
 
+def _usage_model_factory(service):
+    if service == 'nova':
+        return {'klass': models.InstanceUsage, 'order_by': 'launched_at'}
+    if service == 'glance':
+        return {'klass': models.ImageUsage, 'order_by': 'created_at'}
+
+
+def _exists_model_factory(service):
+    if service == 'nova':
+        return {'klass': models.InstanceExists, 'order_by': 'id'}
+    if service == 'glance':
+        return {'klass': models.ImageExists, 'order_by': 'id'}
+
+
+def _deletes_model_factory(service):
+    if service == 'nova':
+        return {'klass': models.InstanceDeletes, 'order_by': 'launched_at'}
+    if service == 'glance':
+        return {'klass': models.ImageDeletes, 'order_by': 'deleted_at'}
+
 @api_call
 def list_usage_launches(request):
-    objects = get_db_objects(models.InstanceUsage, request, 'launched_at')
-    dicts = _convert_model_list(objects)
-    return {'launches': dicts}
+    return {'launches': list_usage_launches_with_service(request, 'nova')}
 
+@api_call
+def list_usage_images(request):
+    return { 'images': list_usage_launches_with_service(request, 'glance')}
+
+
+def list_usage_launches_with_service(request, service):
+    model = _usage_model_factory(service)
+    objects = get_db_objects(model['klass'], request,
+                             model['order_by'])
+    dicts = _convert_model_list(objects)
+    return dicts
+
+
+def get_usage_launch_with_service(launch_id, service):
+    model = _usage_model_factory(service)
+    return {'launch': _get_model_by_id(model['klass'], launch_id)}
 
 @api_call
 def get_usage_launch(request, launch_id):
-    return {'launch': _get_model_by_id(models.InstanceUsage, launch_id)}
+    return get_usage_launch_with_service(launch_id, 'nova')
+
+
+@api_call
+def get_usage_image(request, image_id):
+    return get_usage_launch_with_service(image_id, 'glance')
 
 
 @api_call
 def list_usage_deletes(request):
-    objects = get_db_objects(models.InstanceDeletes, request, 'launched_at')
+    return list_usage_deletes_with_service(request, 'nova')
+
+
+@api_call
+def list_usage_deletes_glance(request):
+    return list_usage_deletes_with_service(request, 'glance')
+
+
+def list_usage_deletes_with_service(request, service):
+    model = _deletes_model_factory(service)
+    objects = get_db_objects(model['klass'], request,
+                             model['order_by'])
     dicts = _convert_model_list(objects)
     return {'deletes': dicts}
 
 
 @api_call
 def get_usage_delete(request, delete_id):
-    return {'delete': _get_model_by_id(models.InstanceDeletes, delete_id)}
+    model = _deletes_model_factory('nova')
+    return {'delete': _get_model_by_id(model['klass'], delete_id)}
+
+
+@api_call
+def get_usage_delete_glance(request, delete_id):
+    model = _deletes_model_factory('glance')
+    return {'delete': _get_model_by_id(model['klass'], delete_id)}
 
 
 def _exists_extra_values(exist):
@@ -139,6 +189,16 @@ def _exists_extra_values(exist):
 
 @api_call
 def list_usage_exists(request):
+    return list_usage_exists_with_service(request, 'nova')
+
+
+@api_call
+def list_usage_exists_glance(request):
+    return list_usage_exists_with_service(request, 'glance')
+
+
+def list_usage_exists_with_service(request, service):
+    model = _exists_model_factory(service)
     try:
         custom_filters = {}
         if 'received_min' in request.GET:
@@ -155,7 +215,7 @@ def list_usage_exists(request):
         msg = "Range filters must be dates."
         raise BadRequestException(message=msg)
 
-    objects = get_db_objects(models.InstanceExists, request, 'id',
+    objects = get_db_objects(model['klass'], request, 'id',
                              custom_filters=custom_filters)
     dicts = _convert_model_list(objects, _exists_extra_values)
     return {'exists': dicts}
@@ -164,6 +224,11 @@ def list_usage_exists(request):
 @api_call
 def get_usage_exist(request, exist_id):
     return {'exist': _get_model_by_id(models.InstanceExists, exist_id,
+                                      _exists_extra_values)}
+
+@api_call
+def get_usage_exist_glance(request, exist_id):
+    return {'exist': _get_model_by_id(models.ImageExists, exist_id,
                                       _exists_extra_values)}
 
 
@@ -210,7 +275,7 @@ def _find_exists_with_message_id(msg_id, exists_model, service):
 
 
 def _ping_processing_with_service(pings, service):
-    exists_model = _exists_model_factory(service)
+    exists_model = _exists_model_factory(service)['klass']
     with transaction.commit_on_success():
         for msg_id, status_code in pings.items():
             try:
