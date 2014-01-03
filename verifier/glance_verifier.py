@@ -136,6 +136,9 @@ def _verify(exists):
             _verify_validity(exist)
 
             exist.mark_verified()
+        except VerificationException, e:
+            verified = False
+            exist.mark_failed(reason=str(e))
         except Exception, e:
             verified = False
             exist.mark_failed(reason=e.__class__.__name__)

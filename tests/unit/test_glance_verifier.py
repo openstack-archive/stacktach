@@ -435,10 +435,6 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.assertTrue(verified)
 
     def test_verify_exist_marks_exist_failed_if_field_mismatch_exception(self):
-        mock_logger = self._setup_mock_logger()
-        self.mox.StubOutWithMock(mock_logger, 'info')
-        mock_logger.exception("glance: Expected field to be 'expected' "
-                              "got 'actual'")
 
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
@@ -450,7 +446,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         field_mismatch_exc = FieldMismatch('field', 'expected', 'actual')
         glance_verifier._verify_for_usage(exist1).AndRaise(
             exception=field_mismatch_exc)
-        exist1.mark_failed(reason='FieldMismatch')
+        exist1.mark_failed(reason="Expected field to be 'expected' got 'actual'")
 
         glance_verifier._verify_for_usage(exist2)
         glance_verifier._verify_for_delete(exist2)
