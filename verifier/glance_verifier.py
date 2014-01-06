@@ -151,20 +151,16 @@ class GlanceVerifier(Verifier):
     def __init__(self, config, pool=None):
         super(GlanceVerifier, self).__init__(config, pool=pool)
 
-    def verify_for_range(self, ending_max, callback=None):
-        exists_grouped_by_owner_and_rawid = \
-            models.ImageExists.find_and_group_by_owner_and_raw_id(
-                ending_max=ending_max,
-                status=models.ImageExists.PENDING)
-        count = len(exists_grouped_by_owner_and_rawid)
+    def verify_exists(self, grouped_exists, callback, verifying_status):
+        count = len(grouped_exists)
         added = 0
         update_interval = datetime.timedelta(seconds=30)
         next_update = datetime.datetime.utcnow() + update_interval
         _get_child_logger().info("glance: Adding %s per-owner exists to queue." % count)
         while added < count:
-            for exists in exists_grouped_by_owner_and_rawid.values():
+            for exists in grouped_exists.values():
                 for exist in exists:
-                    exist.status = models.ImageExists.VERIFYING
+                    exist.status = verifying_status
                     exist.save()
                 result = self.pool.apply_async(_verify, args=(exists,),
                                                callback=callback)
@@ -176,6 +172,22 @@ class GlanceVerifier(Verifier):
                     _get_child_logger().info(msg)
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
+
+    def verify_for_range(self, ending_max, callback=None):
+        unsent_exists_grouped_by_owner_and_rawid = \
+            models.ImageExists.find_and_group_by_owner_and_raw_id(
+                ending_max=ending_max,
+                status=models.ImageExists.SENT_UNVERIFIED)
+        unsent_count = self.verify_exists(unsent_exists_grouped_by_owner_and_rawid,
+                                        None, models.ImageExists.SENT_VERIFYING)
+        exists_grouped_by_owner_and_rawid = \
+            models.ImageExists.find_and_group_by_owner_and_raw_id(
+                ending_max=ending_max,
+                status=models.ImageExists.PENDING)
+        count = self.verify_exists(exists_grouped_by_owner_and_rawid, callback,
+                                 models.ImageExists.VERIFYING)
+
+        return count+unsent_count
 
     def send_verified_notification(self, exist, connection, exchange,
                                    routing_keys=None):

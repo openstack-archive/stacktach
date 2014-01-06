@@ -290,9 +290,7 @@ class NovaVerifier(base_verifier.Verifier):
                 message_service.send_notification(
                     json_body[1], key, connection, exchange)
 
-    def verify_for_range(self, ending_max, callback=None):
-        exists = models.InstanceExists.find(
-            ending_max=ending_max, status=models.InstanceExists.PENDING)
+    def verify_exists(self, callback, exists, verifying_status):
         count = exists.count()
         added = 0
         update_interval = datetime.timedelta(seconds=30)
@@ -300,7 +298,7 @@ class NovaVerifier(base_verifier.Verifier):
         _get_child_logger().info("nova: Adding %s exists to queue." % count)
         while added < count:
             for exist in exists[0:1000]:
-                exist.update_status(models.InstanceExists.VERIFYING)
+                exist.update_status(verifying_status)
                 exist.save()
                 validation_level = self.config.validation_level()
                 result = self.pool.apply_async(
@@ -314,6 +312,20 @@ class NovaVerifier(base_verifier.Verifier):
                     _get_child_logger().info(msg)
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
+
+    def verify_for_range(self, ending_max, callback=None):
+        sent_unverified_exists = models.InstanceExists.find(
+            ending_max=ending_max, status=
+            models.InstanceExists.SENT_UNVERIFIED)
+        sent_unverified_count = self.verify_exists(None,
+                                                   sent_unverified_exists,
+                                                   models.InstanceExists.
+                                                   SENT_VERIFYING)
+        exists = models.InstanceExists.find(
+            ending_max=ending_max, status=models.InstanceExists.PENDING)
+        count = self.verify_exists(callback, exists,
+                                   models.InstanceExists.VERIFYING)
+        return count+sent_unverified_count
 
     def reconcile_failed(self):
         for failed_exist in self.failed:

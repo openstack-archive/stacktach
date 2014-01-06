@@ -256,12 +256,18 @@ class InstanceExists(models.Model):
     VERIFIED = 'verified'
     RECONCILED = 'reconciled'
     FAILED = 'failed'
+    SENT_UNVERIFIED = 'sent_unverified'
+    SENT_FAILED = 'sent_failed'
+    SENT_VERIFYING = 'sent_verifying'
     STATUS_CHOICES = [
         (PENDING, 'Pending Verification'),
         (VERIFYING, 'Currently Being Verified'),
         (VERIFIED, 'Passed Verification'),
         (RECONCILED, 'Passed Verification After Reconciliation'),
         (FAILED, 'Failed Verification'),
+        (SENT_UNVERIFIED, 'Unverified but sent by Yagi'),
+        (SENT_FAILED, 'Failed Verification but sent by Yagi'),
+        (SENT_VERIFYING, 'Currently being verified but sent by Yagi')
     ]
 
     instance = models.CharField(max_length=50, null=True,
@@ -321,7 +327,10 @@ class InstanceExists(models.Model):
         self.save()
 
     def mark_failed(self, reason=None):
-        self.status = InstanceExists.FAILED
+        if self.status == InstanceExists.SENT_VERIFYING:
+            self.status = InstanceExists.SENT_FAILED
+        else:
+            self.status = InstanceExists.FAILED
         if reason:
             self.fail_reason = reason
         self.save()
@@ -458,11 +467,17 @@ class ImageExists(models.Model):
     VERIFYING = 'verifying'
     VERIFIED = 'verified'
     FAILED = 'failed'
+    SENT_UNVERIFIED = 'sent_unverified'
+    SENT_FAILED = 'sent_failed'
+    SENT_VERIFYING = 'sent_verifying'
     STATUS_CHOICES = [
         (PENDING, 'Pending Verification'),
         (VERIFYING, 'Currently Being Verified'),
         (VERIFIED, 'Passed Verification'),
         (FAILED, 'Failed Verification'),
+        (SENT_UNVERIFIED, 'Unverified but sent by Yagi'),
+        (SENT_FAILED, 'Failed Verification but sent by Yagi'),
+        (SENT_VERIFYING, 'Currently being verified but sent by Yagi')
     ]
 
     uuid = models.CharField(max_length=50, db_index=True, null=True)
@@ -513,7 +528,10 @@ class ImageExists(models.Model):
         self.save()
 
     def mark_failed(self, reason=None):
-        self.status = InstanceExists.FAILED
+        if self.status == ImageExists.SENT_VERIFYING:
+            self.status = ImageExists.SENT_FAILED
+        else:
+            self.status = ImageExists.FAILED
         if reason:
             self.fail_reason = reason
         self.save()
