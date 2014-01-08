@@ -98,11 +98,11 @@ def validation_level():
 
 
 def nova_event_type():
-    return config.get('nova_event_type', 'compute.instance.exists.verified.old')
+    return config.get('nova_event_type', 'compute.instance.exists.verified')
 
 
 def glance_event_type():
-    return config.get('glance_event_type', 'image.exists.verified.old')
+    return config.get('glance_event_type', 'image.exists.verified')
 
 
 def flavor_field_name():
