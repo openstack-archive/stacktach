@@ -114,8 +114,8 @@ def _get_deletes(start, session):
 
 def seed(period_length):
     start = get_period_start(datetime.datetime.utcnow(), period_length)
-    db_api.configure_db()
-    session = db_api.get_session()
+    db_api.setup_db_env()
+    session = db_api._get_session()
 
     print "Populating active image usages"
     usages = _get_usages(start, session)
