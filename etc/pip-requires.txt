@@ -8,3 +8,4 @@ argparse
 Pympler
 requests
 south
+sphinxcontrib-httpdomain
