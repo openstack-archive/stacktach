@@ -48,7 +48,13 @@ But that's not much fun. A deployment entry would look like this: ::
              "rabbit_port": 5672,
              "rabbit_userid": "rabbit",
              "rabbit_password": "rabbit",
-             "rabbit_virtual_host": "/"
+             "rabbit_virtual_host": "/",
+             "topics": {
+                 "nova": [
+                     {"queue": "notifications.info", "routing_key": "notifications.info"},
+                     {"queue": "notifications.error", "routing_key": "notifications.error"},
+                 ]
+             }
          }
     ]}
 
@@ -56,7 +62,11 @@ where, *name* is whatever you want to call your deployment, and *rabbit_\** are 
 
 By default, Nova uses ephemeral queues. If you are using durable queues, be sure to change the necessary flag here.
 
+The topics section defines which queues to pull notifications from. You should
+pull notifications from all related queues (``.error``, ``.info``, ``.warn``, etc)
+
 You can add as many deployments as you like.
+
 
 Starting the Worker
 ===================
@@ -72,7 +82,7 @@ Configuring Nova to Generate Notifications
 In the OpenStack service you wish to have generate notifications, add the
 following to its ``.conf`` file: ::
 
-    --notification_driver=nova.openstack.common.notifier.rabbit_notifier
+    --notification_driver=nova.openstack.common.notifier.rpc_notifier
     --notification_topics=monitor
 
 **Note:** *This will likely change once the various project switch to ``oslo.messaging``
@@ -82,6 +92,17 @@ This will tell OpenStack to publish notifications to a Rabbit exchange starting 
 ``monitor.*`` ... this may result in ``monitor.info``, ``monitor.error``, etc.
 
 You'll need to restart Nova once these changes are made.
+
+If you're using `DevStack`_ you may want to set up your ``local.conf`` to include the following: ::
+
+    [[post-config|$NOVA_CONF]]
+    [DEFAULT]
+    notification_driver=nova.openstack.common.notifier.rpc_notifier
+    notification_topics=notifications,monitor
+    notify_on_state_change=vm_and_task_state
+    notify_on_any_change=True
+    instance_usage_audit=True
+    instance_usage_audit_period=hour
 
 Next Steps
 ==========

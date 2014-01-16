@@ -47,7 +47,7 @@ Finally, `DJANGO_SETTINGS_MODULE` tells Django where to get its configuration fr
 
 The `sample_stacktach_worker_config.json` file tells StackTach where each of the RabbitMQ servers are that it needs to get events from. In most cases you'll only have one entry in this file, but for large multi-cell deployments, this file can get pretty large. It's also handy for setting up one StackTach for each developer environment.
 
-The file is in json format and the main configuration is under the `"deployments"` key, which should contain a list of deployment dictionaries. 
+The file is in json format and the main configuration is under the `"deployments"` key, which should contain a list of deployment dictionaries.
 
 A blank worker config file would look like this:
 ```
@@ -74,7 +74,7 @@ where, *name* is whatever you want to call your deployment, and *rabbit_<>* are 
 
 By default, Nova uses ephemeral queues. If you are using durable queues, be sure to change the necessary flag here.
 
-You can add as many deployments as you like. 
+You can add as many deployments as you like.
 
 #### Starting the Worker
 
