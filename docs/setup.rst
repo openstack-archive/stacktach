@@ -104,6 +104,9 @@ If you're using `DevStack`_ you may want to set up your ``local.conf`` to includ
     instance_usage_audit=True
     instance_usage_audit_period=hour
 
+.. _DevStack: http://devstack.org/
+
+
 Next Steps
 ==========
 
