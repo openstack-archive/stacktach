@@ -4,7 +4,8 @@
     "settle_units": "minutes",
     "pool_size": 2,
     "enable_notifications": true,
-     "validation_level": "all",
+    "validation_level": "all",
+    "flavor_field_name": "instance_type_id",
     "rabbit": {
         "durable_queue": false,
         "host": "10.0.0.1",
