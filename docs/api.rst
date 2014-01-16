@@ -601,7 +601,7 @@ stacky/search
 
    Search for notifications.
 
-   Returns::
+   Returns:
 
    * Event ID
    * ``E`` for errors, ``.`` otherwise
