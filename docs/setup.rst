@@ -18,6 +18,8 @@ The "Hurry Up" Install Guide
 
 Of course, this is only suitable for playing around. If you want to get serious about deploying StackTach you should set up a proper webserver and database on standalone servers. There is a lot of data that gets collected by StackTach (depending on your deployment size) ... be warned. Keep an eye on DB size.
 
+.. _stacktach-config-files:
+
 The Config Files
 ****************
 There are two config files for StackTach. The first one tells us where the second one is. A sample of these two files is in ``./etc/sample_*``. Create a local copy of these files and populate them with the appropriate config values as described below.

@@ -14,6 +14,7 @@ Contents:
    intro
    setup
    api
+   usage
 
 
 Indices and tables
