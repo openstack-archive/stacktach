@@ -34,3 +34,6 @@ browser interface or command line tool (`Stacky`_).
 
 .. image:: images/diagram.gif
 
+To get a general sense of notification adoption across OpenStack projects `read this blog post`_
+
+.. _read this blog post: http://www.sandywalsh.com/2013/09/notification-usage-in-openstack-report.html

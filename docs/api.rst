@@ -546,20 +546,192 @@ stacky/show/<event_id>
 stacky/watch/<deployment_id>
 ============================
 
+.. http:get:: http://example.com/stacky/watch/<deployment_id>/
+
+   Get a real-time feed of notifications.
+
+   Once again, this is a non-standard response (not the typical row-column format).
+   This call returns a tuple of information:
+
+   * A list of column widths, to be used as a hint for formatting.
+   * A list of events that meet the query criteria.
+     * the db id of the event
+     * the type of event (``E`` for errors, ``.`` otherwise)
+     * stringified date of the event
+     * stringified time of the event
+     * deployment name
+     * the event name
+     * the instance UUID, if available
+   * The ending unixtime timestamp. The last time covered by this query
+     (utcnow, essentially)
+
+      **Example request**:
+
+   .. sourcecode:: http
+
+      GET /stacky/watch/14/  HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: text/json
+
+      [
+        [10, 1, 15, 20, 50, 36],
+        [
+        ... events ...
+        ]
+        "1389892207"
+      ]
+
+  :query service: ``nova`` or ``glance``. default="nova"
+  :query since: get all events since ``unixtime``. Defaults to 2 seconds ago.
+  :query event_name: only watch for ``event_name`` notifications. Defaults to all events.
+
+
 stacky/search
 =============
 
-stacky/kpi
-==========
+.. http:get:: http://example.com/stacky/search/
 
-stacky/kpi/<tenant_id>
-======================
+   Search for notifications.
+
+   Returns::
+
+   * Event ID
+   * ``E`` for errors, ``.`` otherwise
+   * unixtime for when the event was generated
+   * the deployment name
+   * the event name
+   * the host name
+   * the instance UUID
+   * the request ID
+
+      **Example request**:
+
+   .. sourcecode:: http
+
+      GET /stacky/search/  HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: text/json
+
+      [
+        [...event info as listed above...]
+      ]
+
+  :query service: ``nova`` or ``glance``. default="nova"
+  :query field: notification field to search on.
+  :query value: notification values to find.
+  :query when_min: unixtime to start search
+  :query when_max: unixtime to end search
 
 stacky/usage/launches
 =====================
 
+.. http:get:: http://example.com/stacky/launches/
+
+   Return a list of all instance launches.
+
+      **Example request**:
+
+   .. sourcecode:: http
+
+      GET /stacky/usages/launches/  HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: text/json
+
+      [
+        ["UUID", "Launched At", "Instance Type Id", "Instance Flavor Id"],
+        [
+          ... usage launch records ...
+        ]
+      ]
+
+  :query instance: desired instance UUID (optional)
+
 stacky/usage/deletes
 ====================
 
+.. http:get:: http://example.com/stacky/deletes/
+
+   Return a list of all instance deletes.
+
+      **Example request**:
+
+   .. sourcecode:: http
+
+      GET /stacky/usages/deletes/  HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: text/json
+
+      [
+        ["UUID", "Launched At", "Deleted At"]
+        [
+          ... usage deleted records ...
+        ]
+      ]
+
+  :query instance: desired instance UUID (optional)
+
+
 stacky/usage/exists
 ===================
+
+.. http:get:: http://example.com/stacky/exists/
+
+   Return a list of all instance exists notifications.
+
+      **Example request**:
+
+   .. sourcecode:: http
+
+      GET /stacky/usages/exists/  HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: text/json
+
+      [
+        ["UUID", "Launched At", "Deleted At", "Instance Type Id",
+         "Instance Flavor Id", "Message ID", "Status"]
+        [
+          ... usage exists records ...
+        ]
+      ]
+
+  :query instance: desired instance UUID (optional)
