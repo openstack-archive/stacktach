@@ -45,7 +45,7 @@ db/confirm/usage/exists/batch/
 
 .. http:put:: http://example.com/db/confirm/usage/exists/batch/
 
-  Uses the provided message_id's and http status codes to update image and instance exists send_status values.
+Uses the provided message_id's and http status codes to update image and instance exists send_status values.
 
   **Example V0 request**:
 
@@ -114,7 +114,7 @@ db/usage/nova/launches/
 
 .. http:get:: http://example.com/db/usage/nova/launches/
 
-  Returns a list of instance launches matching provided query criteria.
+Returns a list of instance launches matching provided query criteria.
 
   **Query Parameters**
 
@@ -177,7 +177,7 @@ db/usage/glance/images/
 
 .. http:get:: http://example.com/db/usage/glance/images/
 
-  Returns a list of images matching provided query criteria.
+Returns a list of images matching provided query criteria.
 
   **Query Parameters**
 
@@ -322,7 +322,7 @@ db/usage/nova/deletes/
 
 .. http:get:: http://example.com/db/usage/nova/deletes/
 
-  Returns a list of instance deletes matching provided query criteria.
+Returns a list of instance deletes matching provided query criteria.
 
   **Query Parameters**
 
@@ -375,7 +375,7 @@ db/usage/glance/deletes/
 
 .. http:get:: http://example.com/db/usage/glance/deletes/
 
-  Returns a list of image deletes matching provided query criteria.
+Returns a list of image deletes matching provided query criteria.
 
   **Query Parameters**
 
@@ -508,7 +508,7 @@ db/usage/nova/exists/
 
 .. http:get:: http://example.com/db/usage/nova/exists/
 
-  Returns a list of instance exists matching provided query criteria.
+Returns a list of instance exists matching provided query criteria.
 
   **Query Parameters**
 
@@ -601,7 +601,7 @@ db/usage/glance/exists/
 
 .. http:get:: http://example.com/db/usage/glance/exists/
 
-  Returns a list of instance exists matching provided query criteria.
+Returns a list of instance exists matching provided query criteria.
 
   **Query Parameters**
 
@@ -690,7 +690,7 @@ db/usage/nova/exists/<exist_id>/
 
 .. http:get:: http://example.com/db/usage/nova/exists/<exist_id>
 
-  Returns a single instance exists matching provided id
+Returns a single instance exists matching provided id
 
   **Example request**:
 
@@ -741,7 +741,7 @@ db/usage/glance/exists/<exist_id>/
 
 .. http:get:: http://example.com/db/usage/glance/exists/<exist_id>/
 
-  Returns a single instance exists matching provided id
+Returns a single instance exists matching provided id
 
   **Example request**:
 
