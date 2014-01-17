@@ -12,4 +12,4 @@ OpenStack has the ability to publish notifications to a RabbitMQ exchange as the
 A detailed description of the notifications published by OpenStack [is available here](http://wiki.openstack.org/SystemUsageData)
 
 ## Documentation
-`cd` into the `docs` directory and run `make html` to get the installation and API docs. Or you can view the `rst` files [directly here](https://github.com/rackerlabs/stacktach/blob/master/docs/setup.rst)
+http://stacktach.readthedocs.org/
