@@ -17,6 +17,7 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+import ast
 
 import datetime
 import decimal
@@ -1509,4 +1510,59 @@ class StackyServerTestCase(StacktachBaseTestCase):
         actual_results = stacky_server.model_search(fake_request, fake_model,
                                                     filters, order_by='when')
         self.assertEqual(actual_results, results)
+        self.mox.VerifyAll()
+
+    def test_jsonreports_search(self):
+        model = models.JsonReport.objects
+        model_search_result = self.mox.CreateMockAnything()
+        model_search_result.id = '5975'
+        model_search_result.period_start = datetime.datetime(2014, 1, 18,)
+        model_search_result.period_end = datetime.datetime(2014, 1, 19)
+        model_search_result.created = 1388569200
+        model_search_result.name = 'nova usage audit'
+        model_search_result.version = 4
+        request = self.mox.CreateMockAnything()
+        request.GET = {
+            'audit_period_beginning': 1234,
+            'name': 'nova_usage_audit'
+        }
+        filters = {
+            'audit_period_beginning__exact': 1234,
+            'name__exact': 'nova_usage_audit'
+        }
+        self.mox.StubOutWithMock(stacky_server, 'model_search')
+        stacky_server.model_search(request, model, filters).AndReturn(
+            [model_search_result])
+        self.mox.ReplayAll()
+
+        actual_result = stacky_server.do_jsonreports_search(request).content
+        expected_result = \
+            [['Id', 'Start', 'End', 'Created', 'Name', 'Version'],
+             ['5975', '2014-01-18 00:00:00', '2014-01-19 00:00:00',
+              '2014-01-01 09:40:00', 'nova usage audit', 4]]
+
+        self.assertEquals(ast.literal_eval(actual_result), expected_result)
+        self.mox.VerifyAll()
+
+    def test_jsonreports_search_400(self):
+        model = models.JsonReport.objects
+        request = self.mox.CreateMockAnything()
+        request.GET = {'invalid_column_1': 'value_1',
+                       'invalid_column_2': 'value_2' }
+        filters = {'invalid_column_1__exact': 'value_1',
+                   'invalid_column_2__exact': 'value_2'}
+        self.mox.StubOutWithMock(stacky_server, 'model_search')
+        stacky_server.model_search(request, model, filters).AndRaise(FieldError)
+
+        self.mox.ReplayAll()
+
+        actual_result = stacky_server.do_jsonreports_search(request).content
+        expected_result = \
+        [
+            ["Error", "Message"],
+            ["Bad Request", "The requested fields do not exist for the "
+             "corresponding object: invalid_column_1, invalid_column_2. Note: "
+             "The field names of database are case-sensitive."]
+        ]
+        self.assertEqual(ast.literal_eval(actual_result), expected_result)
         self.mox.VerifyAll()
