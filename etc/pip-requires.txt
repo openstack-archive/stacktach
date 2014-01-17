@@ -9,3 +9,4 @@ Pympler
 requests
 south
 sphinxcontrib-httpdomain
+pbr
