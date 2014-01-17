@@ -4,7 +4,7 @@ The StackTach Database REST Interface
 JSON Response Format
 ********************
 
-The StackTach Database API uses a more standard data model for access of to database objects
+The StackTach Database API uses a more standard data model for access to database objects. The Database API is read only, with the exception of usage confirmation, which is used to indicate that usage has been sent downstream.
 
 The JSON response format uses an envelope with a single key to indicate the type of object returned. This object can be either a dictionary in the case of queries that return single objects, or a list when multiple objects are turned.
 
@@ -37,6 +37,8 @@ Sample JSON response, multiple objects: ::
     ]
   }
 
+Write APIs
+**********
 
 db/confirm/usage/exists/batch/
 =====================================
@@ -94,6 +96,9 @@ db/confirm/usage/exists/batch/
       HTTP/1.1 200 OK
       Vary: Accept
       Content-Type: application/json
+
+Read APIs
+*********
 
 db/usage/launches/
 ==================
