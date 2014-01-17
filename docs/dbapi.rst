@@ -37,6 +37,8 @@ Sample JSON response, multiple objects: ::
     ]
   }
 
+Write APIs
+**********
 
 db/confirm/usage/exists/batch/
 =====================================
@@ -94,6 +96,9 @@ db/confirm/usage/exists/batch/
       HTTP/1.1 200 OK
       Vary: Accept
       Content-Type: application/json
+
+Read APIs
+*********
 
 db/usage/launches/
 ==================
