@@ -37,6 +37,64 @@ Sample JSON response, multiple objects: ::
     ]
   }
 
+
+db/confirm/usage/exists/batch/
+=====================================
+
+.. http:put:: http://example.com/db/confirm/usage/exists/batch/
+
+  Uses the provided message_id's and http status codes to update image and instance exists send_status values.
+
+  **Example V0 request**:
+
+   .. sourcecode:: http
+
+      PUT db/confirm/usage/exists/batch/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+      {
+        "messages":
+        [
+          {"nova_message_id": 200},
+          {"nova_message_id": 400}
+        ]
+      }
+
+  **Example V1 request**:
+
+   .. sourcecode:: http
+
+      PUT db/confirm/usage/exists/batch/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+      {
+        "messages":
+        [
+          {
+            "nova":
+            [
+              {"nova_message_id1": 200},
+              {"nova_message_id2": 400}
+            ],
+            "glance":
+            [
+              {"glance_message_id1": 200},
+              {"glance_message_id2": 400}
+            ]
+          }
+        ]
+        "version": 1
+      }
+  **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: application/json
+
 db/usage/launches/
 ==================
 
@@ -717,60 +775,3 @@ db/usage/glance/exists/<exist_id>/
           "delete": null
         }
       }
-
-db/confirm/usage/exists/batch/
-=====================================
-
-.. http:put:: http://example.com/db/confirm/usage/exists/batch/
-
-  Uses the provided message_id's and http status codes to update image and instance exists send_status values.
-
-  **Example V0 request**:
-
-   .. sourcecode:: http
-
-      PUT db/confirm/usage/exists/batch/ HTTP/1.1
-      Host: example.com
-      Accept: application/json
-
-      {
-        "messages":
-        [
-          {"nova_message_id": 200},
-          {"nova_message_id": 400}
-        ]
-      }
-
-  **Example V1 request**:
-
-   .. sourcecode:: http
-
-      PUT db/confirm/usage/exists/batch/ HTTP/1.1
-      Host: example.com
-      Accept: application/json
-
-      {
-        "messages":
-        [
-          {
-            "nova":
-            [
-              {"nova_message_id1": 200},
-              {"nova_message_id2": 400}
-            ],
-            "glance":
-            [
-              {"glance_message_id1": 200},
-              {"glance_message_id2": 400}
-            ]
-          }
-        ]
-        "version": 1
-      }
-  **Example response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Vary: Accept
-      Content-Type: application/json
