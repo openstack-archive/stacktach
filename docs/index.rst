@@ -15,6 +15,7 @@ Contents:
    setup
    api
    usage
+   dbapi
 
 
 Indices and tables
