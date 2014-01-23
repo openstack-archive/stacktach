@@ -17,6 +17,8 @@ SECS_PER_DAY = SECS_PER_HOUR * 24
 DEFAULT_LIMIT = 50
 HARD_LIMIT = 1000
 
+UTC_FORMAT = '%Y-%m-%d %H:%M:%S'
+
 
 def _get_limit(request):
     limit = request.GET.get('limit', DEFAULT_LIMIT)
@@ -619,3 +621,35 @@ def search(request):
     except FieldError:
         return error_response(400, 'Bad Request', "The requested field '%s' does not exist for the corresponding object.\n"
                     "Note: The field names of database are case-sensitive." % field)
+
+
+def do_jsonreports_search(request):
+    model = models.JsonReport.objects
+    filters = {}
+    for filter, value in request.GET.iteritems():
+        filters[filter + '__exact'] = value
+    try:
+        reports = model_search(request, model, filters)
+    except FieldError:
+        args = request.GET.keys()
+        args.sort()
+        return error_response(
+            400, 'Bad Request', "The requested fields do not exist for "
+            "the corresponding object: %s. Note: The field names of database "
+            "are case-sensitive." % ', '.join(args))
+
+    results = [['Id', 'Start', 'End', 'Created', 'Name', 'Version']]
+    for report in reports:
+            results.append([report.id,
+                            datetime.datetime.strftime(
+                                report.period_start, UTC_FORMAT),
+                            datetime.datetime.strftime(
+                                report.period_end, UTC_FORMAT),
+                            datetime.datetime.strftime(
+                                dt.dt_from_decimal(report.created),
+                                UTC_FORMAT),
+                            report.name,
+                            report.version])
+
+    return rsp(json.dumps(results))
+
