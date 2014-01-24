@@ -1512,27 +1512,46 @@ class StackyServerTestCase(StacktachBaseTestCase):
         self.assertEqual(actual_results, results)
         self.mox.VerifyAll()
 
-    def test_jsonreports_search(self):
-        model = models.JsonReport.objects
-        model_search_result = self.mox.CreateMockAnything()
-        model_search_result.id = '5975'
-        model_search_result.period_start = datetime.datetime(2014, 1, 18,)
-        model_search_result.period_end = datetime.datetime(2014, 1, 19)
-        model_search_result.created = 1388569200
-        model_search_result.name = 'nova usage audit'
-        model_search_result.version = 4
+
+class JsonReportsSearchAPI(StacktachBaseTestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+        self.model = models.JsonReport.objects
+        self.model_search_result = self.mox.CreateMockAnything()
+        self.model_search_result.id = '5975'
+        self.model_search_result.period_start = datetime.datetime(2014, 1, 18,)
+        self.model_search_result.period_end = datetime.datetime(2014, 1, 19)
+        self.model_search_result.created = 1388569200
+        self.model_search_result.name = 'nova usage audit'
+        self.model_search_result.version = 4
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_jsonreports_search_order_by_period_start(self):
         request = self.mox.CreateMockAnything()
         request.GET = {
-            'audit_period_beginning': 1234,
-            'name': 'nova_usage_audit'
+            'id': 1,
+            'name': 'nova_usage_audit',
+            'period_start': '2014-01-01 00:00:00',
+            'period_end': '2014-01-02 00:00:00',
+            'created': '2014-01-01 09:40:00',
+            'version': 4,
+            'json': 'json'
         }
         filters = {
-            'audit_period_beginning__exact': 1234,
-            'name__exact': 'nova_usage_audit'
+            'id__exact': 1,
+            'period_start__exact': '2014-01-01 00:00:00',
+            'name__exact': 'nova_usage_audit',
+            'period_end__exact': '2014-01-02 00:00:00',
+            'created__exact': decimal.Decimal('1388569200'),
+            'version__exact': 4,
+            'json__exact': 'json'
         }
         self.mox.StubOutWithMock(stacky_server, 'model_search')
-        stacky_server.model_search(request, model, filters).AndReturn(
-            [model_search_result])
+        stacky_server.model_search(request, self.model, filters,
+                                   order_by='-id').AndReturn(
+            [self.model_search_result])
         self.mox.ReplayAll()
 
         actual_result = stacky_server.do_jsonreports_search(request).content
@@ -1544,16 +1563,38 @@ class StackyServerTestCase(StacktachBaseTestCase):
         self.assertEquals(ast.literal_eval(actual_result), expected_result)
         self.mox.VerifyAll()
 
-    def test_jsonreports_search_400(self):
-        model = models.JsonReport.objects
+    def test_jsonreports_search_with_limit_offset(self):
+        request = self.mox.CreateMockAnything()
+        request.GET = {
+            'period_start': '2014-01-01 09:40:00',
+            'name': 'nova_usage_audit',
+            'limit': 10,
+            'offset': 5
+        }
+        filters = {
+            'period_start__exact': '2014-01-01 09:40:00',
+            'name__exact': 'nova_usage_audit',
+        }
+        self.mox.StubOutWithMock(stacky_server, 'model_search')
+        stacky_server.model_search(request, self.model, filters,
+                                   order_by='-id').AndReturn(
+            [self.model_search_result])
+        self.mox.ReplayAll()
+
+        actual_result = stacky_server.do_jsonreports_search(request).content
+        expected_result = \
+            [['Id', 'Start', 'End', 'Created', 'Name', 'Version'],
+             ['5975', '2014-01-18 00:00:00', '2014-01-19 00:00:00',
+              '2014-01-01 09:40:00', 'nova usage audit', 4]]
+
+        self.assertEquals(ast.literal_eval(actual_result), expected_result)
+        self.mox.VerifyAll()
+
+    def test_jsonreports_search_with_invalid_field_names_400(self):
         request = self.mox.CreateMockAnything()
         request.GET = {'invalid_column_1': 'value_1',
-                       'invalid_column_2': 'value_2' }
-        filters = {'invalid_column_1__exact': 'value_1',
-                   'invalid_column_2__exact': 'value_2'}
-        self.mox.StubOutWithMock(stacky_server, 'model_search')
-        stacky_server.model_search(request, model, filters).AndRaise(FieldError)
-
+                       'invalid_column_2': 'value_2',
+                       'period_start': '2014-01-01 00:00:00'}
         self.mox.ReplayAll()
 
         actual_result = stacky_server.do_jsonreports_search(request).content
@@ -1565,4 +1606,56 @@ class StackyServerTestCase(StacktachBaseTestCase):
              "The field names of database are case-sensitive."]
         ]
         self.assertEqual(ast.literal_eval(actual_result), expected_result)
+        self.mox.VerifyAll()
+
+    def test_jsonreports_search_with_invalid_format_of_field_values_400(self):
+        request = self.mox.CreateMockAnything()
+        request.GET = {'period_start': '1234'}
+        self.mox.ReplayAll()
+
+        actual_result = stacky_server.do_jsonreports_search(request).content
+        expected_result = \
+        [
+            ["Error", "Message"],
+            ["Bad Request", "'1234' value has an invalid format. It must be in "
+             "YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ] format."]
+        ]
+        self.assertEqual(ast.literal_eval(actual_result), expected_result)
+        self.mox.VerifyAll()
+
+    def test_jsonreports_search_by_created(self):
+        request = self.mox.CreateMockAnything()
+        request.GET = {
+            'created': '2014-01-01 09:40:20'}
+        filters = {
+            'created__exact': 1388569220}
+        self.mox.StubOutWithMock(stacky_server, 'model_search')
+        stacky_server.model_search(request, self.model, filters,
+                                   order_by='-id').AndReturn(
+            [self.model_search_result])
+        self.mox.ReplayAll()
+
+        actual_result = stacky_server.do_jsonreports_search(request).content
+        expected_result = \
+            [['Id', 'Start', 'End', 'Created', 'Name', 'Version'],
+             ['5975', '2014-01-18 00:00:00', '2014-01-19 00:00:00',
+              '2014-01-01 09:40:00', 'nova usage audit', 4]]
+
+        self.assertEquals(ast.literal_eval(actual_result), expected_result)
+        self.mox.VerifyAll()
+
+    def test_jsonreports_search_by_invalid_created_400(self):
+        request = self.mox.CreateMockAnything()
+        request.GET = {
+            'created': '1234'}
+        self.mox.ReplayAll()
+
+        actual_result = stacky_server.do_jsonreports_search(request).content
+        expected_result = \
+        [
+            ["Error", "Message"],
+            ["Bad Request", "'1234' value has an invalid format. It must be in "
+             "YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ] format."]
+        ]
+        self.assertEquals(ast.literal_eval(actual_result), expected_result)
         self.mox.VerifyAll()

@@ -1,3 +1,4 @@
+from copy import deepcopy
 import decimal
 import datetime
 import json
@@ -9,7 +10,7 @@ from django.shortcuts import get_object_or_404
 import datetime_to_decimal as dt
 import models
 import utils
-from django.core.exceptions import ObjectDoesNotExist, FieldError
+from django.core.exceptions import ObjectDoesNotExist, FieldError, ValidationError
 
 SECS_PER_HOUR = 60 * 60
 SECS_PER_DAY = SECS_PER_HOUR * 24
@@ -623,33 +624,74 @@ def search(request):
                     "Note: The field names of database are case-sensitive." % field)
 
 
-def do_jsonreports_search(request):
-    model = models.JsonReport.objects
-    filters = {}
-    for filter, value in request.GET.iteritems():
-        filters[filter + '__exact'] = value
-    try:
-        reports = model_search(request, model, filters)
-    except FieldError:
-        args = request.GET.keys()
-        args.sort()
-        return error_response(
-            400, 'Bad Request', "The requested fields do not exist for "
-            "the corresponding object: %s. Note: The field names of database "
-            "are case-sensitive." % ', '.join(args))
+class BadRequestException(Exception):
+    pass
 
-    results = [['Id', 'Start', 'End', 'Created', 'Name', 'Version']]
-    for report in reports:
-            results.append([report.id,
-                            datetime.datetime.strftime(
-                                report.period_start, UTC_FORMAT),
-                            datetime.datetime.strftime(
-                                report.period_end, UTC_FORMAT),
-                            datetime.datetime.strftime(
-                                dt.dt_from_decimal(report.created),
-                                UTC_FORMAT),
-                            report.name,
-                            report.version])
+
+def _parse_created(request_filters):
+    try:
+        created_datetime = datetime.datetime.strptime(
+            request_filters['created'], '%Y-%m-%d %H:%M:%S')
+        return dt.dt_to_decimal(created_datetime)
+    except ValueError:
+        raise BadRequestException(
+            "'%s' value has an invalid format. It must be in "
+            "YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ] format." %
+            request_filters['created'])
+
+
+def _create_query_filters_from_request(request_filters, model):
+    allowed_fields = [field.name for field in models.get_model_fields(model)]
+    invalid_fields = []
+    query_filters = {}
+
+    for field, value in request_filters.iteritems():
+        if field in allowed_fields:
+            query_filters[field + '__exact'] = value
+        else:
+            invalid_fields.append(field)
+
+    if invalid_fields:
+        raise BadRequestException(
+            "The requested fields do not exist for the corresponding "
+            "object: %s. Note: The field names of database "
+            "are case-sensitive." %
+            ', '.join(sorted(invalid_fields)))
+
+    return query_filters
+
+
+def _get_query_filters(request, model):
+    request_filters = deepcopy(request.GET)
+    if 'created' in request_filters:
+        request_filters['created'] = _parse_created(request_filters)
+    request_filters.pop('limit', None)
+    request_filters.pop('offset', None)
+
+    return _create_query_filters_from_request(request_filters, model)
+
+
+def do_jsonreports_search(request):
+    try:
+        model = models.JsonReport
+        filters = _get_query_filters(request, model)
+        reports = model_search(request, model.objects, filters,
+                               order_by='-id')
+        results = [['Id', 'Start', 'End', 'Created', 'Name', 'Version']]
+        for report in reports:
+                results.append([report.id,
+                                datetime.datetime.strftime(
+                                    report.period_start, UTC_FORMAT),
+                                datetime.datetime.strftime(
+                                    report.period_end, UTC_FORMAT),
+                                datetime.datetime.strftime(
+                                    dt.dt_from_decimal(report.created),
+                                    UTC_FORMAT),
+                                report.name,
+                                report.version])
+    except BadRequestException as be:
+        return error_response(400, 'Bad Request', be.message)
+    except ValidationError as ve:
+        return error_response(400, 'Bad Request', ve.messages[0])
 
     return rsp(json.dumps(results))
-
