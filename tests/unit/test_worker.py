@@ -169,6 +169,7 @@ class ConsumerTestCase(StacktachBaseTestCase):
         mock_logger.debug("Processing on 'east_coast.prod.global nova'")
         mock_logger.debug("Completed processing on "
                           "'east_coast.prod.global nova'")
+        mock_logger.info("Worker exiting.")
 
         config = {
             'name': 'east_coast.prod.global',
@@ -217,6 +218,7 @@ class ConsumerTestCase(StacktachBaseTestCase):
         mock_logger.debug("Processing on 'east_coast.prod.global nova'")
         mock_logger.debug("Completed processing on "
                           "'east_coast.prod.global nova'")
+        mock_logger.info("Worker exiting.")
 
         config = {
             'name': 'east_coast.prod.global',
