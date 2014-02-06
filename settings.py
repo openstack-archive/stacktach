@@ -167,3 +167,7 @@ LOGGING = {
         },
     }
 }
+
+# Force use of the pickle serializer as a workaound for django-1.6. See:
+# https://docs.djangoproject.com/en/dev/releases/1.6/#default-session-serialization-switched-to-json
+SESSION_SERIALIZER='django.contrib.sessions.serializers.PickleSerializer'
