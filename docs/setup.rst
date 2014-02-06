@@ -12,7 +12,7 @@ The "Hurry Up" Install Guide
 #. Configure OpenStack to publish Notifications back into RabbitMQ (see below)
 #. Restart the OpenStack services.
 #. Run the Worker to start consuming messages. (see below)
-#. Run the web server (``python manage.py runserver``)
+#. Run the web server (``python manage.py runserver --insecure``)
 #. Point your browser to ``http://127.0.0.1:8000`` (the default server location)
 #. Click on stuff, see what happens. You can't hurt anything, it's all read-only.
 
