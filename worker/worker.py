@@ -19,7 +19,6 @@
 import datetime
 import sys
 import time
-import anyjson
 import signal
 
 import kombu
@@ -40,7 +39,6 @@ from stacktach import db
 from stacktach import message_service
 from stacktach import stacklog
 from stacktach import views
-from kombu.serialization import BytesIO, register
 
 stacklog.set_default_logger_name('worker')
 shutdown_soon = False
@@ -65,13 +63,6 @@ class Consumer(kombu.mixins.ConsumerMixin):
         self.topics = topics
         self.exchange = exchange
         signal.signal(signal.SIGTERM, self._shutdown)
-
-        register('bufferjson', self.loads, anyjson.dumps,
-                 content_type='application/json',
-                 content_encoding='binary')
-
-    def loads(s):
-        return anyjson.loads(BytesIO(s))
 
     def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
         return message_service.create_exchange(name, exchange_type=type,
