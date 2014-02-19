@@ -628,53 +628,67 @@ class BadRequestException(Exception):
     pass
 
 
-def _parse_created(request_filters):
+def _parse_created(created):
     try:
-        created_datetime = datetime.datetime.strptime(
-            request_filters['created'], '%Y-%m-%d %H:%M:%S')
+        created_datetime = datetime.datetime.strptime(created, '%Y-%m-%d')
         return dt.dt_to_decimal(created_datetime)
     except ValueError:
         raise BadRequestException(
-            "'%s' value has an invalid format. It must be in "
-            "YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ] format." %
-            request_filters['created'])
+            "'%s' value has an invalid format. It must be in YYYY-MM-DD format."
+            % created)
 
 
-def _create_query_filters_from_request(request_filters, model):
-    allowed_fields = [field.name for field in models.get_model_fields(model)]
-    invalid_fields = []
+def _parse_id(id):
+    try:
+        return int(id)
+    except ValueError:
+        raise BadRequestException(
+            "'%s' value has an invalid format. It must be in integer "
+            "format." % id)
+
+
+def _parse_fields_and_create_query_filters(request_filters):
     query_filters = {}
 
     for field, value in request_filters.iteritems():
-        if field in allowed_fields:
-            query_filters[field + '__exact'] = value
+        if field == 'created':
+            decimal_created = _parse_created(value)
+            query_filters['created__gt'] = decimal_created
+            query_filters['created__lt'] = decimal_created + SECS_PER_DAY
+        elif field == 'id':
+            id = _parse_id(value)
+            query_filters['id__exact'] = id
         else:
-            invalid_fields.append(field)
-
-    if invalid_fields:
-        raise BadRequestException(
-            "The requested fields do not exist for the corresponding "
-            "object: %s. Note: The field names of database "
-            "are case-sensitive." %
-            ', '.join(sorted(invalid_fields)))
+            query_filters[field + '__exact'] = value
 
     return query_filters
 
 
-def _get_query_filters(request, model):
+def _check_if_fields_searchable(request_filters):
+    allowed_fields = ['id', 'name', 'created', 'period_start', 'period_end']
+    invalid_fields = [field for field in request_filters.keys()
+                      if field not in allowed_fields]
+    if invalid_fields:
+        raise BadRequestException(
+            "The requested fields either do not exist for the corresponding "
+            "object or are not searchable: %s. Note: The field names of "
+            "database are case-sensitive." %
+            ', '.join(sorted(invalid_fields)))
+
+
+def _create_query_filters(request):
     request_filters = deepcopy(request.GET)
-    if 'created' in request_filters:
-        request_filters['created'] = _parse_created(request_filters)
     request_filters.pop('limit', None)
     request_filters.pop('offset', None)
 
-    return _create_query_filters_from_request(request_filters, model)
+    _check_if_fields_searchable(request_filters)
+    return _parse_fields_and_create_query_filters(request_filters)
 
 
 def do_jsonreports_search(request):
     try:
         model = models.JsonReport
-        filters = _get_query_filters(request, model)
+        filters = _create_query_filters(request)
         reports = model_search(request, model.objects, filters,
                                order_by='-id')
         results = [['Id', 'Start', 'End', 'Created', 'Name', 'Version']]
