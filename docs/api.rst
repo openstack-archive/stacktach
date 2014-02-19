@@ -488,6 +488,77 @@ stacky/report/<report_id>
         ...
       ]
 
+stacky/reports/search/
+=========================
+
+.. http:get:: http://example.com/stacky/reports/search
+
+   Returns reports that match the search criteria in descending order of id.
+
+   The contents of the report varies by the specific report, but
+   all are in row/column format with Row 0 being a special *metadata* row.
+   The actual row/columns of the report start at Row 1 onwards.
+
+   **Example request**:
+
+   .. sourcecode:: http
+
+      GET /stacky/reports/search/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: text/json
+
+      [
+        [
+            "Id",
+            "Start",
+            "End",
+            "Created",
+            "Name",
+            "Version"
+        ],
+
+        [
+            4253,
+            "2013-11-21 00:00:00",
+            "2013-11-22 00:00:00",
+            "2013-11-22 01:44:55",
+            "public outbound bandwidth",
+            1
+        ],
+        [
+            4252,
+            "2014-01-18 00:00:00",
+            "2013-11-22 00:00:00",
+            "2013-11-22 01:44:55",
+            "image events audit",
+            1
+        ],
+        [
+            4248,
+            "2013-11-21 00:00:00",
+            "2013-11-22 00:00:00",
+            "2013-11-22 01:44:55",
+            "Error detail report",
+            1
+        ],
+
+        ...
+      ]
+
+  :query id: integer report id
+  :query name: string report name(can include spaces)
+  :query period_start: start of period, which the report pertains to, in the following format: YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]
+  :query period_end: end of period, which the report pertains to, in the following format: YYYY-MM-DD HH:MM[:ss[.uuuuuu]][TZ]
+  :query created: the day, when the report was created, in the following format: YYYY-MM-DD
+
 stacky/show/<event_id>
 ======================
 
