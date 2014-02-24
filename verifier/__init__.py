@@ -17,6 +17,8 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
+import datetime
+
 
 class VerificationException(Exception):
     def __init__(self, reason):
@@ -44,22 +46,35 @@ class AmbiguousResults(VerificationException):
 
 
 class FieldMismatch(VerificationException):
-    def __init__(self, field_name, expected, actual):
+    def __init__(self, field_name, expected, actual, uuid):
         self.field_name = field_name
         self.expected = expected
         self.actual = actual
-        self.reason = "Expected %s to be '%s' got '%s'" % (self.field_name,
-                                                           self.expected,
-                                                           self.actual)
+        self.reason = \
+            "Failed at {failed_at} UTC for {uuid}: Expected {field_name} " \
+            "to be '{expected}' got '{actual}'".\
+            format(failed_at=datetime.datetime.utcnow(), uuid=uuid,
+                   field_name=field_name, expected=expected,
+                   actual=actual)
+
 
 class NullFieldException(VerificationException):
-    def __init__(self, field_name, exist_id):
+    def __init__(self, field_name, exist_id, uuid):
         self.field_name = field_name
-        self.reason = "%s field was null for exist id %s" %(field_name, exist_id)
+        self.reason = \
+            "Failed at {failed_at} UTC for {uuid}: {field_name} field " \
+            "was null for exist id {exist_id}".format(
+                failed_at=datetime.datetime.utcnow(), uuid=uuid,
+                field_name=field_name, exist_id=exist_id)
+
 
 class WrongTypeException(VerificationException):
-    def __init__(self, field_name, value, exist_id):
+    def __init__(self, field_name, value, exist_id, uuid):
         self.field_name = field_name
-        self.reason = "{ %s : %s } of incorrect type for exist id %s"\
-                      %(field_name, value, exist_id)
+        self.reason = \
+            "Failed at {failed_at} UTC for {uuid}: " \
+            "{{{field_name}: {value}}} was of incorrect type for " \
+            "exist id {exist_id}".format(
+                failed_at=datetime.datetime.utcnow(), uuid=uuid,
+                field_name=field_name, value=value, exist_id=exist_id)
 

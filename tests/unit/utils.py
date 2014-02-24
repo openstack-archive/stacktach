@@ -19,6 +19,7 @@
 # IN THE SOFTWARE.
 
 import datetime
+import decimal
 
 TENANT_ID_1 = 'testtenantid1'
 TENANT_ID_2 = 'testtenantid2'
@@ -30,7 +31,7 @@ IMAGE_UUID_1 = "12345678-6352-4dbc-8271-96cc54bf14cd"
 INSTANCE_ID_1 = "08f685d9-6352-4dbc-8271-96cc54bf14cd"
 INSTANCE_ID_2 = "515adf96-41d3-b86d-5467-e584edc61dab"
 
-INSTANCE_FLAVOR_ID_1 = "performance1-120"
+INSTANCE_FLAVOR_ID_1 = "1"
 INSTANCE_FLAVOR_ID_2 = "performance2-120"
 
 INSTANCE_TYPE_ID_1 = "12345"
@@ -60,6 +61,18 @@ OS_ARCH_2 = "x64"
 
 OS_VERSION_1 = "1"
 OS_VERSION_2 = "2"
+
+LAUNCHED_AT_1 = decimal.Decimal("1.1")
+LAUNCHED_AT_2 = decimal.Decimal("2.1")
+
+DELETED_AT_1 = decimal.Decimal("3.1")
+DELETED_AT_2 = decimal.Decimal("4.1")
+
+SIZE_1 = 1234
+SIZE_2 = 4567
+
+CREATED_AT_1 = decimal.Decimal("10.1")
+CREATED_AT_2 = decimal.Decimal("11.1")
 
 TIMESTAMP_1 = "2013-06-20 17:31:57.939614"
 SETTLE_TIME = 5
