@@ -17,11 +17,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
 # IN THE SOFTWARE.
-from datetime import datetime
-
+import datetime
 import decimal
 import json
-import logging
 import uuid
 import kombu
 
@@ -31,7 +29,7 @@ from stacktach import datetime_to_decimal as dt
 from stacktach import stacklog
 from stacktach import models
 from tests.unit import StacktachBaseTestCase
-from utils import IMAGE_UUID_1
+from utils import IMAGE_UUID_1, SIZE_1, SIZE_2, CREATED_AT_1, CREATED_AT_2
 from utils import GLANCE_VERIFIER_EVENT_TYPE
 from utils import make_verifier_config
 from verifier import glance_verifier
@@ -87,8 +85,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
     def test_verify_usage_created_at_mismatch(self):
         exist = self.mox.CreateMockAnything()
         exist.usage = self.mox.CreateMockAnything()
-        exist.created_at = decimal.Decimal('1.1')
-        exist.usage.created_at = decimal.Decimal('2.1')
+        exist.created_at = CREATED_AT_1
+        exist.usage.created_at = CREATED_AT_2
         self.mox.ReplayAll()
 
         with self.assertRaises(FieldMismatch) as cm:
@@ -96,8 +94,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
 
         exception = cm.exception
         self.assertEqual(exception.field_name, 'created_at')
-        self.assertEqual(exception.expected, decimal.Decimal('1.1'))
-        self.assertEqual(exception.actual, decimal.Decimal('2.1'))
+        self.assertEqual(exception.expected, CREATED_AT_1)
+        self.assertEqual(exception.actual, CREATED_AT_2)
 
         self.mox.VerifyAll()
 
@@ -119,10 +117,10 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
 
     def test_verify_usage_size_mismatch(self):
         exist = self.mox.CreateMockAnything()
-        exist.size = 1234
+        exist.size = SIZE_1
 
         exist.usage = self.mox.CreateMockAnything()
-        exist.usage.size = 5678
+        exist.usage.size = SIZE_2
         self.mox.ReplayAll()
 
         with self.assertRaises(FieldMismatch) as cm:
@@ -130,8 +128,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         exception = cm.exception
 
         self.assertEqual(exception.field_name, 'size')
-        self.assertEqual(exception.expected, 1234)
-        self.assertEqual(exception.actual, 5678)
+        self.assertEqual(exception.expected, SIZE_1)
+        self.assertEqual(exception.actual, SIZE_2)
 
         self.mox.VerifyAll()
 
@@ -255,30 +253,16 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.actual, decimal.Decimal('4.1'))
         self.mox.VerifyAll()
 
-    def test_verify_for_delete_size_mismatch(self):
-        exist = self.mox.CreateMockAnything()
-        exist.delete = self.mox.CreateMockAnything()
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.delete.launched_at = decimal.Decimal('1.1')
-        exist.delete.deleted_at = decimal.Decimal('6.1')
+    def test_should_verify_that_image_size_in_exist_is_not_null(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
         self.mox.ReplayAll()
 
-        try:
-            glance_verifier._verify_for_delete(exist)
-            self.fail()
-        except FieldMismatch, fm:
-            self.assertEqual(fm.field_name, 'deleted_at')
-            self.assertEqual(fm.expected, decimal.Decimal('5.1'))
-            self.assertEqual(fm.actual, decimal.Decimal('6.1'))
-        self.mox.VerifyAll()
-
-    def test_should_verify_that_image_size_in_exist_is_not_null(self):
         exist = self.mox.CreateMockAnything()
         exist.id = 23
         exist.size = None
         exist.created_at = decimal.Decimal('5.1')
-        exist.uuid = 'abcd1234'
+        exist.uuid = '1234-5678-9012-3456'
         self.mox.ReplayAll()
 
         try:
@@ -286,26 +270,40 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.fail()
         except NullFieldException as nf:
             self.assertEqual(nf.field_name, 'image_size')
-            self.assertEqual(nf.reason, "image_size field was null for exist id 23")
+            self.assertEqual(
+                nf.reason, "Failed at 2014-01-02 03:04:05 UTC for "
+                "1234-5678-9012-3456: image_size field was null for "
+                "exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_created_at_in_exist_is_not_null(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-01 01:02:03')
+        self.mox.ReplayAll()
+
         exist = self.mox.CreateMockAnything()
         exist.id = 23
         exist.size = 'size'
         exist.created_at = None
-        exist.uuid = 'abcd1234'
+        exist.uuid = '1234-5678-9012-3456'
         self.mox.ReplayAll()
 
-        try:
+        with self.assertRaises(NullFieldException) as nfe:
             glance_verifier._verify_validity(exist)
-            self.fail()
-        except NullFieldException as nf:
-            self.assertEqual(nf.field_name, 'created_at')
-            self.assertEqual(nf.reason, "created_at field was null for exist id 23")
+        exception = nfe.exception
+
+        self.assertEqual(exception.field_name, 'created_at')
+        self.assertEqual(exception.reason,
+                         "Failed at 2014-01-01 01:02:03 UTC for "
+                         "1234-5678-9012-3456: created_at field was "
+                         "null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_uuid_in_exist_is_not_null(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-01 01:02:03')
+        self.mox.ReplayAll()
+
         exist = self.mox.CreateMockAnything()
         exist.id = 23
         exist.size = 'size'
@@ -318,15 +316,21 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.fail()
         except NullFieldException as nf:
             self.assertEqual(nf.field_name, 'uuid')
-            self.assertEqual(nf.reason, "uuid field was null for exist id 23")
+            self.assertEqual(
+                nf.reason, "Failed at 2014-01-01 01:02:03 UTC for None: "
+                           "uuid field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_owner_in_exist_is_not_null(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         exist = self.mox.CreateMockAnything()
         exist.id = 23
         exist.size = 1234
         exist.created_at = decimal.Decimal('5.1')
-        exist.uuid = 'abcd1234'
+        exist.uuid = '1234-5678-9012-3456'
         exist.owner = None
         self.mox.ReplayAll()
 
@@ -335,10 +339,16 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.fail()
         except NullFieldException as nf:
             self.assertEqual(nf.field_name, 'owner')
-            self.assertEqual(nf.reason, "owner field was null for exist id 23")
+            self.assertEqual(
+                nf.reason, "Failed at 2014-01-02 03:04:05 UTC for "
+                "1234-5678-9012-3456: owner field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_uuid_value_is_uuid_like(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         exist = self.mox.CreateMockAnything()
         exist.id = 23
         exist.size = 'size'
@@ -351,10 +361,17 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.fail()
         except WrongTypeException as wt:
             self.assertEqual(wt.field_name, 'uuid')
-            self.assertEqual(wt.reason, "{ uuid : asdfe-fgh } of incorrect type for exist id 23")
+            self.assertEqual(
+                wt.reason,
+                "Failed at 2014-01-02 03:04:05 UTC for None: "
+                "{uuid: asdfe-fgh} was of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_created_at_is_decimal(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         exist = self.mox.CreateMockAnything()
         exist.id = 23
         exist.size = 'size'
@@ -367,13 +384,21 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.fail()
         except WrongTypeException as wt:
             self.assertEqual(wt.field_name, 'created_at')
-            self.assertEqual(wt.reason, "{ created_at : 123.a } of incorrect type for exist id 23")
+            self.assertEqual(
+                wt.reason,
+                "Failed at 2014-01-02 03:04:05 UTC for "
+                "58fb036d-5ef8-47a8-b503-7571276c400a: {created_at: 123.a} was "
+                "of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_image_size_is_of_type_decimal(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         exist = self.mox.CreateMockAnything()
         exist.id = 23
-        exist.size = 'size'
+        exist.size = 'random'
         exist.created_at = decimal.Decimal('5.1')
         exist.uuid = "58fb036d-5ef8-47a8-b503-7571276c400a"
         self.mox.ReplayAll()
@@ -383,10 +408,18 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.fail()
         except WrongTypeException as wt:
             self.assertEqual(wt.field_name, 'size')
-            self.assertEqual(wt.reason, "{ size : size } of incorrect type for exist id 23")
+            self.assertEqual(
+                wt.reason,
+                "Failed at 2014-01-02 03:04:05 UTC for "
+                "58fb036d-5ef8-47a8-b503-7571276c400a: {size: random} was "
+                "of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_owner_is_of_type_hex(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         exist = self.mox.CreateMockAnything()
         exist.id = 23
         exist.size = 1234L
@@ -400,7 +433,12 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.fail()
         except WrongTypeException as wt:
             self.assertEqual(wt.field_name, 'owner')
-            self.assertEqual(wt.reason, "{ owner : 3762854cd6f6435998188d5120e4c271,kl } of incorrect type for exist id 23")
+            self.assertEqual(
+                wt.reason,
+                "Failed at 2014-01-02 03:04:05 UTC for "
+                "58fb036d-5ef8-47a8-b503-7571276c400a: "
+                "{owner: 3762854cd6f6435998188d5120e4c271,kl} was of "
+                "incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_correctly_for_all_non_null_and_valid_types(self):
@@ -435,6 +473,9 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.assertTrue(verified)
 
     def test_verify_exist_marks_exist_failed_if_field_mismatch_exception(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-01 01:01:01')
+        self.mox.ReplayAll()
 
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
@@ -442,11 +483,13 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(glance_verifier, '_verify_for_usage')
         self.mox.StubOutWithMock(glance_verifier, '_verify_for_delete')
         self.mox.StubOutWithMock(glance_verifier, '_verify_validity')
-
-        field_mismatch_exc = FieldMismatch('field', 'expected', 'actual')
+        field_mismatch_exc = FieldMismatch('field', 'expected',
+                                           'actual', 'uuid')
         glance_verifier._verify_for_usage(exist1).AndRaise(
             exception=field_mismatch_exc)
-        exist1.mark_failed(reason="Expected field to be 'expected' got 'actual'")
+        exist1.mark_failed(
+            reason="Failed at 2014-01-01 01:01:01 UTC for uuid: Expected "
+                   "field to be 'expected' got 'actual'")
 
         glance_verifier._verify_for_usage(exist2)
         glance_verifier._verify_for_delete(exist2)
@@ -465,7 +508,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
         mock_logger.info('glance: Adding 2 per-owner exists to queue.')
         mock_logger.info('glance: Adding 2 per-owner exists to queue.')
-        when_max = datetime.utcnow()
+        when_max = datetime.datetime.utcnow()
         models.ImageExists.VERIFYING = 'verifying'
         models.ImageExists.PENDING = 'pending'
         models.ImageExists.SENT_VERIFYING = 'sent_verifying'
@@ -514,7 +557,7 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         mock_logger.info('glance: Adding 0 per-owner exists to queue.')
         mock_logger.info('glance: Adding 2 per-owner exists to queue.')
         callback = self.mox.CreateMockAnything()
-        when_max = datetime.utcnow()
+        when_max = datetime.datetime.utcnow()
         models.ImageExists.SENT_VERIFYING = 'sent_verifying'
         models.ImageExists.SENT_UNVERIFIED = 'sent_unverified'
         models.ImageExists.PENDING = 'pending'
@@ -559,8 +602,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         ]
         exist_str = json.dumps(exist_dict)
         exist.raw.json = exist_str
-        exist.audit_period_beginning = datetime(2013, 10, 10)
-        exist.audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        exist.audit_period_beginning = datetime.datetime(2013, 10, 10)
+        exist.audit_period_ending = datetime.datetime(2013, 10, 10, 23, 59, 59)
         exist.owner = "1"
         self.mox.StubOutWithMock(uuid, 'uuid4')
         uuid.uuid4().AndReturn('some_other_uuid')
@@ -601,8 +644,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         ]
         exist_str = json.dumps(exist_dict)
         exist.raw.json = exist_str
-        exist.audit_period_beginning = datetime(2013, 10, 10)
-        exist.audit_period_ending = datetime(2013, 10, 10, 23, 59, 59)
+        exist.audit_period_beginning = datetime.datetime(2013, 10, 10)
+        exist.audit_period_ending = datetime.datetime(2013, 10, 10, 23, 59, 59)
         exist.owner = "1"
         self.mox.StubOutWithMock(kombu.pools, 'producers')
         self.mox.StubOutWithMock(kombu.common, 'maybe_declare')

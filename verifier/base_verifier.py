@@ -81,34 +81,34 @@ def _verify_date_field(d1, d2, same_second=False):
 def _is_like_uuid(attr_name, attr_value, exist_id):
     if not re.match("[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$",
              attr_value):
-        raise WrongTypeException(attr_name, attr_value, exist_id)
+        raise WrongTypeException(attr_name, attr_value, exist_id, None)
 
 
-def _is_like_date(attr_name, attr_value, exist_id):
+def _is_like_date(attr_name, attr_value, exist_id, instance_uuid):
     if not isinstance(attr_value, decimal.Decimal):
-        raise WrongTypeException(attr_name, attr_value, exist_id)
+        raise WrongTypeException(attr_name, attr_value, exist_id, instance_uuid)
 
 
-def _is_long(attr_name, attr_value, exist_id):
+def _is_long(attr_name, attr_value, exist_id, instance_uuid):
     if not isinstance(attr_value, long):
-        raise WrongTypeException(attr_name, attr_value, exist_id)
+        raise WrongTypeException(attr_name, attr_value, exist_id, instance_uuid)
 
 
-def _is_int_in_char(attr_name, attr_value, exist_id):
+def _is_int_in_char(attr_name, attr_value, exist_id, instance_uuid):
     try:
         int(attr_value)
     except ValueError:
-        raise WrongTypeException(attr_name, attr_value, exist_id)
+        raise WrongTypeException(attr_name, attr_value, exist_id, instance_uuid)
 
 
-def _is_hex_owner_id(attr_name, attr_value, exist_id):
+def _is_hex_owner_id(attr_name, attr_value, exist_id, instance_uuid):
     if not re.match("^[0-9a-fA-F]+$", attr_value):
-       raise WrongTypeException(attr_name, attr_value, exist_id)
+        raise WrongTypeException(attr_name, attr_value, exist_id, instance_uuid)
 
 
-def _is_alphanumeric(attr_name, attr_value, exist_id):
+def _is_alphanumeric(attr_name, attr_value, exist_id, instance_uuid):
     if not re.match("[a-zA-Z0-9.]+$", attr_value):
-       raise WrongTypeException(attr_name, attr_value, exist_id)
+        raise WrongTypeException(attr_name, attr_value, exist_id, instance_uuid)
 
 
 class Verifier(object):

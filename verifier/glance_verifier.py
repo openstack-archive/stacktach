@@ -51,16 +51,14 @@ def _get_child_logger():
 def _verify_field_mismatch(exists, usage):
     if not base_verifier._verify_date_field(
             usage.created_at, exists.created_at, same_second=True):
-        raise FieldMismatch('created_at', exists.created_at,
-                            usage.created_at)
+        raise FieldMismatch('created_at', exists.created_at, usage.created_at,
+                            exists.uuid)
 
     if usage.owner != exists.owner:
-        raise FieldMismatch('owner', exists.owner,
-                            usage.owner)
+        raise FieldMismatch('owner', exists.owner, usage.owner, exists.uuid)
 
     if usage.size != exists.size:
-        raise FieldMismatch('size', exists.size,
-                            usage.size)
+        raise FieldMismatch('size', exists.size, usage.size, exists.uuid)
 
 
 def _verify_validity(exist):
@@ -68,11 +66,12 @@ def _verify_validity(exist):
               exist.uuid: 'uuid', exist.owner: 'owner'}
     for (field_value, field_name) in fields.items():
         if field_value is None:
-            raise NullFieldException(field_name, exist.id)
+            raise NullFieldException(field_name, exist.id, exist.uuid)
     base_verifier._is_like_uuid('uuid', exist.uuid, exist.id)
-    base_verifier._is_like_date('created_at', exist.created_at, exist.id)
-    base_verifier._is_long('size', exist.size, exist.id)
-    base_verifier._is_hex_owner_id('owner', exist.owner, exist.id)
+    base_verifier._is_like_date('created_at', exist.created_at, exist.id,
+                                exist.uuid)
+    base_verifier._is_long('size', exist.size, exist.id, exist.uuid)
+    base_verifier._is_hex_owner_id('owner', exist.owner, exist.id, exist.uuid)
 
 
 def _verify_for_usage(exist, usage=None):
@@ -124,7 +123,7 @@ def _verify_for_delete(exist, delete=None):
         if not base_verifier._verify_date_field(
                 delete.deleted_at, exist.deleted_at, same_second=True):
             raise FieldMismatch('deleted_at', exist.deleted_at,
-                                delete.deleted_at)
+                                delete.deleted_at, exist.uuid)
 
 
 def _verify(exists):
