@@ -239,7 +239,7 @@ def _get_exist_stats(request, service):
     query = klass.objects.filter(**filters)
     values = query.values('status', 'send_status')
     stats = values.annotate(event_count=Count('send_status'))
-    return stats
+    return list(stats)
 
 @api_call
 def exists_send_status(request, message_id):
