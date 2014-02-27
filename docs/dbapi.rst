@@ -780,3 +780,38 @@ Returns a single instance exists matching provided id
           "delete": null
         }
       }
+
+db/count/verified/
+==================
+
+.. http:get:: http://example.com/count/verified/
+
+Returns a count of .verified events stored in Stacktach's Rawdata table from
+``audit_period_beginning`` to ``audit_period_ending``
+
+  **Query Parameters**
+
+  * ``audit_period_beginning``: datetime (yyyy-mm-dd)
+  * ``audit_period_ending``: datetime (yyyy-mm-dd)
+  * ``service``: ``nova`` or ``glance``. default="nova"
+
+  **Example request**:
+
+   .. sourcecode:: http
+
+      GET db/count/verified/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+
+  **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: application/json
+
+      {
+        count: 10
+      }
