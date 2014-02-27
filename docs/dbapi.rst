@@ -100,6 +100,44 @@ Uses the provided message_id's and http status codes to update image and instanc
 Read APIs
 *********
 
+
+
+db/stats/events
+===============
+
+.. http:get:: http://example.com/db/stats/events/
+
+Returns a count of events stored in Stacktach's Rawdata tables from
+``when_min`` to ``when_max``
+
+  **Query Parameters**
+
+  * ``event``: event type to filter by
+  * ``when_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``when_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``service``: ``nova`` or ``glance``. default="nova"
+
+  **Example request**:
+
+   .. sourcecode:: http
+
+      GET db/stats/events/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+
+  **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: application/json
+
+      {
+        count: 10
+      }
+
 db/stats/nova/exists/
 =====================
 
@@ -876,45 +914,10 @@ Returns a single instance exists matching provided id
         }
       }
 
-db/count/verified/
-==================
+/db/repair
+==========
 
-.. http:get:: http://example.com/count/verified/
-
-Returns a count of .verified events stored in Stacktach's Rawdata table from
-``audit_period_beginning`` to ``audit_period_ending``
-
-  **Query Parameters**
-
-  * ``audit_period_beginning``: datetime (yyyy-mm-dd)
-  * ``audit_period_ending``: datetime (yyyy-mm-dd)
-  * ``service``: ``nova`` or ``glance``. default="nova"
-
-  **Example request**:
-
-   .. sourcecode:: http
-
-      GET db/count/verified/ HTTP/1.1
-      Host: example.com
-      Accept: application/json
-
-
-  **Example response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Vary: Accept
-      Content-Type: application/json
-
-      {
-        count: 10
-      }
-
-repair
-======
-
-.. http:post:: http://example.com/repair/
+.. http:post:: http://example.com/db/repair/
 
    Changes the status of all the exists of message-ids sent with the request
    from 'pending' to 'sent_unverified' so that the verifier does not end up
@@ -926,7 +929,7 @@ repair
 
    .. sourcecode::http
 
-      POST /repair/  HTTP/1.1
+      POST /db/repair/  HTTP/1.1
       Host: example.com
       Accept: application/json
 

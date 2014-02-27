@@ -91,7 +91,7 @@ dbapi_urls = (
         'stacktach.dbapi.get_usage_exist_stats'),
     url(r'db/stats/glance/exists$',
         'stacktach.dbapi.get_usage_exist_stats_glance'),
-    url(r'db/count/verified', 'stacktach.dbapi.get_verified_count'),
+    url(r'db/stats/events', 'stacktach.dbapi.get_event_stats'),
     url(r'db/repair/', 'stacktach.dbapi.repair_stacktach_down'),
 )
 

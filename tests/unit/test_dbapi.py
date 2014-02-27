@@ -1106,9 +1106,10 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_get_verified_count(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'audit_period_beginning': "2014-02-26",
-                            'audit_period_ending': "2014-02-27",
-                            'service': "nova"}
+        fake_request.GET = {'when_min': "2014-02-26 00:00:00",
+                            'when_max': "2014-02-27 00:00:00",
+                            'service': "nova",
+                            'event': 'compute.instance.exists.verified'}
         mock_query = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(models.RawData.objects, "filter")
         models.RawData.objects.filter(event='compute.instance.exists.verified',
@@ -1118,21 +1119,22 @@ class DBAPITestCase(StacktachBaseTestCase):
         mock_query.count().AndReturn(100)
         self.mox.ReplayAll()
 
-        response = dbapi.get_verified_count(fake_request)
+        response = dbapi.get_event_stats(fake_request)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(json.loads(response.content), {'count': 100})
+        self.assertEqual(json.loads(response.content),
+                         {'stats': {'count': 100}})
         self.mox.VerifyAll()
 
     def test_get_verified_count_wrong_date_format_returns_400(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'audit_period_beginning': "2014-020-26",
+        fake_request.GET = {'when_min': "2014-020-26",
 
                             'service': "nova"}
 
         self.mox.ReplayAll()
 
-        response = dbapi.get_verified_count(fake_request)
+        response = dbapi.get_event_stats(fake_request)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(json.loads(response.content)['message'],
                          "Invalid format for date"
@@ -1142,30 +1144,18 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_get_verified_count_wrong_service_returns_400(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'audit_period_beginning': "2014-02-26",
-                            "audit_period_ending": "2014-02-27",
+        fake_request.GET = {'when_min': "2014-02-26 00:00:00",
+                            "when_min": "2014-02-27 00:00:00",
                             'service': "qonos"}
 
         self.mox.ReplayAll()
 
-        response = dbapi.get_verified_count(fake_request)
+        response = dbapi.get_event_stats(fake_request)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(json.loads(response.content)['message'],
                          "Invalid service")
         self.mox.VerifyAll()
 
-    def test_get_verified_count_invalid_query_parameter_returns_400(self):
-        fake_request = self.mox.CreateMockAnything()
-        fake_request.method = 'GET'
-        fake_request.GET = {'audit_period': "2014-02-26",}
-
-        self.mox.ReplayAll()
-
-        response = dbapi.get_verified_count(fake_request)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(json.loads(response.content)['message'],
-                         "Invalid/absent query parameter")
-        self.mox.VerifyAll()
 
 class StacktachRepairScenarioApi(StacktachBaseTestCase):
     def setUp(self):

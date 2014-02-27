@@ -459,23 +459,26 @@ def _rawdata_factory(service):
 
 
 @api_call
-def get_verified_count(request):
+def get_event_stats(request):
     try:
-        audit_period_beginning = datetime.strptime(
-            request.GET.get("audit_period_beginning"), "%Y-%m-%d")
-        audit_period_ending = datetime.strptime(
-            request.GET.get("audit_period_ending"), "%Y-%m-%d")
+        filters = {}
+        if 'when_min' in request.GET:
+            when_min = utils.str_time_to_unix(request.GET['when_min'])
+            filters['when__gte'] = when_min
+
+        if 'when_max' in request.GET:
+            when_max = utils.str_time_to_unix(request.GET['when_max'])
+            filters['when__lte'] = when_max
+
+        if 'event' in request.GET:
+            filters['event'] = request.GET['event']
+
         service = request.GET.get("service", "nova")
         rawdata = _rawdata_factory(service)
-        filters = {
-            'when__gte': dt.dt_to_decimal(audit_period_beginning),
-            'when__lte': dt.dt_to_decimal(audit_period_ending),
-            'event': "compute.instance.exists.verified"
-        }
-        return {'count': rawdata.filter(**filters).count()}
-    except KeyError and TypeError:
+        return {'stats': {'count': rawdata.filter(**filters).count()}}
+    except (KeyError, TypeError):
         raise BadRequestException(message="Invalid/absent query parameter")
-    except ValueError:
+    except (ValueError, AttributeError):
         raise BadRequestException(message="Invalid format for date (Correct "
                                           "format should be %YYYY-%mm-%dd)")
 
