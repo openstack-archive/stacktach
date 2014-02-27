@@ -1009,7 +1009,7 @@ class StacktachRepairScenarioApi(StacktachBaseTestCase):
         message_ids = ["04fd94b5-64dd-4559-83b7-981d9d4f7a5a",
                        "14fd94b5-64dd-4559-83b7-981d9d4f7a5a",
                        "24fd94b5-64dd-4559-83b7-981d9d4f7a5a"]
-        request.POST._iterlists().AndReturn([('service', 'nova'),
+        request.POST._iterlists().AndReturn([('service', ['nova']),
                                              ('message_ids', message_ids)])
         self.mox.StubOutWithMock(models.InstanceExists,
                                  'mark_exists_as_sent_unverified')

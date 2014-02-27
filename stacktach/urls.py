@@ -72,7 +72,7 @@ urlpatterns = patterns('',
     url(r'db/confirm/usage/exists/(?P<message_id>[\w\-]+)/$',
         'stacktach.dbapi.exists_send_status'),
     url(r'db/count/verified', 'stacktach.dbapi.get_verified_count'),
-    url(r'repair/', 'stacktach.dbapi.repair_stacktach_down'),
+    url(r'db/repair/', 'stacktach.dbapi.repair_stacktach_down'),
 
     url(r'^(?P<deployment_id>\d+)/$', 'stacktach.views.home', name='home'),
     url(r'^(?P<deployment_id>\d+)/details/(?P<column>\w+)/(?P<row_id>\d+)/$',

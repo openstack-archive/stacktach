@@ -36,7 +36,6 @@ from stacktach import datetime_to_decimal as dt
 from stacktach import models
 from stacktach import stacklog
 from stacktach import utils
-from stacktach.models import InstanceExists, ImageExists
 
 DEFAULT_LIMIT = 50
 HARD_LIMIT = 1000
@@ -454,19 +453,13 @@ def get_verified_count(request):
                                           "format should be %YYYY-%mm-%dd)")
 
 
-def exists_factory(service):
-    model = InstanceExists
-    if service == 'glance':
-        model = ImageExists
-    return model
-
-
 def repair_stacktach_down(request):
     post_dict = dict((request.POST._iterlists()))
     message_ids = post_dict.get('message_ids')
     service = post_dict.get('service', ['nova'])
+    klass = _exists_model_factory(service[0])['klass']
     absent_exists, exists_not_pending = \
-        exists_factory(service[0]).mark_exists_as_sent_unverified(message_ids)
+        klass.mark_exists_as_sent_unverified(message_ids)
     response_data = {'absent_exists': absent_exists,
                      'exists_not_pending': exists_not_pending}
     response = HttpResponse(json.dumps(response_data),
