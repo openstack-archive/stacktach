@@ -49,35 +49,54 @@ def _verify_field_mismatch(exists, launch):
     flavor_field_name = config.flavor_field_name()
     if not base_verifier._verify_date_field(
             launch.launched_at, exists.launched_at, same_second=True):
-        raise FieldMismatch('launched_at', exists.launched_at,
-                            launch.launched_at, exists.instance)
+        raise FieldMismatch(
+            'launched_at',
+            {'name': 'exists', 'value': exists.launched_at},
+            {'name': 'launches', 'value': launch.launched_at},
+            exists.instance)
 
     if getattr(launch, flavor_field_name) != \
             getattr(exists, flavor_field_name):
-        raise FieldMismatch(flavor_field_name,
-                            getattr(exists, flavor_field_name),
-                            getattr(launch, flavor_field_name),
-                            exists.instance)
+        raise FieldMismatch(
+            flavor_field_name,
+            {'name': 'exists', 'value': getattr(exists, flavor_field_name)},
+            {'name': 'launches', 'value': getattr(launch, flavor_field_name)},
+            exists.instance)
 
     if launch.tenant != exists.tenant:
-        raise FieldMismatch('tenant', exists.tenant, launch.tenant,
-                            exists.instance)
+        raise FieldMismatch(
+            'tenant',
+            {'name': 'exists', 'value': exists.tenant},
+            {'name': 'launches', 'value': launch.tenant},
+            exists.instance)
 
     if launch.rax_options != exists.rax_options:
-        raise FieldMismatch('rax_options', exists.rax_options,
-                            launch.rax_options, exists.instance)
+        raise FieldMismatch(
+            'rax_options',
+            {'name': 'exists', 'value': exists.rax_options},
+            {'name': 'launches', 'value': launch.rax_options},
+            exists.instance)
 
     if launch.os_architecture != exists.os_architecture:
-        raise FieldMismatch('os_architecture', exists.os_architecture,
-                            launch.os_architecture, exists.instance)
+        raise FieldMismatch(
+            'os_architecture',
+            {'name': 'exists', 'value': exists.os_architecture},
+            {'name': 'launches', 'value': launch.os_architecture},
+            exists.instance)
 
     if launch.os_version != exists.os_version:
-        raise FieldMismatch('os_version', exists.os_version,
-                            launch.os_version, exists.instance)
+        raise FieldMismatch(
+            'os_version',
+            {'name': 'exists', 'value': exists.os_version},
+            {'name': 'launches', 'value': launch.os_version},
+            exists.instance)
 
     if launch.os_distro != exists.os_distro:
-        raise FieldMismatch('os_distro', exists.os_distro,
-                            launch.os_distro, exists.instance)
+        raise FieldMismatch(
+            'os_distro',
+            {'name': 'exists', 'value': exists.os_distro},
+            {'name': 'launches', 'value': launch.os_distro},
+            exists.instance)
 
 
 def _verify_for_launch(exist, launch=None,
@@ -143,13 +162,19 @@ def _verify_for_delete(exist, delete=None,
     if delete:
         if not base_verifier._verify_date_field(
                 delete.launched_at, exist.launched_at, same_second=True):
-            raise FieldMismatch('launched_at', exist.launched_at,
-                                delete.launched_at, exist.instance)
+            raise FieldMismatch(
+                'launched_at',
+                {'name': 'exists', 'value': exist.launched_at},
+                {'name': 'deletes', 'value': delete.launched_at},
+                exist.instance)
 
         if not base_verifier._verify_date_field(
                 delete.deleted_at, exist.deleted_at, same_second=True):
-            raise FieldMismatch('deleted_at', exist.deleted_at,
-                                delete.deleted_at, exist.instance)
+            raise FieldMismatch(
+                'deleted_at',
+                {'name': 'exists', 'value': exist.deleted_at},
+                {'name': 'deletes', 'value': delete.deleted_at},
+                exist.instance)
 
 
 def _verify_basic_validity(exist):

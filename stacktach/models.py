@@ -177,14 +177,20 @@ class InstanceUsage(models.Model):
     rax_options = models.TextField(null=True, blank=True)
 
     def deployment(self):
-        return self.latest_raw_for_request_id().deployment.name
+        raws = RawData.objects.filter(request_id=self.request_id)
+        return raws and raws[0].deployment
+
+    def latest_deployment_for_request_id(self):
+        raw = self.latest_raw_for_request_id()
+        return raw and raw.deployment
 
     def latest_raw_for_request_id(self):
-        return RawData.objects.filter(
+        return self.request_id and RawData.objects.filter(
             request_id=self.request_id).order_by('-id')[0]
 
     def host(self):
-        return self.latest_raw_for_request_id().host
+        raw = self.latest_raw_for_request_id()
+        return raw and raw.host
 
     @staticmethod
     def find(instance, launched_at):
@@ -356,6 +362,7 @@ class InstanceExists(models.Model):
                 exists = InstanceExists.objects.get(message_id=message_id)
                 if exists.status == InstanceExists.PENDING:
                     exists.status = InstanceExists.SENT_UNVERIFIED
+                    exists.send_status = '201'
                     exists.save()
                 else:
                     exists_not_pending.append(message_id)
@@ -407,6 +414,22 @@ class JsonReport(models.Model):
     name = models.CharField(max_length=50, db_index=True)
     version = models.IntegerField(default=1)
     json = models.TextField()
+
+
+class TenantType(models.Model):
+    name = models.CharField(max_length=50, db_index=True)
+    value = models.CharField(max_length=50, db_index=True)
+
+
+class TenantInfo(models.Model):
+    """This contains tenant information synced from an external source.
+    It's mostly used as a cache to put things like tenant name on reports
+    without making alot of calls to an external system."""
+    tenant = models.CharField(max_length=50, db_index=True, unique=True)
+    name = models.CharField(max_length=100, null=True,
+                            blank=True, db_index=True)
+    types = models.ManyToManyField(TenantType)
+    last_updated = models.DateTimeField(db_index=True)
 
 
 class GlanceRawData(models.Model):
@@ -575,6 +598,7 @@ class ImageExists(models.Model):
                 for exists in exists_list:
                     if exists.status == ImageExists.PENDING:
                         exists.status = ImageExists.SENT_UNVERIFIED
+                        exists.send_status = '201'
                         exists.save()
                     else:
                         exists_not_pending.append(message_id)

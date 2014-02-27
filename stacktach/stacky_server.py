@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -495,98 +495,6 @@ def do_kpi(request, tenant_id=None):
     return rsp(json.dumps(results))
 
 
-def do_list_usage_launches(request):
-
-    filter_args = {}
-    if 'instance' in request.GET:
-        uuid = request.GET['instance']
-        if not utils.is_uuid_like(uuid):
-            msg = "%s is not uuid-like" % uuid
-            return error_response(400, 'Bad Request', msg)
-        filter_args['instance'] = uuid
-
-    model = models.InstanceUsage.objects
-    if len(filter_args) > 0:
-        launches = model_search(request, model, filter_args)
-    else:
-        launches = model_search(request, model, None)
-
-    results = [["UUID", "Launched At", "Instance Type Id",
-                "Instance Flavor Id"]]
-
-    for launch in launches:
-        launched = None
-        if launch.launched_at:
-            launched = str(dt.dt_from_decimal(launch.launched_at))
-        results.append([launch.instance, launched, launch.instance_type_id,
-                        launch.instance_flavor_id])
-
-    return rsp(json.dumps(results))
-
-
-def do_list_usage_deletes(request):
-
-    filter_args = {}
-    if 'instance' in request.GET:
-        uuid = request.GET['instance']
-        if not utils.is_uuid_like(uuid):
-            msg = "%s is not uuid-like" % uuid
-            return error_response(400, 'Bad Request', msg)
-        filter_args['instance'] = uuid
-
-    model = models.InstanceDeletes.objects
-    if len(filter_args) > 0:
-        deletes = model_search(request, model, filter_args)
-    else:
-        deletes = model_search(request, model, None)
-
-    results = [["UUID", "Launched At", "Deleted At"]]
-
-    for delete in deletes:
-        launched = None
-        if delete.launched_at:
-            launched = str(dt.dt_from_decimal(delete.launched_at))
-        deleted = None
-        if delete.deleted_at:
-            deleted = str(dt.dt_from_decimal(delete.deleted_at))
-        results.append([delete.instance, launched, deleted])
-
-    return rsp(json.dumps(results))
-
-
-def do_list_usage_exists(request):
-
-    filter_args = {}
-    if 'instance' in request.GET:
-        uuid = request.GET['instance']
-        if not utils.is_uuid_like(uuid):
-            msg = "%s is not uuid-like" % uuid
-            return error_response(400, 'Bad Request', msg)
-        filter_args['instance'] = uuid
-
-    model = models.InstanceExists.objects
-    if len(filter_args) > 0:
-        exists = model_search(request, model, filter_args)
-    else:
-        exists = model_search(request, model, None)
-
-    results = [["UUID", "Launched At", "Deleted At", "Instance Type Id",
-                "Instance Flavor Id", "Message ID", "Status"]]
-
-    for exist in exists:
-        launched = None
-        if exist.launched_at:
-            launched = str(dt.dt_from_decimal(exist.launched_at))
-        deleted = None
-        if exist.deleted_at:
-            deleted = str(dt.dt_from_decimal(exist.deleted_at))
-        results.append([exist.instance, launched, deleted,
-                        exist.instance_type_id, exist.instance_flavor_id,
-                        exist.message_id, exist.status])
-
-    return rsp(json.dumps(results))
-
-
 def do_jsonreports(request):
     yesterday = datetime.datetime.utcnow() - datetime.timedelta(days=1)
     now = datetime.datetime.utcnow()
@@ -720,7 +628,7 @@ def do_jsonreports_search(request):
                                 report.name,
                                 report.version])
     except BadRequestException as be:
-        return error_response(400, 'Bad Request', be.message)
+        return error_response(400, 'Bad Request', str(be))
     except ValidationError as ve:
         return error_response(400, 'Bad Request', ve.messages[0])
 

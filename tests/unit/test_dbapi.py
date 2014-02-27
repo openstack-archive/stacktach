@@ -34,6 +34,17 @@ from utils import MESSAGE_ID_3
 from utils import MESSAGE_ID_4
 
 
+class Length(mox.Comparator):
+    def __init__(self, l):
+        self._len = l
+
+    def equals(self, rhs):
+        return self._len == len(rhs)
+
+    def __repr__(self):
+        return "<sequence with len %s >" % self._len
+
+
 class DBAPITestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
@@ -409,6 +420,128 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
         resp = dbapi.list_usage_exists(fake_request)
         self.assertEqual(resp.status_code, 400)
+        self.mox.VerifyAll()
+
+    def test_update_tenant_info(self):
+        TEST_TENANT='test'
+
+        models.TenantInfo.objects = self.mox.CreateMockAnything()
+        models.TenantType.objects = self.mox.CreateMockAnything()
+
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        body_dict = dict(tenant=TEST_TENANT, 
+                         name='test name',
+                         types=dict(test_type='thingy'))
+        body = json.dumps(body_dict)
+        fake_request.body = body
+
+        info = self.mox.CreateMockAnything()
+        info_result = self.mox.CreateMockAnything()
+        models.TenantInfo.objects.select_for_update().AndReturn(info_result)
+        info_result.get(tenant=TEST_TENANT).AndReturn(info)
+        info.save()
+
+        ttype = self.mox.CreateMockAnything()
+        models.TenantType.objects.get(name='test_type', value='thingy').AndReturn(ttype)
+        ttype.__hash__().AndReturn(hash('test_type'))
+        info.save()
+
+        self.mox.ReplayAll()
+
+        dbapi.update_tenant_info(fake_request, TEST_TENANT)
+
+        self.assertEqual(info.name, 'test name')
+        self.assertEqual(info.types, [ttype])
+        self.mox.VerifyAll()
+
+    def test_batch_update_tenant_info(self):
+        TEST_DATE='test date time'
+
+        mock_t1 = self.mox.CreateMock(models.TenantInfo)
+        mock_t1.id = 1 
+        mock_t1.tenant = 'test_old'
+        mock_t1.name = 'test old name'
+        mock_t1.types = self.mox.CreateMockAnything()
+        mock_t1.types.all().AndReturn([])
+        mock_t1.last_updated = TEST_DATE
+
+        mock_t2 = self.mox.CreateMock(models.TenantInfo)
+        mock_t2.id = 2 
+        mock_t2.tenant = 'test_new'
+        mock_t2.name = 'test new name'
+        mock_t2.last_updated = TEST_DATE
+        mock_t2.types = self.mox.CreateMockAnything()
+        mock_t2.types.all().AndReturn([])
+        TEST_OBJECTS = [mock_t1, mock_t2]
+
+        mock_tt1 = self.mox.CreateMock(models.TenantType)
+        mock_tt1.id = 1
+        mock_tt1.name = 'test_type'
+        mock_tt1.value = 'thingy'
+
+        mock_tt2 = self.mox.CreateMock(models.TenantType)
+        mock_tt2.id = 2
+        mock_tt2.name = 'test_type'
+        mock_tt2.value = 'whatzit'
+        TEST_TYPES = [mock_tt1, mock_tt2]
+
+        models.TenantInfo.objects = self.mox.CreateMockAnything()
+        models.TenantType.objects = self.mox.CreateMockAnything()
+        TypeXref = models.TenantInfo.types.through
+        TypeXref.objects = self.mox.CreateMockAnything()
+
+        self.mox.StubOutWithMock(dbapi, 'datetime')
+        dbapi.datetime.utcnow().AndReturn(TEST_DATE)
+
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'PUT'
+        body_dict = dict(tenants=[dict(tenant='test_old', 
+                                       name='test old name',
+                                       types=dict(test_type='thingy')),
+                                  dict(tenant='test_new', 
+                                       name='test new name',
+                                       types=dict(test_type='whatzit'))])
+        body = json.dumps(body_dict)
+        fake_request.body = body
+
+        info_values = self.mox.CreateMockAnything()
+        models.TenantInfo.objects.filter(tenant__in=['test_old', 'test_new']).AndReturn(info_values)
+        info_values.values('tenant').AndReturn([dict(tenant='test_old')])
+        models.TenantInfo.objects.bulk_create(mox.And(
+            Length(1), mox.IsA(list), mox.In(mox.And(
+                     mox.IsA(models.TenantInfo),
+                     mox.ContainsAttributeValue('tenant','test_new'),
+                     mox.ContainsAttributeValue('name', 'test new name'),
+                     mox.ContainsAttributeValue('last_updated', TEST_DATE)
+                     ))))
+
+        fake_tenants = self.mox.CreateMockAnything()
+        models.TenantInfo.objects.filter(tenant__in=['test_old', 'test_new'])\
+                .AndReturn(fake_tenants)
+        fake_tenants.update(last_updated=TEST_DATE)
+        fake_tenants.__iter__().AndReturn(iter(TEST_OBJECTS))
+
+        models.TenantType.objects.all().AndReturn(TEST_TYPES)
+
+        mock_query = self.mox.CreateMockAnything()
+        TypeXref.objects.filter(tenantinfo_id__in=[]).AndReturn(mock_query)
+        mock_query.delete()
+
+        TypeXref.objects.bulk_create(mox.And(
+            Length(2), mox.IsA(list),
+            mox.In(mox.And(
+                     mox.IsA(TypeXref),
+                     mox.ContainsAttributeValue('tenantinfo_id', 1),
+                     mox.ContainsAttributeValue('tenanttype_id', 1))),
+            mox.In(mox.And(
+                     mox.IsA(TypeXref),
+                     mox.ContainsAttributeValue('tenantinfo_id', 2),
+                     mox.ContainsAttributeValue('tenanttype_id', 2))),
+            ))
+
+        self.mox.ReplayAll()
+        dbapi.batch_update_tenant_info(fake_request)
         self.mox.VerifyAll()
 
     def test_send_status(self):
