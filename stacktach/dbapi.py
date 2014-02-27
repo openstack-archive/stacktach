@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 import decimal
+import datetime
 import functools
 import json
 from datetime import datetime
@@ -514,3 +515,102 @@ def repair_stacktach_down(request):
                             content_type="application/json")
     return response
 
+
+def _update_tenant_info_cache(tenant_info):
+    tenant_id = tenant_info['tenant']
+    try:
+        tenant = models.TenantInfo.objects\
+                                  .select_for_update()\
+                                  .get(tenant=tenant_id)
+    except models.TenantInfo.DoesNotExist:
+        tenant = models.TenantInfo(tenant=tenant_id)
+    tenant.name = tenant_info['name']
+    tenant.last_updated = datetime.utcnow()
+    tenant.save()
+
+    types = set()
+    for type_name, type_value in tenant_info['types'].items():
+        try:
+            tenant_type = models.TenantType.objects\
+                                           .get(name=type_name,
+                                                value=type_value)
+        except models.TenantType.DoesNotExist:
+            tenant_type = models.TenantType(name=type_name,
+                                            value=type_value)
+            tenant_type.save()
+        types.add(tenant_type)
+    tenant.types = list(types)
+    tenant.save()
+
+def _batch_update_tenant_info(info_list):
+    tenant_info = dict((str(info['tenant']), info) for info in info_list)
+    tenant_ids = set(tenant_info)
+    old_tenants = set(t['tenant'] for t in 
+                      models.TenantInfo.objects
+                               .filter(tenant__in=list(tenant_ids))
+                               .values('tenant'))
+    new_tenants = []
+    now = datetime.utcnow()
+    for tenant in (tenant_ids - old_tenants):
+        new_tenants.append(models.TenantInfo(tenant=tenant, 
+                                             name=tenant_info[tenant]['name'],
+                                             last_updated=now))
+    if new_tenants:
+        models.TenantInfo.objects.bulk_create(new_tenants)
+    tenants = models.TenantInfo.objects.filter(tenant__in=list(tenant_ids))
+    tenants.update(last_updated=now)
+
+    types = dict(((tt.name,tt.value),tt) for tt in models.TenantType.objects.all())
+    TypeXref = models.TenantInfo.types.through
+
+    changed_tenant_dbids = []
+    new_type_xrefs = []
+    for tenant in tenants:
+        info = tenant_info[tenant.tenant]
+        new_types = set()
+        for type_name, type_value in info['types'].items():
+            ttype = types.get((type_name, type_value))
+            if ttype is None:
+                ttype = models.TenantType(name=type_name,
+                                                value=type_value)
+                ttype.save()
+                types[(type_name,type_value)] = ttype
+            new_types.add(ttype)
+        cur_types = set(tenant.types.all())
+        if new_types != cur_types:
+            if cur_types:
+                changed_tenant_dbids.append(tenant.id)
+            for ttype in new_types:
+                new_type_xrefs.append(TypeXref(tenantinfo_id=tenant.id, tenanttype_id=ttype.id))
+    TypeXref.objects.filter(tenantinfo_id__in=changed_tenant_dbids).delete()
+    TypeXref.objects.bulk_create(new_type_xrefs)
+
+
+@api_call
+def batch_update_tenant_info(request):
+    if request.method not in ['PUT', 'POST']:
+        raise BadRequestException(message="Invalid method")
+
+    if request.body is None or request.body == '':
+        raise BadRequestException(message="Request body required")
+
+    body = json.loads(request.body)
+    if body.get('tenants') is not None:
+        tenants = body['tenants']
+        _batch_update_tenant_info(tenants)
+    else:
+        msg = "'tenants' missing from request body"
+        raise BadRequestException(message=msg)
+
+@api_call
+def update_tenant_info(request, tenant_id):
+    if request.method not in ['PUT', 'POST']:
+        raise BadRequestException(message="Invalid method")
+
+    if request.body is None or request.body == '':
+        raise BadRequestException(message="Request body required")
+
+    body = json.loads(request.body)
+    if body['tenant'] != tenant_id:
+        raise BadRequestException(message="Invalid tenant: %s != %s" % (body['tenant'], tenant_id)) 
+    _update_tenant_info_cache(body)

@@ -93,6 +93,14 @@ def _get_exists(beginning, ending):
     return models.InstanceExists.objects.filter(**filters)
 
 
+def cell_and_compute(instance, launched_at):
+    usage = InstanceUsage.find(instance, launched_at)[0]
+    deployment = usage.latest_deployment_for_request_id()
+    cell = (deployment and deployment.name) or '-'
+    compute = usage.host() or '-'
+    return cell, compute
+
+
 def _audit_launches_to_exists(launches, exists, beginning):
     fails = []
     for (instance, launches) in launches.items():
@@ -111,14 +119,12 @@ def _audit_launches_to_exists(launches, exists, beginning):
                     if reconciler:
                         args = (expected['id'], beginning)
                         rec = reconciler.missing_exists_for_instance(*args)
-                    msg = "Couldn't find exists for launch (%s, %s)"
-                    msg = msg % (instance, expected['launched_at'])
                     launched_at = dt.dt_from_decimal(expected['launched_at'])
-                    usage = InstanceUsage.find(instance, launched_at)[0]
-                    host = usage.host()
-                    deployment = usage.deployment()
+                    msg = "Couldn't find exists for launch (%s, %s)"
+                    msg = msg % (instance, launched_at)
+                    cell, compute = cell_and_compute(instance, launched_at)
                     fails.append(['Launch', expected['id'], msg,
-                                  'Y' if rec else 'N', host, deployment])
+                                  'Y' if rec else 'N', cell, compute])
         else:
             rec = False
             if reconciler:
@@ -126,11 +132,9 @@ def _audit_launches_to_exists(launches, exists, beginning):
                 rec = reconciler.missing_exists_for_instance(*args)
             msg = "No exists for instance (%s)" % instance
             launched_at = dt.dt_from_decimal(launches[0]['launched_at'])
-            usage = InstanceUsage.find(instance, launched_at)[0]
-            host = usage.host()
-            deployment = usage.deployment()
-            fails.append(['Launch', '-', msg, 'Y' if rec else 'N', host,
-                          deployment])
+            cell, compute = cell_and_compute(instance, launched_at)
+            fails.append(['-', msg, 'Y' if rec else 'N',
+                          cell, compute])
     return fails
 
 
@@ -249,11 +253,15 @@ def store_results(start, end, summary, details):
 
 
 def make_json_report(summary, details):
-    report = [{'summary': summary},
-              ['Object', 'ID', 'Error Description', 'Reconciled?', 'Cell',
-               'Deployment']]
-    report.extend(details['exist_fails'])
-    report.extend(details['launch_fails'])
+    report = {
+        'summary': summary,
+        'exist_fail_headers': ['Exists Row ID', 'Error Description', 'Cell',
+                               'Compute'],
+        'exist_fails': details['exist_fails'],
+        'launch_fail_headers': ['Launch Row ID', 'Error Description',
+                                'Reconciled?', 'Cell', 'Compute'],
+        'launch_fails': details['launch_fails']
+    }
     return json.dumps(report)
 
 
