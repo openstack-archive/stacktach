@@ -875,3 +875,74 @@ Returns a single instance exists matching provided id
           "delete": null
         }
       }
+
+db/count/verified/
+==================
+
+.. http:get:: http://example.com/count/verified/
+
+Returns a count of .verified events stored in Stacktach's Rawdata table from
+``audit_period_beginning`` to ``audit_period_ending``
+
+  **Query Parameters**
+
+  * ``audit_period_beginning``: datetime (yyyy-mm-dd)
+  * ``audit_period_ending``: datetime (yyyy-mm-dd)
+  * ``service``: ``nova`` or ``glance``. default="nova"
+
+  **Example request**:
+
+   .. sourcecode:: http
+
+      GET db/count/verified/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+
+  **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: application/json
+
+      {
+        count: 10
+      }
+
+repair
+======
+
+.. http:post:: http://example.com/repair/
+
+   Changes the status of all the exists of message-ids sent with the request
+   from 'pending' to 'sent_unverified' so that the verifier does not end up
+   sending .verified for all those exists(since the .exists have already been
+   modified as .verified and sent to AH by Yagi). It sends back the message-ids
+   of exists which could not be updated in the json response.
+
+      **Example request**:
+
+   .. sourcecode::http
+
+      POST /repair/  HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+    **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: text/json
+
+      {
+      u'exists_not_pending': [u'494ebfce-0219-4b62-b810-79039a279620'],
+      u'absent_exists': [u'7609f3b2-3694-4b6f-869e-2f13ae504cb2',
+                         u'0c64032e-4a60-44c0-a99d-5a4f2e46afb0']
+      }
+
+  :query message_ids: list of message_ids of exists messages
+  :query service: ``nova`` or ``glance``. default="nova"

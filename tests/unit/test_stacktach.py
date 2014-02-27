@@ -38,8 +38,7 @@ from utils import TENANT_ID_1
 from utils import INSTANCE_TYPE_ID_1
 from utils import DUMMY_TIME
 from utils import INSTANCE_TYPE_ID_2
-from utils import IMAGE_UUID_1
-from stacktach import stacklog
+from stacktach import stacklog, models
 from stacktach import notification
 from stacktach import views
 from tests.unit import StacktachBaseTestCase

@@ -21,6 +21,7 @@
 import decimal
 import functools
 import json
+from datetime import datetime
 
 from django.db import transaction
 from django.db.models import Count
@@ -445,3 +446,50 @@ def _convert_model_list(model_list, extra_values_func=None):
         converted.append(_convert_model(item, extra_values_func))
 
     return converted
+
+
+def _rawdata_factory(service):
+    if service == "nova":
+        rawdata = models.RawData.objects
+    elif service == "glance":
+        rawdata = models.GlanceRawData.objects
+    else:
+        raise BadRequestException(message="Invalid service")
+    return rawdata
+
+
+@api_call
+def get_verified_count(request):
+    try:
+        audit_period_beginning = datetime.strptime(
+            request.GET.get("audit_period_beginning"), "%Y-%m-%d")
+        audit_period_ending = datetime.strptime(
+            request.GET.get("audit_period_ending"), "%Y-%m-%d")
+        service = request.GET.get("service", "nova")
+        rawdata = _rawdata_factory(service)
+        filters = {
+            'when__gte': dt.dt_to_decimal(audit_period_beginning),
+            'when__lte': dt.dt_to_decimal(audit_period_ending),
+            'event': "compute.instance.exists.verified"
+        }
+        return {'count': rawdata.filter(**filters).count()}
+    except KeyError and TypeError:
+        raise BadRequestException(message="Invalid/absent query parameter")
+    except ValueError:
+        raise BadRequestException(message="Invalid format for date (Correct "
+                                          "format should be %YYYY-%mm-%dd)")
+
+
+def repair_stacktach_down(request):
+    post_dict = dict((request.POST._iterlists()))
+    message_ids = post_dict.get('message_ids')
+    service = post_dict.get('service', ['nova'])
+    klass = _exists_model_factory(service[0])['klass']
+    absent_exists, exists_not_pending = \
+        klass.mark_exists_as_sent_unverified(message_ids)
+    response_data = {'absent_exists': absent_exists,
+                     'exists_not_pending': exists_not_pending}
+    response = HttpResponse(json.dumps(response_data),
+                            content_type="application/json")
+    return response
+
