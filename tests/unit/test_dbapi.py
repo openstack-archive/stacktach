@@ -995,3 +995,54 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(json.loads(response.content)['message'],
                          "Invalid/absent query parameter")
         self.mox.VerifyAll()
+
+class StacktachRepairScenarioApi(StacktachBaseTestCase):
+    def setUp(self):
+        self.mox = mox.Mox()
+
+    def tearDown(self):
+        self.mox.UnsetStubs()
+
+    def test_change_nova_exists_status_for_all_exists(self):
+        request = self.mox.CreateMockAnything()
+        request.POST = self.mox.CreateMockAnything()
+        message_ids = ["04fd94b5-64dd-4559-83b7-981d9d4f7a5a",
+                       "14fd94b5-64dd-4559-83b7-981d9d4f7a5a",
+                       "24fd94b5-64dd-4559-83b7-981d9d4f7a5a"]
+        request.POST._iterlists().AndReturn([('service', 'nova'),
+                                             ('message_ids', message_ids)])
+        self.mox.StubOutWithMock(models.InstanceExists,
+                                 'mark_exists_as_sent_unverified')
+        models.InstanceExists.mark_exists_as_sent_unverified(message_ids).\
+            AndReturn([[], []])
+        self.mox.ReplayAll()
+
+        response = dbapi.repair_stacktach_down(request)
+        self.assertEqual(response.status_code, 200)
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data['exists_not_pending'], [])
+        self.assertEqual(response_data['absent_exists'], [])
+
+        self.mox.VerifyAll()
+
+    def test_change_glance_exists_status_for_all_exists(self):
+        request = self.mox.CreateMockAnything()
+        request.POST = self.mox.CreateMockAnything()
+        message_ids = ['04fd94b5-64dd-4559-83b7-981d9d4f7a5a',
+                       '14fd94b5-64dd-4559-83b7-981d9d4f7a5a',
+                       '24fd94b5-64dd-4559-83b7-981d9d4f7a5a']
+        request.POST._iterlists().AndReturn([('service', ['glance']),
+                                             ('message_ids', message_ids)])
+        self.mox.StubOutWithMock(models.ImageExists,
+                                 'mark_exists_as_sent_unverified')
+        models.ImageExists.mark_exists_as_sent_unverified(message_ids).\
+            AndReturn([[], []])
+        self.mox.ReplayAll()
+
+        response = dbapi.repair_stacktach_down(request)
+        self.assertEqual(response.status_code, 200)
+        response_data = json.loads(response.content)
+        self.assertEqual(response_data['exists_not_pending'], [])
+        self.assertEqual(response_data['absent_exists'], [])
+
+        self.mox.VerifyAll()

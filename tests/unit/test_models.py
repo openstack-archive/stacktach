@@ -112,6 +112,81 @@ class ImageExistsTestCase(unittest.TestCase):
                                    'owner1-3': [exist4],
                                    'owner2-2': [exist2]})
 
+    def test_mark_exists_as_sent_unverified(self):
+        message_ids = ["0708cb0b-6169-4d7c-9f58-3cf3d5bf694b",
+                       "9156b83e-f684-4ec3-8f94-7e41902f27aa"]
+
+        exist1 = self.mox.CreateMockAnything()
+        exist1.status = "pending"
+        exist1.save()
+        exist2 = self.mox.CreateMockAnything()
+        exist2.status = "pending"
+        exist2.save()
+        exist3 = self.mox.CreateMockAnything()
+        exist3.status = "pending"
+        exist3.save()
+        self.mox.StubOutWithMock(ImageExists.objects, 'filter')
+        ImageExists.objects.filter(message_id=message_ids[0]).AndReturn(
+            [exist1, exist2])
+        ImageExists.objects.filter(message_id=message_ids[1]).AndReturn(
+            [exist3])
+        self.mox.ReplayAll()
+
+        results = ImageExists.mark_exists_as_sent_unverified(message_ids)
+
+        self.assertEqual(results, ([], []))
+
+        self.mox.VerifyAll()
+
+    def test_mark_exists_as_sent_unverified_return_absent_exists(self):
+        message_ids = ["0708cb0b-6169-4d7c-9f58-3cf3d5bf694b",
+                       "9156b83e-f684-4ec3-8f94-7e41902f27aa"]
+
+        exist1 = self.mox.CreateMockAnything()
+        exist1.status = "pending"
+        exist1.save()
+        exist2 = self.mox.CreateMockAnything()
+        exist2.status = "pending"
+        exist2.save()
+        self.mox.StubOutWithMock(ImageExists.objects, 'filter')
+        ImageExists.objects.filter(message_id=message_ids[0]).AndReturn(
+            [exist1, exist2])
+        ImageExists.objects.filter(message_id=message_ids[1]).AndReturn([])
+        self.mox.ReplayAll()
+
+        results = ImageExists.mark_exists_as_sent_unverified(message_ids)
+
+        self.assertEqual(results, (['9156b83e-f684-4ec3-8f94-7e41902f27aa'],
+                                   []))
+
+        self.mox.VerifyAll()
+
+    def test_mark_exists_as_sent_unverified_and_return_exist_not_pending(self):
+        message_ids = ["0708cb0b-6169-4d7c-9f58-3cf3d5bf694b",
+                       "9156b83e-f684-4ec3-8f94-7e41902f27aa"]
+
+        exist1 = self.mox.CreateMockAnything()
+        exist1.status = "pending"
+        exist1.save()
+        exist2 = self.mox.CreateMockAnything()
+        exist2.status = "verified"
+        exist3 = self.mox.CreateMockAnything()
+        exist3.status = "pending"
+        exist3.save()
+        self.mox.StubOutWithMock(ImageExists.objects, 'filter')
+        ImageExists.objects.filter(message_id=message_ids[0]).AndReturn(
+            [exist1, exist2])
+        ImageExists.objects.filter(message_id=message_ids[1]).AndReturn(
+            [exist3])
+        self.mox.ReplayAll()
+
+        results = ImageExists.mark_exists_as_sent_unverified(message_ids)
+
+        self.assertEqual(results, ([],
+                                   ["0708cb0b-6169-4d7c-9f58-3cf3d5bf694b"]))
+
+        self.mox.VerifyAll()
+
 
 class InstanceExistsTestCase(unittest.TestCase):
     def setUp(self):
@@ -137,3 +212,66 @@ class InstanceExistsTestCase(unittest.TestCase):
 
         self.mox.VerifyAll()
         self.assertEqual(results, [1, 2])
+
+    def test_mark_exists_as_sent_unverified(self):
+        message_ids = ["0708cb0b-6169-4d7c-9f58-3cf3d5bf694b",
+                       "9156b83e-f684-4ec3-8f94-7e41902f27aa"]
+
+        exist1 = self.mox.CreateMockAnything()
+        exist1.status = "pending"
+        exist1.save()
+        exist2 = self.mox.CreateMockAnything()
+        exist2.status = "pending"
+        exist2.save()
+        self.mox.StubOutWithMock(InstanceExists.objects, 'get')
+        InstanceExists.objects.get(message_id=message_ids[0]).AndReturn(exist1)
+        InstanceExists.objects.get(message_id=message_ids[1]).AndReturn(exist2)
+        self.mox.ReplayAll()
+
+        results = InstanceExists.mark_exists_as_sent_unverified(message_ids)
+
+        self.assertEqual(results, ([], []))
+
+        self.mox.VerifyAll()
+
+    def test_mark_exists_as_sent_unverified_return_absent_exists(self):
+        message_ids = ["0708cb0b-6169-4d7c-9f58-3cf3d5bf694b",
+                       "9156b83e-f684-4ec3-8f94-7e41902f27aa"]
+
+        exist1 = self.mox.CreateMockAnything()
+        exist1.status = "pending"
+        exist1.save()
+        self.mox.StubOutWithMock(InstanceExists.objects, 'get')
+        InstanceExists.objects.get(message_id=message_ids[0]).AndReturn(exist1)
+        InstanceExists.objects.get(message_id=message_ids[1]).AndRaise(
+            Exception)
+        self.mox.ReplayAll()
+
+        results = InstanceExists.mark_exists_as_sent_unverified(message_ids)
+
+        self.assertEqual(results, (['9156b83e-f684-4ec3-8f94-7e41902f27aa'],
+                                   []))
+
+        self.mox.VerifyAll()
+
+    def test_mark_exists_as_sent_unverified_and_return_exist_not_pending(self):
+        message_ids = ["0708cb0b-6169-4d7c-9f58-3cf3d5bf694b",
+                       "9156b83e-f684-4ec3-8f94-7e41902f27aa"]
+
+        exist1 = self.mox.CreateMockAnything()
+        exist1.status = "pending"
+        exist1.save()
+        exist2 = self.mox.CreateMockAnything()
+        exist2.status = "verified"
+        self.mox.StubOutWithMock(InstanceExists.objects, 'get')
+        InstanceExists.objects.get(message_id=message_ids[0]).AndReturn(exist1)
+        InstanceExists.objects.get(message_id=message_ids[1]).AndReturn(exist2)
+        self.mox.ReplayAll()
+
+        results = InstanceExists.mark_exists_as_sent_unverified(message_ids)
+
+        self.assertEqual(results, ([],
+                                   ["9156b83e-f684-4ec3-8f94-7e41902f27aa"]))
+
+        self.mox.VerifyAll()
+

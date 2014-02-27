@@ -338,6 +338,24 @@ class InstanceExists(models.Model):
     def update_status(self, new_status):
         self.status = new_status
 
+    @staticmethod
+    def mark_exists_as_sent_unverified(message_ids):
+        absent_exists = []
+        exists_not_pending = []
+        for message_id in message_ids:
+            try:
+                exists = InstanceExists.objects.get(message_id=message_id)
+                if exists.status == InstanceExists.PENDING:
+                    exists.status = InstanceExists.SENT_UNVERIFIED
+                    exists.save()
+                else:
+                    exists_not_pending.append(message_id)
+            except Exception:
+                absent_exists.append(message_id)
+        return absent_exists, exists_not_pending
+
+
+
 
 class Timing(models.Model):
     """Each Timing record corresponds to a .start/.end event pair
@@ -535,6 +553,24 @@ class ImageExists(models.Model):
         if reason:
             self.fail_reason = reason
         self.save()
+
+    @staticmethod
+    def mark_exists_as_sent_unverified(message_ids):
+        absent_exists = []
+        exists_not_pending = []
+        for message_id in message_ids:
+            exists_list = ImageExists.objects.filter(message_id=message_id)
+            if exists_list:
+                for exists in exists_list:
+                    if exists.status == ImageExists.PENDING:
+                        exists.status = ImageExists.SENT_UNVERIFIED
+                        exists.save()
+                    else:
+                        exists_not_pending.append(message_id)
+            else :
+                absent_exists.append(message_id)
+        return absent_exists, exists_not_pending
+
 
 
 def get_model_fields(model):
