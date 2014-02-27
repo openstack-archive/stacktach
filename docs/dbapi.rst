@@ -41,7 +41,7 @@ Write APIs
 **********
 
 db/confirm/usage/exists/batch/
-=====================================
+==============================
 
 .. http:put:: http://example.com/db/confirm/usage/exists/batch/
 
@@ -99,6 +99,101 @@ Uses the provided message_id's and http status codes to update image and instanc
 
 Read APIs
 *********
+
+db/stats/nova/exists/
+=====================
+
+.. http:get:: http://example.com/db/stats/nova/exists
+
+Returns a list of status combinations and count of events with those status combinations.
+
+Note: Only status combinations with >0 count will show up.
+
+  **Query Parameters**
+
+  * ``audit_period_beginning_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``audit_period_beginning_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``audit_period_ending_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``audit_period_ending_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``launched_at_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``launched_at_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``deleted_at_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``deleted_at_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``received_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``received_max``: datetime (yyyy-mm-dd hh:mm:ss)
+
+  **Example request**:
+
+   .. sourcecode:: http
+
+      GET /db/stats/nova/exists/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+  **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: application/json
+
+      {
+        "stats":
+        [
+          {"status": "pending", "send_status": 0, "event_count": 1},
+          {"status": "verified", "send_status": 200, "event_count": 100},
+          {"status": "reconciled", "send_status": 200, "event_count": 2},
+          {"status": "failed", "send_status": 0, "event_count": 1},
+        ]
+      }
+
+db/stats/glance/exists/
+=======================
+
+.. http:get:: http://example.com/db/status/usage/glance/exists
+
+Returns a list of status combinations and count of events with those status combinations.
+
+Note: Only status combinations with >0 count will show up.
+
+  **Query Parameters**
+
+  * ``audit_period_beginning_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``audit_period_beginning_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``audit_period_ending_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``audit_period_ending_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``created_at_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``created_at_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``deleted_at_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``deleted_at_max``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``received_min``: datetime (yyyy-mm-dd hh:mm:ss)
+  * ``received_max``: datetime (yyyy-mm-dd hh:mm:ss)
+
+  **Example request**:
+
+   .. sourcecode:: http
+
+      GET /db/stats/nova/exists/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+  **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+      Vary: Accept
+      Content-Type: application/json
+
+      {
+        "stats":
+        [
+          {"status": "verified", "send_status": 200, "event_count": 200},
+          {"status": "failed", "send_status": 0, "event_count": 2},
+        ]
+      }
+
 
 db/usage/launches/
 ==================
