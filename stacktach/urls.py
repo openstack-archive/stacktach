@@ -59,12 +59,6 @@ stacky_urls = (
     url(r'^stacky/search/$', 'stacktach.stacky_server.search'),
     url(r'^stacky/kpi/$', 'stacktach.stacky_server.do_kpi'),
     url(r'^stacky/kpi/(?P<tenant_id>\w+)/$', 'stacktach.stacky_server.do_kpi'),
-    url(r'^stacky/usage/launches/$',
-        'stacktach.stacky_server.do_list_usage_launches'),
-    url(r'^stacky/usage/deletes/$',
-        'stacktach.stacky_server.do_list_usage_deletes'),
-    url(r'^stacky/usage/exists/$',
-        'stacktach.stacky_server.do_list_usage_exists'),
 )
 
 dbapi_urls = (
@@ -109,6 +103,11 @@ dbapi_urls = (
         'stacktach.dbapi.get_usage_exist_stats_glance'),
     url(r'^db/stats/events/', 'stacktach.dbapi.get_event_stats'),
     url(r'^db/repair/', 'stacktach.dbapi.repair_stacktach_down'),
+    url(r'db/tenant/info/(?P<tenant_id>\w+)/$',
+        'stacktach.dbapi.update_tenant_info'),
+    url(r'db/tenant/batch_info/$',
+        'stacktach.dbapi.batch_update_tenant_info'),
+
 )
 
 urlpatterns = patterns('', *(web_urls + stacky_urls + dbapi_urls))

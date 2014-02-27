@@ -71,6 +71,9 @@ SIZE_2 = 4567
 CREATED_AT_1 = decimal.Decimal("10.1")
 CREATED_AT_2 = decimal.Decimal("11.1")
 
+IMAGE_OWNER_1 = "owner_1"
+IMAGE_OWNER_2 = "owner_2"
+
 TIMESTAMP_1 = "2013-06-20 17:31:57.939614"
 SETTLE_TIME = 5
 SETTLE_UNITS = "minutes"
@@ -198,3 +201,10 @@ def make_verifier_config(notifs):
                                     GLANCE_VERIFIER_EVENT_TYPE,
                                     FLAVOR_FIELD_NAME)
         return config
+
+
+def mock_datetime_utcnow(mox, time):
+    mox.StubOutWithMock(datetime, 'datetime')
+    datetime.datetime.utcnow().AndReturn(time)
+    mox.ReplayAll()
+

@@ -50,7 +50,9 @@ def _get_child_logger():
 
 class Consumer(kombu.mixins.ConsumerMixin):
     def __init__(self, name, connection, deployment, durable, queue_arguments,
-                 exchange, topics):
+                 exchange, topics, connect_max_retries=10):
+        self.connect_max_retries = connect_max_retries
+        self.retry_attempts = 0
         self.connection = connection
         self.deployment = deployment
         self.durable = durable
@@ -144,11 +146,18 @@ class Consumer(kombu.mixins.ConsumerMixin):
         shutdown_soon = True
 
     def on_connection_revived(self):
+        self.retry_attempts = 0
         _get_child_logger().debug("The connection to RabbitMQ was revived.")
 
     def on_connection_error(self, exc, interval):
-        _get_child_logger().error("RabbitMQ Broker connection error: %r. "
-                                  "Trying again in %s seconds.", exc, interval)
+        self.retry_attempts += 1
+        msg = ("RabbitMQ Broker connection error: %r. "
+               "Trying again in %s seconds.", exc, interval)
+        if self.retry_attempts >= self.connect_max_retries:
+            # If we're on the last retry
+            _get_child_logger().error(*msg)
+        else:
+            _get_child_logger().warn(*msg)
 
     def on_decode_error(self, message, exc):
         _get_child_logger().exception("Decode Error: %s" % exc)

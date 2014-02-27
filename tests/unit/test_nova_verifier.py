@@ -28,7 +28,8 @@ from stacktach import datetime_to_decimal as dt
 from stacktach import stacklog
 from stacktach import models
 from tests.unit import StacktachBaseTestCase
-from utils import make_verifier_config, LAUNCHED_AT_1, INSTANCE_FLAVOR_ID_1 
+from tests.unit import utils
+from utils import make_verifier_config, LAUNCHED_AT_1, INSTANCE_FLAVOR_ID_1
 from utils import INSTANCE_FLAVOR_ID_2, FLAVOR_FIELD_NAME, DELETED_AT_1
 from utils import LAUNCHED_AT_2, DELETED_AT_2
 from utils import INSTANCE_ID_1
@@ -97,6 +98,7 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
     def test_verify_for_launch_launched_at_in_range(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
+
         exist = self.mox.CreateMockAnything()
         exist.usage = self.mox.CreateMockAnything()
         exist.launched_at = decimal.Decimal('1.0')
@@ -111,24 +113,29 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_for_launch_launched_at_missmatch(self):
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn("flavor_field_name")
+
         exist = self.mox.CreateMockAnything()
+        exist.instance = INSTANCE_ID_1
         exist.usage = self.mox.CreateMockAnything()
-        exist.launched_at = decimal.Decimal('1.1')
+        exist.launched_at = LAUNCHED_AT_1
         exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.usage.launched_at = decimal.Decimal('2.1')
+        exist.usage.launched_at = LAUNCHED_AT_2
         exist.usage.dummy_flavor_field_name = 'dummy_flavor'
         self.mox.ReplayAll()
 
-        try:
+        with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_launch(exist)
-            self.fail()
-        except FieldMismatch, fm:
-            self.assertEqual(fm.field_name, 'launched_at')
-            self.assertEqual(fm.expected, decimal.Decimal('1.1'))
-            self.assertEqual(fm.actual, decimal.Decimal('2.1'))
+        exception = fm.exception
 
+        entity_1 = {'name': 'exists', 'value': LAUNCHED_AT_1}
+        entity_2 = {'name': 'launches', 'value': LAUNCHED_AT_2}
+        self.assertEqual(exception.field_name, 'launched_at')
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
         self.mox.VerifyAll()
 
     def test_verify_for_launch_flavor_id_missmatch(self):
@@ -138,6 +145,7 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
 
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn(FLAVOR_FIELD_NAME)
+
         exist = self.mox.CreateMockAnything()
         exist.instance = INSTANCE_ID_1
         exist.usage = self.mox.CreateMockAnything()
@@ -146,25 +154,27 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
         exist.usage.launched_at = decimal.Decimal(LAUNCHED_AT_1)
         exist.usage.flavor_field_name = INSTANCE_FLAVOR_ID_2
         self.mox.ReplayAll()
+
         with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_launch(exist)
         exception = fm.exception
-        self.assertEqual(exception.field_name, FLAVOR_FIELD_NAME)
-        self.assertEqual(exception.expected, INSTANCE_FLAVOR_ID_1)
-        self.assertEqual(exception.actual, INSTANCE_FLAVOR_ID_2)
-        self.assertEqual(
-            exception.reason,
-            "Failed at 2014-01-02 03:04:05 UTC for "
-            "08f685d9-6352-4dbc-8271-96cc54bf14cd: Expected flavor_field_name "
-            "to be '1' got 'performance2-120'")
+
+        entity_1 = {'name': 'exists', 'value': INSTANCE_FLAVOR_ID_1}
+        entity_2 = {'name': 'launches', 'value': INSTANCE_FLAVOR_ID_2}
+        self.assertEqual(exception.field_name, 'flavor_field_name')
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
         self.mox.VerifyAll()
 
     def test_verify_for_launch_tenant_id_mismatch(self):
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn(FLAVOR_FIELD_NAME)
 
         exist = self.mox.CreateMockAnything()
         exist.tenant = TENANT_ID_1
+        exist.instance = INSTANCE_ID_1
 
         exist.usage = self.mox.CreateMockAnything()
         exist.usage.tenant = TENANT_ID_2
@@ -174,17 +184,21 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
             nova_verifier._verify_for_launch(exist)
         exception = cm.exception
 
+        entity_1 = {'name': 'exists', 'value': TENANT_ID_1}
+        entity_2 = {'name': 'launches', 'value': TENANT_ID_2}
         self.assertEqual(exception.field_name, 'tenant')
-        self.assertEqual(exception.expected, TENANT_ID_1)
-        self.assertEqual(exception.actual, TENANT_ID_2)
-
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
         self.mox.VerifyAll()
 
     def test_verify_for_launch_rax_options_mismatch(self):
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn("flavor_field_name")
         exist = self.mox.CreateMockAnything()
         exist.rax_options = RAX_OPTIONS_1
+        exist.instance = INSTANCE_ID_1
 
         exist.usage = self.mox.CreateMockAnything()
         exist.usage.rax_options = RAX_OPTIONS_2
@@ -193,18 +207,22 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
         with self.assertRaises(FieldMismatch) as cm:
             nova_verifier._verify_for_launch(exist)
         exception = cm.exception
-
+        entity_1 = {'name': 'exists', 'value': RAX_OPTIONS_1}
+        entity_2 = {'name': 'launches', 'value': RAX_OPTIONS_2}
         self.assertEqual(exception.field_name, 'rax_options')
-        self.assertEqual(exception.expected, RAX_OPTIONS_1)
-        self.assertEqual(exception.actual, RAX_OPTIONS_2)
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
 
         self.mox.VerifyAll()
 
     def test_verify_for_launch_os_distro_mismatch(self):
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn("flavor_field_name")
         exist = self.mox.CreateMockAnything()
         exist.os_distro = OS_DISTRO_1
+        exist.instance = INSTANCE_ID_1
 
         exist.usage = self.mox.CreateMockAnything()
         exist.usage.os_distro = OS_DISTRO_2
@@ -214,16 +232,20 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
             nova_verifier._verify_for_launch(exist)
         exception = cm.exception
 
+        entity_1 = {'name': 'exists', 'value': OS_DISTRO_1}
+        entity_2 = {'name': 'launches', 'value': OS_DISTRO_2}
         self.assertEqual(exception.field_name, 'os_distro')
-        self.assertEqual(exception.expected, OS_DISTRO_1)
-        self.assertEqual(exception.actual, OS_DISTRO_2)
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
 
         self.mox.VerifyAll()
 
     def test_verify_for_launch_os_architecture_mismatch(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn("flavor_field_name")
+
         exist = self.mox.CreateMockAnything()
+        exist.instance = INSTANCE_ID_1
         exist.os_architecture = OS_ARCH_1
 
         exist.usage = self.mox.CreateMockAnything()
@@ -234,17 +256,20 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
             nova_verifier._verify_for_launch(exist)
         exception = cm.exception
 
+        entity_1 = {'name': 'exists', 'value': OS_ARCH_1}
+        entity_2 = {'name': 'launches', 'value': OS_ARCH_2}
         self.assertEqual(exception.field_name, 'os_architecture')
-        self.assertEqual(exception.expected, OS_ARCH_1)
-        self.assertEqual(exception.actual, OS_ARCH_2)
-
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
         self.mox.VerifyAll()
 
     def test_verify_for_launch_os_version_mismatch(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn("flavor_field_name")
+
         exist = self.mox.CreateMockAnything()
         exist.os_version = OS_VERSION_1
+        exist.instance = INSTANCE_ID_1
 
         exist.usage = self.mox.CreateMockAnything()
         exist.usage.os_version = OS_VERSION_2
@@ -254,15 +279,17 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
             nova_verifier._verify_for_launch(exist)
         exception = cm.exception
 
+        entity_1 = {'name': 'exists', 'value': OS_VERSION_1}
+        entity_2 = {'name': 'launches', 'value': OS_VERSION_2}
         self.assertEqual(exception.field_name, 'os_version')
-        self.assertEqual(exception.expected, OS_VERSION_1)
-        self.assertEqual(exception.actual, OS_VERSION_2)
-
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
         self.mox.VerifyAll()
 
     def test_verify_for_launch_late_usage(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn("flavor_field_name")
+
         exist = self.mox.CreateMockAnything()
         exist.usage = None
         exist.instance = INSTANCE_ID_1
@@ -431,10 +458,13 @@ class NovaVerifierVerifyForDeleteTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_for_delete_launched_at_mismatch(self):
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
+
         exist = self.mox.CreateMockAnything()
-        exist.delete = self.mox.CreateMockAnything()
+        exist.instance = INSTANCE_ID_1
         exist.launched_at = LAUNCHED_AT_1
         exist.deleted_at = DELETED_AT_1
+        exist.delete = self.mox.CreateMockAnything()
         exist.delete.launched_at = LAUNCHED_AT_2
         exist.delete.deleted_at = DELETED_AT_1
         self.mox.ReplayAll()
@@ -442,16 +472,22 @@ class NovaVerifierVerifyForDeleteTestCase(StacktachBaseTestCase):
         with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_delete(exist)
         exception = fm.exception
+
+        entity_1 = {'name': 'exists', 'value': LAUNCHED_AT_1}
+        entity_2 = {'name': 'deletes', 'value': LAUNCHED_AT_2}
         self.assertEqual(exception.field_name, 'launched_at')
-        self.assertEqual(exception.expected, LAUNCHED_AT_1)
-        self.assertEqual(exception.actual, LAUNCHED_AT_2)
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
         self.mox.VerifyAll()
 
     def test_verify_for_delete_deleted_at_mismatch(self):
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
+
         exist = self.mox.CreateMockAnything()
-        exist.delete = self.mox.CreateMockAnything()
+        exist.instance = INSTANCE_ID_1
         exist.launched_at = LAUNCHED_AT_1
         exist.deleted_at = DELETED_AT_1
+        exist.delete = self.mox.CreateMockAnything()
         exist.delete.launched_at = LAUNCHED_AT_1
         exist.delete.deleted_at = DELETED_AT_2
         self.mox.ReplayAll()
@@ -459,9 +495,11 @@ class NovaVerifierVerifyForDeleteTestCase(StacktachBaseTestCase):
         with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_delete(exist)
         exception = fm.exception
+        entity_1 = {'name': 'exists', 'value': DELETED_AT_1}
+        entity_2 = {'name': 'deletes', 'value': DELETED_AT_2}
         self.assertEqual(exception.field_name, 'deleted_at')
-        self.assertEqual(exception.expected, DELETED_AT_1)
-        self.assertEqual(exception.actual, DELETED_AT_2)
+        self.assertEqual(exception.entity_1, entity_1)
+        self.assertEqual(exception.entity_2, entity_2)
         self.mox.VerifyAll()
 
 

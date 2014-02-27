@@ -27,7 +27,7 @@ def _status_queries(exists_query):
     pending = exists_query.filter(status=models.InstanceExists.PENDING)
     verifying = exists_query.filter(status=models.InstanceExists.VERIFYING)
     sent_unverified = exists_query.filter(status=models.InstanceExists.SENT_UNVERIFIED)
-    sent_failed = exists_query.filter(status=models.InstanceExists.VERIFYING)
+    sent_failed = exists_query.filter(status=models.InstanceExists.SENT_FAILED)
     sent_verifying = exists_query.filter(status=models.InstanceExists.SENT_VERIFYING)
     return verified, reconciled, fail, pending, verifying, sent_unverified, \
         sent_failed, sent_verifying
@@ -101,7 +101,13 @@ def _verified_audit_base(base_query, exists_model):
 
     failed_query = Q(status=exists_model.FAILED)
     failed = exists_model.objects.filter(base_query & failed_query)
-    detail = [['Exist', e.id, e.fail_reason] for e in failed]
+    detail = []
+    for e in failed:
+        try:
+            detail.append([e.id, e.fail_reason, e.raw.deployment.name,
+                           e.raw.host])
+        except Exception:
+            detail.append([e.id, e.fail_reason, "-", "-"])
     return summary, detail
 
 

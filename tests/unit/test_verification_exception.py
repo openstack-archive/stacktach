@@ -1,7 +1,7 @@
-import datetime
 import mox
-from tests.unit import StacktachBaseTestCase
-from verifier import NotFound, AmbiguousResults, FieldMismatch, NullFieldException, WrongTypeException
+from tests.unit import StacktachBaseTestCase, utils
+from verifier import NotFound, AmbiguousResults, FieldMismatch
+from verifier import NullFieldException, WrongTypeException
 
 
 class VerificationExceptionTestCase(StacktachBaseTestCase):
@@ -25,36 +25,41 @@ class VerificationExceptionTestCase(StacktachBaseTestCase):
             "Ambiguous results for object_type using search_params")
 
     def test_field_mismatch_exception(self):
-        self.mox.StubOutWithMock(datetime, 'datetime')
-        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
-        self.mox.ReplayAll()
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
 
-        exception = FieldMismatch('field_name', 'expected', 'actual', 'uuid')
+        exception = FieldMismatch(
+            'field_name',
+            {'name': 'entity1', 'value': 'expected'},
+            {'name': 'entity2', 'value': 'actual'},
+            'uuid')
 
-        self.assertEqual(exception.reason,
-                         "Failed at 2014-01-02 03:04:05 UTC for uuid: Expected"
-                         " field_name to be 'expected' got 'actual'")
+        self.assertEqual(
+            exception.reason,
+            "Failed at 2014-01-02 03:04:05 UTC for uuid: Data mismatch for "
+            "'field_name' - 'entity1' contains 'expected' but 'entity2' "
+            "contains 'actual'")
 
     def test_null_field_exception(self):
-        self.mox.StubOutWithMock(datetime, 'datetime')
-        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
-        self.mox.ReplayAll()
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
 
-        exception = NullFieldException('field_name', '1234', 'uuid')
+        exception = NullFieldException('field_name', 'exist_id', 'uuid')
 
-        self.assertEqual(exception.reason,
-                         "Failed at 2014-01-02 03:04:05 UTC for uuid: "
-                         "field_name field was null for exist id 1234")
+        self.assertEqual(exception.field_name, 'field_name')
+        self.assertEqual(
+            exception.reason,
+            "Failed at 2014-01-02 03:04:05 UTC for uuid: field_name field was "
+            "null for exist id exist_id")
 
     def test_wrong_type_exception(self):
-        self.mox.StubOutWithMock(datetime, 'datetime')
-        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
-        self.mox.ReplayAll()
+        utils.mock_datetime_utcnow(self.mox, '2014-01-02 03:04:05')
 
-        exception = WrongTypeException('field_name', 'value', '1234', 'uuid')
-
-        self.assertEqual(exception.reason,
-                         "Failed at 2014-01-02 03:04:05 UTC for uuid: "
-                         "{field_name: value} was of incorrect type for"
-                         " exist id 1234")
-
+        exception = WrongTypeException(
+            'field_name', 'value', 'exist_id', 'uuid')
+        self.assertEqual(exception.field_name, 'field_name')
+        self.assertEqual(exception.value, 'value')
+        self.assertEqual(exception.exist_id, 'exist_id')
+        self.assertEqual(exception.uuid, 'uuid')
+        self.assertEqual(
+            exception.reason,
+            "Failed at 2014-01-02 03:04:05 UTC for uuid: {field_name: value} "
+            "was of incorrect type for exist id exist_id")

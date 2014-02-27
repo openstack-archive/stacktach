@@ -43,16 +43,22 @@ class AmbiguousResults(VerificationException):
 
 
 class FieldMismatch(VerificationException):
-    def __init__(self, field_name, expected, actual, uuid):
+    def __init__(self, field_name, entity_1, entity_2, uuid):
+        #instance fields for testing ease
         self.field_name = field_name
-        self.expected = expected
-        self.actual = actual
+        self.entity_1 = entity_1
+        self.entity_2 = entity_2
+        self.uuid = uuid
+
         self.reason = \
-            "Failed at {failed_at} UTC for {uuid}: Expected {field_name} " \
-            "to be '{expected}' got '{actual}'".\
-            format(failed_at=datetime.datetime.utcnow(), uuid=uuid,
-                   field_name=field_name, expected=expected,
-                   actual=actual)
+            "Failed at {failed_at} UTC for {uuid}: Data mismatch for " \
+            "'{field_name}' - '{name_1}' contains '{value_1}' but '{name_2}' " \
+            "contains '{value_2}'".\
+            format(failed_at=datetime.datetime.utcnow(), uuid=self.uuid,
+                   field_name=self.field_name, name_1=entity_1['name'],
+                   value_1=self.entity_1['value'],
+                   name_2=self.entity_2['name'],
+                   value_2=self.entity_2['value'])
 
 
 class NullFieldException(VerificationException):
@@ -67,11 +73,16 @@ class NullFieldException(VerificationException):
 
 class WrongTypeException(VerificationException):
     def __init__(self, field_name, value, exist_id, uuid):
+        #made instance fields to ease testing
         self.field_name = field_name
+        self.value = value
+        self.exist_id = exist_id
+        self.uuid = uuid
+
         self.reason = \
             "Failed at {failed_at} UTC for {uuid}: " \
             "{{{field_name}: {value}}} was of incorrect type for " \
             "exist id {exist_id}".format(
-                failed_at=datetime.datetime.utcnow(), uuid=uuid,
-                field_name=field_name, value=value, exist_id=exist_id)
-
+                failed_at=datetime.datetime.utcnow(), uuid=self.uuid,
+                field_name=self.field_name, value=self.value,
+                exist_id=self.exist_id)
