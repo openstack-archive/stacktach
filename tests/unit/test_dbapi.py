@@ -22,6 +22,7 @@ import datetime
 from decimal import Decimal
 import json
 
+from django.db.models import Count
 from django.db.models import FieldDoesNotExist
 from django.db import transaction
 import mox
@@ -44,6 +45,10 @@ class DBAPITestCase(StacktachBaseTestCase):
         mor_exception = models.InstanceExists.MultipleObjectsReturned
         self.mox.StubOutWithMock(models, 'InstanceExists',
                                  use_mock_anything=True)
+        self.mox.StubOutWithMock(models, 'ImageExists',
+                                 use_mock_anything=True)
+        models.InstanceExists._meta = self.mox.CreateMockAnything()
+        models.ImageExists._meta = self.mox.CreateMockAnything()
         models.InstanceExists.objects = self.mox.CreateMockAnything()
         models.ImageExists.objects = self.mox.CreateMockAnything()
         models.InstanceExists.DoesNotExist = dne_exception
@@ -932,12 +937,179 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(json.loads(resp.content), {'deletes': deletes})
         self.mox.VerifyAll()
 
+    def test_get_usage_exist_stats_nova(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {}
+        query = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.filter().AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
+    def test_get_usage_exist_stats_nova_received_min(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        now = datetime.datetime.utcnow()
+        fake_request.GET = {'received_min': str(now)}
+        query = self.mox.CreateMockAnything()
+        filters = {'raw__when__gte': utils.decimal_utc(now)}
+        models.InstanceExists.objects.filter(**filters).AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
+    def test_get_usage_exist_stats_nova_received_max(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        now = datetime.datetime.utcnow()
+        fake_request.GET = {'received_max': str(now)}
+        query = self.mox.CreateMockAnything()
+        filters = {'raw__when__lte': utils.decimal_utc(now)}
+        models.InstanceExists.objects.filter(**filters).AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
+    def test_get_usage_exist_stats_nova_class_field_filter(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        now = datetime.datetime.utcnow()
+        fake_request.GET = {'audit_period_ending_min': str(now)}
+        query = self.mox.CreateMockAnything()
+        models.InstanceExists._meta.get_field_by_name('audit_period_ending')
+        filters = {'audit_period_ending__gte': utils.decimal_utc(now)}
+        models.InstanceExists.objects.filter(**filters).AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
+    def test_get_usage_exist_stats_glance(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {}
+        query = self.mox.CreateMockAnything()
+        models.ImageExists.objects.filter().AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats_glance(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
+    def test_get_usage_exist_stats_glance_received_min(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        now = datetime.datetime.utcnow()
+        fake_request.GET = {'received_min': str(now)}
+        query = self.mox.CreateMockAnything()
+        filters = {'raw__when__gte': utils.decimal_utc(now)}
+        models.ImageExists.objects.filter(**filters).AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats_glance(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
+    def test_get_usage_exist_stats_glance_received_max(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        now = datetime.datetime.utcnow()
+        fake_request.GET = {'received_max': str(now)}
+        query = self.mox.CreateMockAnything()
+        filters = {'raw__when__lte': utils.decimal_utc(now)}
+        models.ImageExists.objects.filter(**filters).AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats_glance(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
+    def test_get_usage_exist_stats_glance_class_field_filter(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        now = datetime.datetime.utcnow()
+        fake_request.GET = {'audit_period_ending_min': str(now)}
+        query = self.mox.CreateMockAnything()
+        models.ImageExists._meta.get_field_by_name('audit_period_ending')
+        filters = {'audit_period_ending__gte': utils.decimal_utc(now)}
+        models.ImageExists.objects.filter(**filters).AndReturn(query)
+        query.values('status', 'send_status').AndReturn(query)
+        result = [
+            {'status': 'verified', 'send_status': 201L, 'event_count': 2},
+            {'status': 'failed', 'send_status': 0L, 'event_count': 1}
+        ]
+        query.annotate(event_count=mox.IsA(Count)).AndReturn(result)
+        self.mox.ReplayAll()
+        response = dbapi.get_usage_exist_stats_glance(fake_request)
+        self.assertEqual(response.status_code, 200)
+        expected_response = json.dumps({'stats': result})
+        self.assertEqual(expected_response, response.content)
+        self.mox.VerifyAll()
+
     def test_get_verified_count(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'audit_period_beginning': "2014-02-26",
-                            'audit_period_ending': "2014-02-27",
-                            'service': "nova"}
+        fake_request.GET = {'when_min': "2014-02-26 00:00:00",
+                            'when_max': "2014-02-27 00:00:00",
+                            'service': "nova",
+                            'event': 'compute.instance.exists.verified'}
         mock_query = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(models.RawData.objects, "filter")
         models.RawData.objects.filter(event='compute.instance.exists.verified',
@@ -947,21 +1119,22 @@ class DBAPITestCase(StacktachBaseTestCase):
         mock_query.count().AndReturn(100)
         self.mox.ReplayAll()
 
-        response = dbapi.get_verified_count(fake_request)
+        response = dbapi.get_event_stats(fake_request)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(json.loads(response.content), {'count': 100})
+        self.assertEqual(json.loads(response.content),
+                         {'stats': {'count': 100}})
         self.mox.VerifyAll()
 
     def test_get_verified_count_wrong_date_format_returns_400(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'audit_period_beginning': "2014-020-26",
+        fake_request.GET = {'when_min': "2014-020-26",
 
                             'service': "nova"}
 
         self.mox.ReplayAll()
 
-        response = dbapi.get_verified_count(fake_request)
+        response = dbapi.get_event_stats(fake_request)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(json.loads(response.content)['message'],
                          "Invalid format for date"
@@ -971,30 +1144,18 @@ class DBAPITestCase(StacktachBaseTestCase):
     def test_get_verified_count_wrong_service_returns_400(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'audit_period_beginning': "2014-02-26",
-                            "audit_period_ending": "2014-02-27",
+        fake_request.GET = {'when_min': "2014-02-26 00:00:00",
+                            "when_min": "2014-02-27 00:00:00",
                             'service': "qonos"}
 
         self.mox.ReplayAll()
 
-        response = dbapi.get_verified_count(fake_request)
+        response = dbapi.get_event_stats(fake_request)
         self.assertEqual(response.status_code, 400)
         self.assertEqual(json.loads(response.content)['message'],
                          "Invalid service")
         self.mox.VerifyAll()
 
-    def test_get_verified_count_invalid_query_parameter_returns_400(self):
-        fake_request = self.mox.CreateMockAnything()
-        fake_request.method = 'GET'
-        fake_request.GET = {'audit_period': "2014-02-26",}
-
-        self.mox.ReplayAll()
-
-        response = dbapi.get_verified_count(fake_request)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(json.loads(response.content)['message'],
-                         "Invalid/absent query parameter")
-        self.mox.VerifyAll()
 
 class StacktachRepairScenarioApi(StacktachBaseTestCase):
     def setUp(self):

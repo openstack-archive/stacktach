@@ -24,6 +24,7 @@ import json
 from datetime import datetime
 
 from django.db import transaction
+from django.db.models import Count
 from django.db.models import FieldDoesNotExist
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
@@ -200,22 +201,7 @@ def list_usage_exists_glance(request):
 
 def list_usage_exists_with_service(request, service):
     model = _exists_model_factory(service)
-    try:
-        custom_filters = {}
-        if 'received_min' in request.GET:
-            received_min = request.GET['received_min']
-            custom_filters['received_min'] = {}
-            custom_filters['received_min']['raw__when__gte'] = \
-                utils.str_time_to_unix(received_min)
-        if 'received_max' in request.GET:
-            received_max = request.GET['received_max']
-            custom_filters['received_max'] = {}
-            custom_filters['received_max']['raw__when__lte'] = \
-                utils.str_time_to_unix(received_max)
-    except AttributeError:
-        msg = "Range filters must be dates."
-        raise BadRequestException(message=msg)
-
+    custom_filters = _get_exists_filter_args(request)
     objects = get_db_objects(model['klass'], request, 'id',
                              custom_filters=custom_filters)
     dicts = _convert_model_list(objects, _exists_extra_values)
@@ -232,6 +218,28 @@ def get_usage_exist_glance(request, exist_id):
     return {'exist': _get_model_by_id(models.ImageExists, exist_id,
                                       _exists_extra_values)}
 
+
+@api_call
+def get_usage_exist_stats(request):
+    return {'stats': _get_exist_stats(request, 'nova')}
+
+
+@api_call
+def get_usage_exist_stats_glance(request):
+    return {'stats': _get_exist_stats(request, 'glance')}
+
+
+def _get_exist_stats(request, service):
+    klass = _exists_model_factory(service)['klass']
+    exists_filters = _get_exists_filter_args(request)
+    filters = _get_filter_args(klass, request,
+                               custom_filters=exists_filters)
+    for value in exists_filters.values():
+        filters.update(value)
+    query = klass.objects.filter(**filters)
+    values = query.values('status', 'send_status')
+    stats = values.annotate(event_count=Count('send_status'))
+    return stats
 
 @api_call
 def exists_send_status(request, message_id):
@@ -329,6 +337,25 @@ def _check_has_field(klass, field_name):
     except FieldDoesNotExist:
         msg = "No such field '%s'." % field_name
         raise BadRequestException(msg)
+
+
+def _get_exists_filter_args(request):
+    try:
+        custom_filters = {}
+        if 'received_min' in request.GET:
+            received_min = request.GET['received_min']
+            custom_filters['received_min'] = {}
+            custom_filters['received_min']['raw__when__gte'] = \
+                utils.str_time_to_unix(received_min)
+        if 'received_max' in request.GET:
+            received_max = request.GET['received_max']
+            custom_filters['received_max'] = {}
+            custom_filters['received_max']['raw__when__lte'] = \
+                utils.str_time_to_unix(received_max)
+    except AttributeError:
+        msg = "Range filters must be dates."
+        raise BadRequestException(message=msg)
+    return custom_filters
 
 
 def _get_filter_args(klass, request, custom_filters=None):
@@ -432,23 +459,26 @@ def _rawdata_factory(service):
 
 
 @api_call
-def get_verified_count(request):
+def get_event_stats(request):
     try:
-        audit_period_beginning = datetime.strptime(
-            request.GET.get("audit_period_beginning"), "%Y-%m-%d")
-        audit_period_ending = datetime.strptime(
-            request.GET.get("audit_period_ending"), "%Y-%m-%d")
+        filters = {}
+        if 'when_min' in request.GET:
+            when_min = utils.str_time_to_unix(request.GET['when_min'])
+            filters['when__gte'] = when_min
+
+        if 'when_max' in request.GET:
+            when_max = utils.str_time_to_unix(request.GET['when_max'])
+            filters['when__lte'] = when_max
+
+        if 'event' in request.GET:
+            filters['event'] = request.GET['event']
+
         service = request.GET.get("service", "nova")
         rawdata = _rawdata_factory(service)
-        filters = {
-            'when__gte': dt.dt_to_decimal(audit_period_beginning),
-            'when__lte': dt.dt_to_decimal(audit_period_ending),
-            'event': "compute.instance.exists.verified"
-        }
-        return {'count': rawdata.filter(**filters).count()}
-    except KeyError and TypeError:
+        return {'stats': {'count': rawdata.filter(**filters).count()}}
+    except (KeyError, TypeError):
         raise BadRequestException(message="Invalid/absent query parameter")
-    except ValueError:
+    except (ValueError, AttributeError):
         raise BadRequestException(message="Invalid format for date (Correct "
                                           "format should be %YYYY-%mm-%dd)")
 

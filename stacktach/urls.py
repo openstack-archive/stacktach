@@ -7,8 +7,22 @@ web_logger = stacklog.get_logger('stacktach-web')
 web_logger_listener = stacklog.LogListener(web_logger)
 web_logger_listener.start()
 
-urlpatterns = patterns('',
+web_urls = (
     url(r'^$', 'stacktach.views.welcome', name='welcome'),
+    url(r'^(?P<deployment_id>\d+)/$', 'stacktach.views.home', name='home'),
+    url(r'^(?P<deployment_id>\d+)/details/(?P<column>\w+)/(?P<row_id>\d+)/$',
+        'stacktach.views.details', name='details'),
+    url(r'^(?P<deployment_id>\d+)/search/$',
+        'stacktach.views.search', name='search'),
+    url(r'^(?P<deployment_id>\d+)/expand/(?P<row_id>\d+)/$',
+        'stacktach.views.expand', name='expand'),
+    url(r'^(?P<deployment_id>\d+)/latest_raw/$',
+        'stacktach.views.latest_raw', name='latest_raw'),
+    url(r'^(?P<deployment_id>\d+)/instance_status/$',
+        'stacktach.views.instance_status', name='instance_status'),
+)
+
+stacky_urls = (
     url(r'stacky/deployments/$', 'stacktach.stacky_server.do_deployments'),
     url(r'stacky/events/$', 'stacktach.stacky_server.do_events'),
     url(r'stacky/hosts/$', 'stacktach.stacky_server.do_hosts'),
@@ -35,7 +49,9 @@ urlpatterns = patterns('',
         'stacktach.stacky_server.do_list_usage_deletes'),
     url(r'stacky/usage/exists/$',
         'stacktach.stacky_server.do_list_usage_exists'),
+)
 
+dbapi_urls = (
     url(r'db/usage/launches/$',
         'stacktach.dbapi.list_usage_launches'),
     url(r'db/usage/nova/launches/$',
@@ -71,18 +87,12 @@ urlpatterns = patterns('',
         'stacktach.dbapi.get_usage_exist_glance'),
     url(r'db/confirm/usage/exists/(?P<message_id>[\w\-]+)/$',
         'stacktach.dbapi.exists_send_status'),
-    url(r'db/count/verified', 'stacktach.dbapi.get_verified_count'),
+    url(r'db/stats/nova/exists$',
+        'stacktach.dbapi.get_usage_exist_stats'),
+    url(r'db/stats/glance/exists$',
+        'stacktach.dbapi.get_usage_exist_stats_glance'),
+    url(r'db/stats/events', 'stacktach.dbapi.get_event_stats'),
     url(r'db/repair/', 'stacktach.dbapi.repair_stacktach_down'),
-
-    url(r'^(?P<deployment_id>\d+)/$', 'stacktach.views.home', name='home'),
-    url(r'^(?P<deployment_id>\d+)/details/(?P<column>\w+)/(?P<row_id>\d+)/$',
-        'stacktach.views.details', name='details'),
-    url(r'^(?P<deployment_id>\d+)/search/$',
-        'stacktach.views.search', name='search'),
-    url(r'^(?P<deployment_id>\d+)/expand/(?P<row_id>\d+)/$',
-        'stacktach.views.expand', name='expand'),
-    url(r'^(?P<deployment_id>\d+)/latest_raw/$',
-        'stacktach.views.latest_raw', name='latest_raw'),
-    url(r'^(?P<deployment_id>\d+)/instance_status/$',
-        'stacktach.views.instance_status', name='instance_status')
 )
+
+urlpatterns = patterns('', *(web_urls + stacky_urls + dbapi_urls))
