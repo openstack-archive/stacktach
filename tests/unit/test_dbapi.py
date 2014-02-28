@@ -1138,7 +1138,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(json.loads(response.content)['message'],
                          "Invalid format for date"
-                         " (Correct format should be %YYYY-%mm-%dd)")
+                         " (Correct format should be %Y-%m-%d %H:%M:%S)")
         self.mox.VerifyAll()
 
     def test_get_verified_count_wrong_service_returns_400(self):

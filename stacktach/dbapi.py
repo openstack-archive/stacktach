@@ -480,7 +480,7 @@ def get_event_stats(request):
         raise BadRequestException(message="Invalid/absent query parameter")
     except (ValueError, AttributeError):
         raise BadRequestException(message="Invalid format for date (Correct "
-                                          "format should be %YYYY-%mm-%dd)")
+                                          "format should be %Y-%m-%d %H:%M:%S)")
 
 
 def repair_stacktach_down(request):
