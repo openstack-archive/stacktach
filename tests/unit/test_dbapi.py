@@ -1173,6 +1173,26 @@ class DBAPITestCase(StacktachBaseTestCase):
                          json.dumps({'stats': [events[0]]}))
         self.mox.VerifyAll()
 
+    def test_get_verified_count_default(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': "nova",
+                            'event': 'compute.instance.exists.verified'}
+        mock_query = self.mox.CreateMockAnything()
+        models.RawData.objects.values('event').AndReturn(mock_query)
+        events = [
+            {'event': 'compute.instance.create.start', 'event_count': 100},
+            {'event': 'compute.instance.exists', 'event_count': 100}
+        ]
+        mock_query.annotate(event_count=mox.IsA(Count)).AndReturn(events)
+        self.mox.ReplayAll()
+
+        response = dbapi.get_event_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content,
+                         json.dumps({'stats': [{'event': 'compute.instance.exists.verified', 'event_count': 0}]}))
+        self.mox.VerifyAll()
+
     def test_get_verified_count_wrong_date_format_returns_400(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'

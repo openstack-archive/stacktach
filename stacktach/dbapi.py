@@ -478,13 +478,9 @@ def get_event_stats(request):
         events = list(events)
 
         if 'event' in request.GET:
-            event_filter = request.GET['event']
-            event_count = {'event': event_filter, 'event_count': 0}
-            for event in events:
-                if event['event'] == event_filter:
-                    event_count['event_count'] = event['event_count']
-                    break
-            events = [event_count, ]
+            event = request.GET['event']
+            default = {'event': event, 'event_count': 0}
+            events = [x for x in events if x['event'] == event] or [default, ]
 
         return {'stats': events}
     except (KeyError, TypeError):
