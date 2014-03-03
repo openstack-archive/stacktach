@@ -40,7 +40,7 @@ from stacktach import utils
 
 DEFAULT_LIMIT = 50
 HARD_LIMIT = 1000
-HARD_WHEN_RANGE_LIMIT = 7 * 24 * 60 * 60  # 5 Days
+HARD_WHEN_RANGE_LIMIT = 7 * 24 * 60 * 60  # 7 Days
 
 
 class APIException(Exception):
