@@ -483,6 +483,7 @@ def get_event_stats(request):
             for event in events:
                 if event['event'] == event_filter:
                     event_count['event_count'] = event['event_count']
+                    break
             events = [event_count, ]
 
         return {'stats': events}
