@@ -43,10 +43,13 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox = mox.Mox()
         dne_exception = models.InstanceExists.DoesNotExist
         mor_exception = models.InstanceExists.MultipleObjectsReturned
+        self.mox.StubOutWithMock(models, 'RawData',
+                                 use_mock_anything=True)
         self.mox.StubOutWithMock(models, 'InstanceExists',
                                  use_mock_anything=True)
         self.mox.StubOutWithMock(models, 'ImageExists',
                                  use_mock_anything=True)
+        models.RawData.objects = self.mox.CreateMockAnything()
         models.InstanceExists._meta = self.mox.CreateMockAnything()
         models.ImageExists._meta = self.mox.CreateMockAnything()
         models.InstanceExists.objects = self.mox.CreateMockAnything()
@@ -1103,26 +1106,91 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.assertEqual(expected_response, response.content)
         self.mox.VerifyAll()
 
-    def test_get_verified_count(self):
+    def test_get_event_stats(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
-        fake_request.GET = {'when_min': "2014-02-26 00:00:00",
-                            'when_max': "2014-02-27 00:00:00",
-                            'service': "nova",
-                            'event': 'compute.instance.exists.verified'}
+        fake_request.GET = {'service': "nova"}
         mock_query = self.mox.CreateMockAnything()
-        self.mox.StubOutWithMock(models.RawData.objects, "filter")
-        models.RawData.objects.filter(event='compute.instance.exists.verified',
-                                      when__gte=Decimal('1393372800'),
-                                      when__lte=Decimal('1393459200')).\
-            AndReturn(mock_query)
-        mock_query.count().AndReturn(100)
+        models.RawData.objects.values('event').AndReturn(mock_query)
+        events = [
+            {'event': 'compute.instance.exists.verified', 'event_count': 100},
+            {'event': 'compute.instance.exists', 'event_count': 100}
+        ]
+        mock_query.annotate(event_count=mox.IsA(Count)).AndReturn(events)
         self.mox.ReplayAll()
 
         response = dbapi.get_event_stats(fake_request)
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(json.loads(response.content),
-                         {'stats': {'count': 100}})
+        self.assertEqual(response.content,
+                         json.dumps({'stats': events}))
+        self.mox.VerifyAll()
+
+    def test_get_event_stats_date_range(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        start = "2014-02-26 00:00:00"
+        end = "2014-02-27 00:00:00"
+        fake_request.GET = {'when_min': start,
+                            'when_max': end,
+                            'service': "nova"}
+        mock_query = self.mox.CreateMockAnything()
+        filters = {
+            'when__gte': stacktach_utils.str_time_to_unix(start),
+            'when__lte': stacktach_utils.str_time_to_unix(end)
+        }
+        models.RawData.objects.filter(**filters).AndReturn(mock_query)
+        mock_query.values('event').AndReturn(mock_query)
+        events = [
+            {'event': 'compute.instance.exists.verified', 'event_count': 100},
+            {'event': 'compute.instance.exists', 'event_count': 100}
+        ]
+        mock_query.annotate(event_count=mox.IsA(Count)).AndReturn(events)
+        self.mox.ReplayAll()
+
+        response = dbapi.get_event_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content,
+                         json.dumps({'stats': events}))
+        self.mox.VerifyAll()
+
+    def test_get_verified_count(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': "nova",
+                            'event': 'compute.instance.exists.verified'}
+        mock_query = self.mox.CreateMockAnything()
+        models.RawData.objects.values('event').AndReturn(mock_query)
+        events = [
+            {'event': 'compute.instance.exists.verified', 'event_count': 100},
+            {'event': 'compute.instance.exists', 'event_count': 100}
+        ]
+        mock_query.annotate(event_count=mox.IsA(Count)).AndReturn(events)
+        self.mox.ReplayAll()
+
+        response = dbapi.get_event_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content,
+                         json.dumps({'stats': [events[0]]}))
+        self.mox.VerifyAll()
+
+    def test_get_verified_count_default(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'service': "nova",
+                            'event': 'compute.instance.exists.verified'}
+        mock_query = self.mox.CreateMockAnything()
+        models.RawData.objects.values('event').AndReturn(mock_query)
+        events = [
+            {'event': 'compute.instance.create.start', 'event_count': 100},
+            {'event': 'compute.instance.exists', 'event_count': 100}
+        ]
+        mock_query.annotate(event_count=mox.IsA(Count)).AndReturn(events)
+        self.mox.ReplayAll()
+
+        response = dbapi.get_event_stats(fake_request)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content,
+                         json.dumps({'stats': [{'event': 'compute.instance.exists.verified', 'event_count': 0}]}))
         self.mox.VerifyAll()
 
     def test_get_verified_count_wrong_date_format_returns_400(self):

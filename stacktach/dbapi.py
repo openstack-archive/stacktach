@@ -470,12 +470,19 @@ def get_event_stats(request):
             when_max = utils.str_time_to_unix(request.GET['when_max'])
             filters['when__lte'] = when_max
 
-        if 'event' in request.GET:
-            filters['event'] = request.GET['event']
-
         service = request.GET.get("service", "nova")
         rawdata = _rawdata_factory(service)
-        return {'stats': {'count': rawdata.filter(**filters).count()}}
+        if filters:
+            rawdata = rawdata.filter(**filters)
+        events = rawdata.values('event').annotate(event_count=Count('event'))
+        events = list(events)
+
+        if 'event' in request.GET:
+            event = request.GET['event']
+            default = {'event': event, 'event_count': 0}
+            events = [x for x in events if x['event'] == event] or [default, ]
+
+        return {'stats': events}
     except (KeyError, TypeError):
         raise BadRequestException(message="Invalid/absent query parameter")
     except (ValueError, AttributeError):
