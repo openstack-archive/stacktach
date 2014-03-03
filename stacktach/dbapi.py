@@ -40,6 +40,7 @@ from stacktach import utils
 
 DEFAULT_LIMIT = 50
 HARD_LIMIT = 1000
+HARD_WHEN_RANGE_LIMIT = 5 * 24 * 60 * 60  # 5 Days
 
 
 class APIException(Exception):
@@ -462,13 +463,22 @@ def _rawdata_factory(service):
 def get_event_stats(request):
     try:
         filters = {}
-        if 'when_min' in request.GET:
-            when_min = utils.str_time_to_unix(request.GET['when_min'])
-            filters['when__gte'] = when_min
 
-        if 'when_max' in request.GET:
+        if 'when_min' in request.GET or 'when_max' in request.GET:
+            if not ('when_min' in request.GET and 'when_max' in request.GET):
+                msg = "When providing date range filters, " \
+                      "a min and max are required."
+                raise BadRequestException(message=msg)
+
+            when_min = utils.str_time_to_unix(request.GET['when_min'])
             when_max = utils.str_time_to_unix(request.GET['when_max'])
+
+            if when_max - when_min > HARD_WHEN_RANGE_LIMIT:
+                msg = "Date ranges may be no larger than %s seconds"
+                raise BadRequestException(message=msg % HARD_WHEN_RANGE_LIMIT)
+
             filters['when__lte'] = when_max
+            filters['when__gte'] = when_min
 
         if 'event' in request.GET:
             filters['event'] = request.GET['event']
