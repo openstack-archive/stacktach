@@ -1193,11 +1193,41 @@ class DBAPITestCase(StacktachBaseTestCase):
                          json.dumps({'stats': [{'event': 'compute.instance.exists.verified', 'event_count': 0}]}))
         self.mox.VerifyAll()
 
+    def test_get_verified_count_only_one_range_param_returns_400(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'when_min': "2014-020-26",
+                            'service': "nova"}
+
+        self.mox.ReplayAll()
+
+        response = dbapi.get_event_stats(fake_request)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.content)['message'],
+                         "When providing date range filters, "
+                         "a min and max are required.")
+        self.mox.VerifyAll()
+
+    def test_get_verified_count_only_large_date_range_returns_400(self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'GET'
+        fake_request.GET = {'when_min': "2014-2-26 00:00:00",
+                            'when_max': "2014-3-5 00:00:01",  # > 7 days later
+                            'service': "nova"}
+
+        self.mox.ReplayAll()
+
+        response = dbapi.get_event_stats(fake_request)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.content)['message'],
+                         "Date ranges may be no larger than 604800 seconds")
+        self.mox.VerifyAll()
+
     def test_get_verified_count_wrong_date_format_returns_400(self):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
         fake_request.GET = {'when_min': "2014-020-26",
-
+                            'when_max': "2014-020-26",
                             'service': "nova"}
 
         self.mox.ReplayAll()
@@ -1213,7 +1243,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'GET'
         fake_request.GET = {'when_min': "2014-02-26 00:00:00",
-                            "when_min": "2014-02-27 00:00:00",
+                            "when_max": "2014-02-27 00:00:00",
                             'service': "qonos"}
 
         self.mox.ReplayAll()
