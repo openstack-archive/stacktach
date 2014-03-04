@@ -32,7 +32,7 @@ from stacktach import datetime_to_decimal as dt
 from stacktach import stacklog
 from stacktach import models
 from tests.unit import StacktachBaseTestCase
-from utils import make_verifier_config
+from utils import make_verifier_config, LAUNCHED_AT_1, INSTANCE_FLAVOR_ID_1, INSTANCE_FLAVOR_ID_2, FLAVOR_FIELD_NAME, DELETED_AT_1, LAUNCHED_AT_2, DELETED_AT_2
 from utils import INSTANCE_ID_1
 from utils import RAX_OPTIONS_1
 from utils import RAX_OPTIONS_2
@@ -54,12 +54,14 @@ from verifier import FieldMismatch
 from verifier import NotFound
 from verifier import VerificationException
 
+
 class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
     def setUp(self):
         self.mox = mox.Mox()
         self.mox.StubOutWithMock(models, 'InstanceUsage',
                                  use_mock_anything=True)
         models.InstanceUsage.objects = self.mox.CreateMockAnything()
+
         self._setup_verifier()
 
     def _setup_verifier(self):
@@ -132,28 +134,36 @@ class NovaVerifierVerifyForLaunchTestCase(StacktachBaseTestCase):
         self.mox.VerifyAll()
 
     def test_verify_for_launch_flavor_id_missmatch(self):
-        self.mox.StubOutWithMock(config, 'flavor_field_name')
-        config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.usage = self.mox.CreateMockAnything()
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor_1'
-        exist.usage.launched_at = decimal.Decimal('1.1')
-        exist.usage.dummy_flavor_field_name = 'dummy_flavor_2'
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
         self.mox.ReplayAll()
 
+        self.mox.StubOutWithMock(config, 'flavor_field_name')
+        config.flavor_field_name().AndReturn(FLAVOR_FIELD_NAME)
+        exist = self.mox.CreateMockAnything()
+        exist.instance = INSTANCE_ID_1
+        exist.usage = self.mox.CreateMockAnything()
+        exist.launched_at = decimal.Decimal(LAUNCHED_AT_1)
+        exist.flavor_field_name = INSTANCE_FLAVOR_ID_1
+        exist.usage.launched_at = decimal.Decimal(LAUNCHED_AT_1)
+        exist.usage.flavor_field_name = INSTANCE_FLAVOR_ID_2
+        self.mox.ReplayAll()
         with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_launch(exist)
         exception = fm.exception
-        self.assertEqual(exception.field_name, 'dummy_flavor_field_name')
-        self.assertEqual(exception.expected, 'dummy_flavor_1')
-        self.assertEqual(exception.actual, 'dummy_flavor_2')
-
+        self.assertEqual(exception.field_name, FLAVOR_FIELD_NAME)
+        self.assertEqual(exception.expected, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(exception.actual, INSTANCE_FLAVOR_ID_2)
+        self.assertEqual(
+            exception.reason,
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "08f685d9-6352-4dbc-8271-96cc54bf14cd: Expected flavor_field_name "
+            "to be '1' got 'performance2-120'")
         self.mox.VerifyAll()
 
     def test_verify_for_launch_tenant_id_mismatch(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
-        config.flavor_field_name().AndReturn("flavor_field_name")
+        config.flavor_field_name().AndReturn(FLAVOR_FIELD_NAME)
 
         exist = self.mox.CreateMockAnything()
         exist.tenant = TENANT_ID_1
@@ -425,35 +435,35 @@ class NovaVerifierVerifyForDeleteTestCase(StacktachBaseTestCase):
     def test_verify_for_delete_launched_at_mismatch(self):
         exist = self.mox.CreateMockAnything()
         exist.delete = self.mox.CreateMockAnything()
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.delete.launched_at = decimal.Decimal('2.1')
-        exist.delete.deleted_at = decimal.Decimal('5.1')
+        exist.launched_at = LAUNCHED_AT_1
+        exist.deleted_at = DELETED_AT_1
+        exist.delete.launched_at = LAUNCHED_AT_2
+        exist.delete.deleted_at = DELETED_AT_1
         self.mox.ReplayAll()
 
         with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_delete(exist)
         exception = fm.exception
         self.assertEqual(exception.field_name, 'launched_at')
-        self.assertEqual(exception.expected, decimal.Decimal('1.1'))
-        self.assertEqual(exception.actual, decimal.Decimal('2.1'))
+        self.assertEqual(exception.expected, LAUNCHED_AT_1)
+        self.assertEqual(exception.actual, LAUNCHED_AT_2)
         self.mox.VerifyAll()
 
     def test_verify_for_delete_deleted_at_mismatch(self):
         exist = self.mox.CreateMockAnything()
         exist.delete = self.mox.CreateMockAnything()
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.delete.launched_at = decimal.Decimal('1.1')
-        exist.delete.deleted_at = decimal.Decimal('6.1')
+        exist.launched_at = LAUNCHED_AT_1
+        exist.deleted_at = DELETED_AT_1
+        exist.delete.launched_at = LAUNCHED_AT_1
+        exist.delete.deleted_at = DELETED_AT_2
         self.mox.ReplayAll()
 
         with self.assertRaises(FieldMismatch) as fm:
             nova_verifier._verify_for_delete(exist)
         exception = fm.exception
         self.assertEqual(exception.field_name, 'deleted_at')
-        self.assertEqual(exception.expected, decimal.Decimal('5.1'))
-        self.assertEqual(exception.actual, decimal.Decimal('6.1'))
+        self.assertEqual(exception.expected, DELETED_AT_1)
+        self.assertEqual(exception.actual, DELETED_AT_2)
         self.mox.VerifyAll()
 
 
@@ -798,18 +808,23 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.assertFalse(result)
         self.mox.VerifyAll()
 
-
     def test_verify_for_range_without_callback(self):
         mock_logger = self._create_mock_logger()
         stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.info('nova: Adding 0 exists to queue.')
         mock_logger.info('nova: Adding 2 exists to queue.')
-
         when_max = datetime.datetime.utcnow()
         results = self.mox.CreateMockAnything()
+        sent_results = self.mox.CreateMockAnything()
         models.InstanceExists.PENDING = 'pending'
         models.InstanceExists.VERIFYING = 'verifying'
+        models.InstanceExists.SENT_UNVERIFIED = 'sent_unverified'
+        models.InstanceExists.find(
+            ending_max=when_max, status='sent_unverified').AndReturn(sent_results)
         models.InstanceExists.find(
             ending_max=when_max, status='pending').AndReturn(results)
+        sent_results.count().AndReturn(0)
         results.count().AndReturn(2)
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
@@ -827,18 +842,25 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.verifier.verify_for_range(when_max)
         self.mox.VerifyAll()
 
+
     def test_verify_for_range_with_callback(self):
+        callback = self.mox.CreateMockAnything()
         mock_logger = self._create_mock_logger()
         stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
-        mock_logger.info("nova: Adding 2 exists to queue.")
-
-        callback = self.mox.CreateMockAnything()
+        stacklog.get_logger('verifier', is_parent=False).AndReturn(mock_logger)
+        mock_logger.info('nova: Adding 0 exists to queue.')
+        mock_logger.info('nova: Adding 2 exists to queue.')
         when_max = datetime.datetime.utcnow()
         results = self.mox.CreateMockAnything()
+        sent_results = self.mox.CreateMockAnything()
         models.InstanceExists.PENDING = 'pending'
         models.InstanceExists.VERIFYING = 'verifying'
+        models.InstanceExists.SENT_UNVERIFIED = 'sent_unverified'
+        models.InstanceExists.find(
+            ending_max=when_max, status='sent_unverified').AndReturn(sent_results)
         models.InstanceExists.find(
             ending_max=when_max, status='pending').AndReturn(results)
+        sent_results.count().AndReturn(0)
         results.count().AndReturn(2)
         exist1 = self.mox.CreateMockAnything()
         exist2 = self.mox.CreateMockAnything()
@@ -856,6 +878,37 @@ class NovaVerifierVerifyTestCase(StacktachBaseTestCase):
         self.verifier.verify_for_range(when_max, callback=callback)
         self.mox.VerifyAll()
 
+
+    def test_verify_for_range_when_found_sent_unverified_messages(self):
+        callback = self.mox.CreateMockAnything()
+        when_max = datetime.datetime.utcnow()
+        results = self.mox.CreateMockAnything()
+        sent_results = self.mox.CreateMockAnything()
+        models.InstanceExists.PENDING = 'pending'
+        models.InstanceExists.VERIFYING = 'verifying'
+        models.InstanceExists.SENT_VERIFYING = 'sent_verifying'
+        models.InstanceExists.SENT_UNVERIFIED = 'sent_unverified'
+        models.InstanceExists.find(
+            ending_max=when_max, status='sent_unverified').AndReturn(sent_results)
+        models.InstanceExists.find(
+            ending_max=when_max, status='pending').AndReturn(results)
+        sent_results.count().AndReturn(2)
+        results.count().AndReturn(0)
+        exist1 = self.mox.CreateMockAnything()
+        exist2 = self.mox.CreateMockAnything()
+        sent_results.__getslice__(0, 1000).AndReturn(sent_results)
+        sent_results.__iter__().AndReturn([exist1, exist2].__iter__())
+        exist1.update_status('sent_verifying')
+        exist2.update_status('sent_verifying')
+        exist1.save()
+        exist2.save()
+        self.pool.apply_async(nova_verifier._verify, args=(exist1, 'all'),
+                              callback=None)
+        self.pool.apply_async(nova_verifier._verify, args=(exist2, 'all'),
+                              callback=None)
+        self.mox.ReplayAll()
+        self.verifier.verify_for_range(when_max, callback=callback)
+        self.mox.VerifyAll()
 
 class NovaVerifierSendVerifiedNotificationTestCase(StacktachBaseTestCase):
     def setUp(self):
@@ -969,28 +1022,52 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
+    def _create_mock_exist(self):
+        exist = self.mox.CreateMockAnything()
+        exist.instance = '58fb036d-5ef8-47a8-b503-7571276c400a'
+        exist.tenant = '3762854cd6f6435998188d5120e4c271'
+        exist.id = 23
+        exist.launched_at = decimal.Decimal('1.1')
+        exist.deleted_at = decimal.Decimal('5.1')
+        exist.dummy_flavor_field_name = 'dummy_flavor'
+        exist.rax_options = '1'
+        exist.os_architecture = 'x64'
+        exist.os_distro = 'com.microsoft.server'
+        exist.os_version = '2008.2'
+
+        return exist
+
     def test_should_verify_that_tenant_in_exist_is_not_null(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
+
+        exist = self._create_mock_exist()
         exist.tenant = None
-        exist.id = 23
         self.mox.ReplayAll()
 
         with self.assertRaises(NullFieldException) as nf:
             nova_verifier._verify_validity(exist, 'all')
         exception = nf.exception
         self.assertEqual(exception.field_name, 'tenant')
-        self.assertEqual(exception.reason,
-                         "tenant field was null for exist id 23")
+        self.assertEqual(
+            exception.reason, "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: tenant field was null for "
+            "exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_launched_at_in_exist_is_not_null(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = 'tenant'
-        exist.id = 23
+
+        exist = self._create_mock_exist()
         exist.launched_at = None
         self.mox.ReplayAll()
 
@@ -998,17 +1075,21 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
             nova_verifier._verify_validity(exist, 'all')
         exception = nf.exception
         self.assertEqual(exception.field_name, 'launched_at')
-        self.assertEqual(exception.reason,
-                         "launched_at field was null for exist id 23")
+        self.assertEqual(
+            exception.reason, "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: launched_at field was null "
+            "for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_that_instance_flavor_id_in_exist_is_not_null(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
+
+        exist = self._create_mock_exist()
         exist.dummy_flavor_field_name = None
         self.mox.ReplayAll()
 
@@ -1018,17 +1099,21 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'dummy_flavor_field_name')
         self.assertEqual(
             exception.reason,
-            "dummy_flavor_field_name field was null for exist id 23")
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: dummy_flavor_field_name "
+            "field was null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_tenant_id_is_of_type_hex(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = 'tenant'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
+
+        exist = self._create_mock_exist()
+        exist.tenant = 'invalid_tenant'
         self.mox.ReplayAll()
 
         with self.assertRaises(WrongTypeException) as wt:
@@ -1037,17 +1122,21 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'tenant')
         self.assertEqual(
             exception.reason,
-            "{ tenant : tenant } of incorrect type for exist id 23")
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: {tenant: invalid_tenant} "
+            "was of incorrect type for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_launched_at_is_of_type_decimal(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
+
+        exist = self._create_mock_exist()
         exist.launched_at = 111
-        exist.dummy_flavor_field_name = 'dummy_flavor'
 
         self.mox.ReplayAll()
 
@@ -1057,17 +1146,20 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'launched_at')
         self.assertEqual(
             exception.reason,
-            "{ launched_at : 111 } of incorrect type for exist id 23")
+            'Failed at 2014-01-02 03:04:05 UTC for '
+            '58fb036d-5ef8-47a8-b503-7571276c400a: {launched_at: 111} was of '
+            'incorrect type for exist id 23')
         self.mox.VerifyAll()
 
     def test_should_verify_deleted_at_is_of_decimal_type_if_present(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
+
+        exist = self._create_mock_exist()
         exist.deleted_at = 20
         self.mox.ReplayAll()
 
@@ -1077,19 +1169,20 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'deleted_at')
         self.assertEqual(
             exception.reason,
-            "{ deleted_at : 20 } of incorrect type for exist id 23")
+            'Failed at 2014-01-02 03:04:05 UTC for '
+            '58fb036d-5ef8-47a8-b503-7571276c400a: {deleted_at: 20} was of '
+            'incorrect type for exist id 23')
         self.mox.VerifyAll()
 
-
     def test_should_verify_rax_options_should_be_of_integer_type(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
+
+        exist = self._create_mock_exist()
         exist.rax_options = 'a'
         self.mox.ReplayAll()
 
@@ -1099,18 +1192,20 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'rax_options')
         self.assertEqual(
             exception.reason,
-            "{ rax_options : a } of incorrect type for exist id 23")
+            'Failed at 2014-01-02 03:04:05 UTC for '
+            '58fb036d-5ef8-47a8-b503-7571276c400a: {rax_options: a} was of '
+            'incorrect type for exist id 23')
         self.mox.VerifyAll()
 
     def test_should_verify_rax_options_should_not_be_empty(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
+
+        exist = self._create_mock_exist()
         exist.rax_options = ''
         self.mox.ReplayAll()
 
@@ -1118,20 +1213,22 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
             nova_verifier._verify_validity(exist, 'all')
         exception = nf.exception
         self.assertEqual(exception.field_name, 'rax_options')
-        self.assertEqual(exception.reason,
-                         "rax_options field was null for exist id 23")
+        self.assertEqual(
+            exception.reason,
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: rax_options field was null "
+            "for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_os_arch_should_be_alphanumeric(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = 12
+
+        exist = self._create_mock_exist()
         exist.os_architecture = 'x64,'
         self.mox.ReplayAll()
 
@@ -1141,19 +1238,19 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'os_architecture')
         self.assertEqual(
             exception.reason,
-            "{ os_architecture : x64, } of incorrect type for exist id 23")
+            'Failed at 2014-01-02 03:04:05 UTC for '
+            '58fb036d-5ef8-47a8-b503-7571276c400a: {os_architecture: x64,} '
+            'was of incorrect type for exist id 23')
         self.mox.VerifyAll()
 
     def test_should_verify_os_arch_should_not_be_empty(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = 12
+
+        exist = self._create_mock_exist()
         exist.os_architecture = ''
         self.mox.ReplayAll()
 
@@ -1163,20 +1260,20 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'os_architecture')
         self.assertEqual(
             exception.reason,
-            "os_architecture field was null for exist id 23")
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: os_architecture field was "
+            "null for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_os_distro_should_be_alphanumeric(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = 12
-        exist.os_architecture = 'x64'
+
+        exist = self._create_mock_exist()
         exist.os_distro = 'com.microsoft.server,'
         self.mox.ReplayAll()
 
@@ -1186,21 +1283,21 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'os_distro')
         self.assertEqual(
             exception.reason,
-            "{ os_distro : com.microsoft.server, } "
-            "of incorrect type for exist id 23")
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: "
+            "{os_distro: com.microsoft.server,} was of incorrect type for "
+            "exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_os_distro_should_not_be_empty(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = 12
-        exist.os_architecture = 'x64'
+
+        exist = self._create_mock_exist()
         exist.os_distro = ''
         self.mox.ReplayAll()
 
@@ -1210,21 +1307,20 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'os_distro')
         self.assertEqual(
             exception.reason,
-            "os_distro field was null for exist id 23")
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: os_distro field was null "
+            "for exist id 23")
         self.mox.VerifyAll()
 
     def test_should_verify_os_version_should_be_alphanumeric(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = 12
-        exist.os_architecture = 'x64'
-        exist.os_distro = 'com.microsoft.server'
+
+        exist = self._create_mock_exist()
         exist.os_version = '2008.2,'
         self.mox.ReplayAll()
 
@@ -1234,21 +1330,20 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'os_version')
         self.assertEqual(
             exception.reason,
-            "{ os_version : 2008.2, } of incorrect type for exist id 23")
+            'Failed at 2014-01-02 03:04:05 UTC for '
+            '58fb036d-5ef8-47a8-b503-7571276c400a: {os_version: 2008.2,} was '
+            'of incorrect type for exist id 23')
         self.mox.VerifyAll()
 
     def test_should_verify_os_version_should_not_be_empty(self):
+        self.mox.StubOutWithMock(datetime, 'datetime')
+        datetime.datetime.utcnow().AndReturn('2014-01-02 03:04:05')
+        self.mox.ReplayAll()
+
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = 12
-        exist.os_architecture = 'x64'
-        exist.os_distro = 'com.microsoft.server'
+
+        exist = self._create_mock_exist()
         exist.os_version = ''
         self.mox.ReplayAll()
 
@@ -1257,30 +1352,26 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         exception = nf.exception
         self.assertEqual(exception.field_name, 'os_version')
         self.assertEqual(
-            exception.reason, "os_version field was null for exist id 23")
+            exception.reason,
+            "Failed at 2014-01-02 03:04:05 UTC for "
+            "58fb036d-5ef8-47a8-b503-7571276c400a: os_version field was null "
+            "for exist id 23")
         self.mox.VerifyAll()
 
-    def test_should_verify_all_exist_fields_when_validity_check_value_is_all(self):
+    def test_should_verify_all_exist_fields_when_validity_check_value_all(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
-        exist.deleted_at = decimal.Decimal('5.1')
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = '12'
-        exist.os_architecture = 'x64'
-        exist.os_distro = 'com.microsoft.server'
-        exist.os_version = '2008.2'
+
+        exist = self._create_mock_exist()
         self.mox.ReplayAll()
 
         nova_verifier._verify_validity(exist, 'all')
         self.mox.VerifyAll()
 
-    def test_should_verify_only_basic_exist_fields_when_validity_check_value_is_basic(self):
+    def test_should_verify_only_basic_fields_when_validity_check_basic(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
+
         exist = self.mox.CreateMockAnything()
         exist.tenant = '3762854cd6f6435998188d5120e4c271'
         exist.id = 23
@@ -1303,16 +1394,9 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
     def test_should_verify_exist_fields_even_if_deleted_at_is_none(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
-        exist = self.mox.CreateMockAnything()
-        exist.tenant = '3762854cd6f6435998188d5120e4c271'
-        exist.id = 23
-        exist.launched_at = decimal.Decimal('1.1')
+
+        exist = self._create_mock_exist()
         exist.deleted_at = None
-        exist.dummy_flavor_field_name = 'dummy_flavor'
-        exist.rax_options = 12
-        exist.os_architecture = 'x64'
-        exist.os_distro = 'com.microsoft.server'
-        exist.os_version = '2008.2'
         self.mox.ReplayAll()
 
         nova_verifier._verify_validity(exist, 'all')

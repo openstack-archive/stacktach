@@ -25,13 +25,13 @@ def _get_parent_logger():
 
 
 def kill_time(signal, frame):
-    log_listener.end()
     print "dying ..."
     for process in processes:
         process.terminate()
     print "rose"
     for process in processes:
         process.join()
+    log_listener.end()
     print "bud"
     sys.exit(0)
 

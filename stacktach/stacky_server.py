@@ -1,3 +1,4 @@
+from copy import deepcopy
 import decimal
 import datetime
 import json
@@ -9,13 +10,15 @@ from django.shortcuts import get_object_or_404
 import datetime_to_decimal as dt
 import models
 import utils
-from django.core.exceptions import ObjectDoesNotExist, FieldError
+from django.core.exceptions import ObjectDoesNotExist, FieldError, ValidationError
 
 SECS_PER_HOUR = 60 * 60
 SECS_PER_DAY = SECS_PER_HOUR * 24
 
 DEFAULT_LIMIT = 50
 HARD_LIMIT = 1000
+
+UTC_FORMAT = '%Y-%m-%d %H:%M:%S'
 
 
 def _get_limit(request):
@@ -619,3 +622,90 @@ def search(request):
     except FieldError:
         return error_response(400, 'Bad Request', "The requested field '%s' does not exist for the corresponding object.\n"
                     "Note: The field names of database are case-sensitive." % field)
+
+
+class BadRequestException(Exception):
+    pass
+
+
+def _parse_created(created):
+    try:
+        created_datetime = datetime.datetime.strptime(created, '%Y-%m-%d')
+        return dt.dt_to_decimal(created_datetime)
+    except ValueError:
+        raise BadRequestException(
+            "'%s' value has an invalid format. It must be in YYYY-MM-DD format."
+            % created)
+
+
+def _parse_id(id):
+    try:
+        return int(id)
+    except ValueError:
+        raise BadRequestException(
+            "'%s' value has an invalid format. It must be in integer "
+            "format." % id)
+
+
+def _parse_fields_and_create_query_filters(request_filters):
+    query_filters = {}
+
+    for field, value in request_filters.iteritems():
+        if field == 'created':
+            decimal_created = _parse_created(value)
+            query_filters['created__gt'] = decimal_created
+            query_filters['created__lt'] = decimal_created + SECS_PER_DAY
+        elif field == 'id':
+            id = _parse_id(value)
+            query_filters['id__exact'] = id
+        else:
+            query_filters[field + '__exact'] = value
+
+    return query_filters
+
+
+def _check_if_fields_searchable(request_filters):
+    allowed_fields = ['id', 'name', 'created', 'period_start', 'period_end']
+    invalid_fields = [field for field in request_filters.keys()
+                      if field not in allowed_fields]
+    if invalid_fields:
+        raise BadRequestException(
+            "The requested fields either do not exist for the corresponding "
+            "object or are not searchable: %s. Note: The field names of "
+            "database are case-sensitive." %
+            ', '.join(sorted(invalid_fields)))
+
+
+def _create_query_filters(request):
+    request_filters = deepcopy(request.GET)
+    request_filters.pop('limit', None)
+    request_filters.pop('offset', None)
+
+    _check_if_fields_searchable(request_filters)
+    return _parse_fields_and_create_query_filters(request_filters)
+
+
+def do_jsonreports_search(request):
+    try:
+        model = models.JsonReport
+        filters = _create_query_filters(request)
+        reports = model_search(request, model.objects, filters,
+                               order_by='-id')
+        results = [['Id', 'Start', 'End', 'Created', 'Name', 'Version']]
+        for report in reports:
+                results.append([report.id,
+                                datetime.datetime.strftime(
+                                    report.period_start, UTC_FORMAT),
+                                datetime.datetime.strftime(
+                                    report.period_end, UTC_FORMAT),
+                                datetime.datetime.strftime(
+                                    dt.dt_from_decimal(report.created),
+                                    UTC_FORMAT),
+                                report.name,
+                                report.version])
+    except BadRequestException as be:
+        return error_response(400, 'Bad Request', be.message)
+    except ValidationError as ve:
+        return error_response(400, 'Bad Request', ve.messages[0])
+
+    return rsp(json.dumps(results))

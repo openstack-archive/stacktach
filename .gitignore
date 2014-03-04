@@ -11,3 +11,4 @@ etc/stacktach_worker_config.json
 etc/stacktach_verifier_config.json
 verifier.log
 verifier.log.*
+.gitattributes

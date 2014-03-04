@@ -21,8 +21,10 @@
 import decimal
 import functools
 import json
+from datetime import datetime
 
 from django.db import transaction
+from django.db.models import Count
 from django.db.models import FieldDoesNotExist
 from django.forms.models import model_to_dict
 from django.http import HttpResponse
@@ -38,6 +40,7 @@ from stacktach import utils
 
 DEFAULT_LIMIT = 50
 HARD_LIMIT = 1000
+HARD_WHEN_RANGE_LIMIT = 7 * 24 * 60 * 60  # 7 Days
 
 
 class APIException(Exception):
@@ -79,13 +82,6 @@ def _log_api_exception(cls, ex, request):
         stacklog.error(msg)
 
 
-def _exists_model_factory(service):
-    if service == 'glance':
-        return models.ImageExists
-    elif service == 'nova':
-        return models.InstanceExists
-
-
 def api_call(func):
 
     @functools.wraps(func)
@@ -108,28 +104,85 @@ def api_call(func):
     return handled
 
 
+def _usage_model_factory(service):
+    if service == 'nova':
+        return {'klass': models.InstanceUsage, 'order_by': 'launched_at'}
+    if service == 'glance':
+        return {'klass': models.ImageUsage, 'order_by': 'created_at'}
+
+
+def _exists_model_factory(service):
+    if service == 'nova':
+        return {'klass': models.InstanceExists, 'order_by': 'id'}
+    if service == 'glance':
+        return {'klass': models.ImageExists, 'order_by': 'id'}
+
+
+def _deletes_model_factory(service):
+    if service == 'nova':
+        return {'klass': models.InstanceDeletes, 'order_by': 'launched_at'}
+    if service == 'glance':
+        return {'klass': models.ImageDeletes, 'order_by': 'deleted_at'}
+
 @api_call
 def list_usage_launches(request):
-    objects = get_db_objects(models.InstanceUsage, request, 'launched_at')
-    dicts = _convert_model_list(objects)
-    return {'launches': dicts}
+    return {'launches': list_usage_launches_with_service(request, 'nova')}
 
+@api_call
+def list_usage_images(request):
+    return { 'images': list_usage_launches_with_service(request, 'glance')}
+
+
+def list_usage_launches_with_service(request, service):
+    model = _usage_model_factory(service)
+    objects = get_db_objects(model['klass'], request,
+                             model['order_by'])
+    dicts = _convert_model_list(objects)
+    return dicts
+
+
+def get_usage_launch_with_service(launch_id, service):
+    model = _usage_model_factory(service)
+    return {'launch': _get_model_by_id(model['klass'], launch_id)}
 
 @api_call
 def get_usage_launch(request, launch_id):
-    return {'launch': _get_model_by_id(models.InstanceUsage, launch_id)}
+    return get_usage_launch_with_service(launch_id, 'nova')
+
+
+@api_call
+def get_usage_image(request, image_id):
+    return get_usage_launch_with_service(image_id, 'glance')
 
 
 @api_call
 def list_usage_deletes(request):
-    objects = get_db_objects(models.InstanceDeletes, request, 'launched_at')
+    return list_usage_deletes_with_service(request, 'nova')
+
+
+@api_call
+def list_usage_deletes_glance(request):
+    return list_usage_deletes_with_service(request, 'glance')
+
+
+def list_usage_deletes_with_service(request, service):
+    model = _deletes_model_factory(service)
+    objects = get_db_objects(model['klass'], request,
+                             model['order_by'])
     dicts = _convert_model_list(objects)
     return {'deletes': dicts}
 
 
 @api_call
 def get_usage_delete(request, delete_id):
-    return {'delete': _get_model_by_id(models.InstanceDeletes, delete_id)}
+    model = _deletes_model_factory('nova')
+    return {'delete': _get_model_by_id(model['klass'], delete_id)}
+
+
+@api_call
+def get_usage_delete_glance(request, delete_id):
+    model = _deletes_model_factory('glance')
+    return {'delete': _get_model_by_id(model['klass'], delete_id)}
 
 
 def _exists_extra_values(exist):
@@ -139,23 +192,18 @@ def _exists_extra_values(exist):
 
 @api_call
 def list_usage_exists(request):
-    try:
-        custom_filters = {}
-        if 'received_min' in request.GET:
-            received_min = request.GET['received_min']
-            custom_filters['received_min'] = {}
-            custom_filters['received_min']['raw__when__gte'] = \
-                utils.str_time_to_unix(received_min)
-        if 'received_max' in request.GET:
-            received_max = request.GET['received_max']
-            custom_filters['received_max'] = {}
-            custom_filters['received_max']['raw__when__lte'] = \
-                utils.str_time_to_unix(received_max)
-    except AttributeError:
-        msg = "Range filters must be dates."
-        raise BadRequestException(message=msg)
+    return list_usage_exists_with_service(request, 'nova')
 
-    objects = get_db_objects(models.InstanceExists, request, 'id',
+
+@api_call
+def list_usage_exists_glance(request):
+    return list_usage_exists_with_service(request, 'glance')
+
+
+def list_usage_exists_with_service(request, service):
+    model = _exists_model_factory(service)
+    custom_filters = _get_exists_filter_args(request)
+    objects = get_db_objects(model['klass'], request, 'id',
                              custom_filters=custom_filters)
     dicts = _convert_model_list(objects, _exists_extra_values)
     return {'exists': dicts}
@@ -166,6 +214,33 @@ def get_usage_exist(request, exist_id):
     return {'exist': _get_model_by_id(models.InstanceExists, exist_id,
                                       _exists_extra_values)}
 
+@api_call
+def get_usage_exist_glance(request, exist_id):
+    return {'exist': _get_model_by_id(models.ImageExists, exist_id,
+                                      _exists_extra_values)}
+
+
+@api_call
+def get_usage_exist_stats(request):
+    return {'stats': _get_exist_stats(request, 'nova')}
+
+
+@api_call
+def get_usage_exist_stats_glance(request):
+    return {'stats': _get_exist_stats(request, 'glance')}
+
+
+def _get_exist_stats(request, service):
+    klass = _exists_model_factory(service)['klass']
+    exists_filters = _get_exists_filter_args(request)
+    filters = _get_filter_args(klass, request,
+                               custom_filters=exists_filters)
+    for value in exists_filters.values():
+        filters.update(value)
+    query = klass.objects.filter(**filters)
+    values = query.values('status', 'send_status')
+    stats = values.annotate(event_count=Count('send_status'))
+    return list(stats)
 
 @api_call
 def exists_send_status(request, message_id):
@@ -210,7 +285,7 @@ def _find_exists_with_message_id(msg_id, exists_model, service):
 
 
 def _ping_processing_with_service(pings, service):
-    exists_model = _exists_model_factory(service)
+    exists_model = _exists_model_factory(service)['klass']
     with transaction.commit_on_success():
         for msg_id, status_code in pings.items():
             try:
@@ -263,6 +338,25 @@ def _check_has_field(klass, field_name):
     except FieldDoesNotExist:
         msg = "No such field '%s'." % field_name
         raise BadRequestException(msg)
+
+
+def _get_exists_filter_args(request):
+    try:
+        custom_filters = {}
+        if 'received_min' in request.GET:
+            received_min = request.GET['received_min']
+            custom_filters['received_min'] = {}
+            custom_filters['received_min']['raw__when__gte'] = \
+                utils.str_time_to_unix(received_min)
+        if 'received_max' in request.GET:
+            received_max = request.GET['received_max']
+            custom_filters['received_max'] = {}
+            custom_filters['received_max']['raw__when__lte'] = \
+                utils.str_time_to_unix(received_max)
+    except AttributeError:
+        msg = "Range filters must be dates."
+        raise BadRequestException(message=msg)
+    return custom_filters
 
 
 def _get_filter_args(klass, request, custom_filters=None):
@@ -353,3 +447,69 @@ def _convert_model_list(model_list, extra_values_func=None):
         converted.append(_convert_model(item, extra_values_func))
 
     return converted
+
+
+def _rawdata_factory(service):
+    if service == "nova":
+        rawdata = models.RawData.objects
+    elif service == "glance":
+        rawdata = models.GlanceRawData.objects
+    else:
+        raise BadRequestException(message="Invalid service")
+    return rawdata
+
+
+@api_call
+def get_event_stats(request):
+    try:
+        filters = {}
+
+        if 'when_min' in request.GET or 'when_max' in request.GET:
+            if not ('when_min' in request.GET and 'when_max' in request.GET):
+                msg = "When providing date range filters, " \
+                      "a min and max are required."
+                raise BadRequestException(message=msg)
+
+            when_min = utils.str_time_to_unix(request.GET['when_min'])
+            when_max = utils.str_time_to_unix(request.GET['when_max'])
+
+            if when_max - when_min > HARD_WHEN_RANGE_LIMIT:
+                msg = "Date ranges may be no larger than %s seconds"
+                raise BadRequestException(message=msg % HARD_WHEN_RANGE_LIMIT)
+
+            filters['when__lte'] = when_max
+            filters['when__gte'] = when_min
+
+        service = request.GET.get("service", "nova")
+        rawdata = _rawdata_factory(service)
+        if filters:
+            rawdata = rawdata.filter(**filters)
+        events = rawdata.values('event').annotate(event_count=Count('event'))
+        events = list(events)
+
+        if 'event' in request.GET:
+            event = request.GET['event']
+            default = {'event': event, 'event_count': 0}
+            events = [x for x in events if x['event'] == event] or [default, ]
+
+        return {'stats': events}
+    except (KeyError, TypeError):
+        raise BadRequestException(message="Invalid/absent query parameter")
+    except (ValueError, AttributeError):
+        raise BadRequestException(message="Invalid format for date (Correct "
+                                          "format should be %Y-%m-%d %H:%M:%S)")
+
+
+def repair_stacktach_down(request):
+    post_dict = dict((request.POST._iterlists()))
+    message_ids = post_dict.get('message_ids')
+    service = post_dict.get('service', ['nova'])
+    klass = _exists_model_factory(service[0])['klass']
+    absent_exists, exists_not_pending = \
+        klass.mark_exists_as_sent_unverified(message_ids)
+    response_data = {'absent_exists': absent_exists,
+                     'exists_not_pending': exists_not_pending}
+    response = HttpResponse(json.dumps(response_data),
+                            content_type="application/json")
+    return response
+

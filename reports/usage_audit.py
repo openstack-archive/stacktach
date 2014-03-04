@@ -9,8 +9,11 @@ def _status_queries(exists_query):
     fail = exists_query.filter(status=models.InstanceExists.FAILED)
     pending = exists_query.filter(status=models.InstanceExists.PENDING)
     verifying = exists_query.filter(status=models.InstanceExists.VERIFYING)
-
-    return verified, reconciled, fail, pending, verifying
+    sent_unverified = exists_query.filter(status=models.InstanceExists.SENT_UNVERIFIED)
+    sent_failed = exists_query.filter(status=models.InstanceExists.VERIFYING)
+    sent_verifying = exists_query.filter(status=models.InstanceExists.SENT_VERIFYING)
+    return verified, reconciled, fail, pending, verifying, sent_unverified, \
+        sent_failed, sent_verifying
 
 
 def _send_status_queries(exists_query):
@@ -28,7 +31,8 @@ def _send_status_queries(exists_query):
 
 def _audit_for_exists(exists_query):
     (verified, reconciled,
-     fail, pending, verifying) = _status_queries(exists_query)
+     fail, pending, verifying, sent_unverified,
+     sent_failed, sent_verifying) = _status_queries(exists_query)
 
     (success, unsent, redirect,
      client_error, server_error) = _send_status_queries(verified)
@@ -43,6 +47,9 @@ def _audit_for_exists(exists_query):
         'failed': fail.count(),
         'pending': pending.count(),
         'verifying': verifying.count(),
+        'sent_unverified': sent_unverified.count(),
+        'sent_failed': sent_failed.count(),
+        'sent_verifying': sent_verifying.count(),
         'send_status': {
             'success': success.count(),
             'unsent': unsent.count(),

@@ -51,16 +51,14 @@ def _get_child_logger():
 def _verify_field_mismatch(exists, usage):
     if not base_verifier._verify_date_field(
             usage.created_at, exists.created_at, same_second=True):
-        raise FieldMismatch('created_at', exists.created_at,
-                            usage.created_at)
+        raise FieldMismatch('created_at', exists.created_at, usage.created_at,
+                            exists.uuid)
 
     if usage.owner != exists.owner:
-        raise FieldMismatch('owner', exists.owner,
-                            usage.owner)
+        raise FieldMismatch('owner', exists.owner, usage.owner, exists.uuid)
 
     if usage.size != exists.size:
-        raise FieldMismatch('size', exists.size,
-                            usage.size)
+        raise FieldMismatch('size', exists.size, usage.size, exists.uuid)
 
 
 def _verify_validity(exist):
@@ -68,11 +66,12 @@ def _verify_validity(exist):
               exist.uuid: 'uuid', exist.owner: 'owner'}
     for (field_value, field_name) in fields.items():
         if field_value is None:
-            raise NullFieldException(field_name, exist.id)
+            raise NullFieldException(field_name, exist.id, exist.uuid)
     base_verifier._is_like_uuid('uuid', exist.uuid, exist.id)
-    base_verifier._is_like_date('created_at', exist.created_at, exist.id)
-    base_verifier._is_long('size', exist.size, exist.id)
-    base_verifier._is_hex_owner_id('owner', exist.owner, exist.id)
+    base_verifier._is_like_date('created_at', exist.created_at, exist.id,
+                                exist.uuid)
+    base_verifier._is_long('size', exist.size, exist.id, exist.uuid)
+    base_verifier._is_hex_owner_id('owner', exist.owner, exist.id, exist.uuid)
 
 
 def _verify_for_usage(exist, usage=None):
@@ -124,7 +123,7 @@ def _verify_for_delete(exist, delete=None):
         if not base_verifier._verify_date_field(
                 delete.deleted_at, exist.deleted_at, same_second=True):
             raise FieldMismatch('deleted_at', exist.deleted_at,
-                                delete.deleted_at)
+                                delete.deleted_at, exist.uuid)
 
 
 def _verify(exists):
@@ -136,6 +135,9 @@ def _verify(exists):
             _verify_validity(exist)
 
             exist.mark_verified()
+        except VerificationException, e:
+            verified = False
+            exist.mark_failed(reason=str(e))
         except Exception, e:
             verified = False
             exist.mark_failed(reason=e.__class__.__name__)
@@ -148,20 +150,16 @@ class GlanceVerifier(Verifier):
     def __init__(self, config, pool=None):
         super(GlanceVerifier, self).__init__(config, pool=pool)
 
-    def verify_for_range(self, ending_max, callback=None):
-        exists_grouped_by_owner_and_rawid = \
-            models.ImageExists.find_and_group_by_owner_and_raw_id(
-                ending_max=ending_max,
-                status=models.ImageExists.PENDING)
-        count = len(exists_grouped_by_owner_and_rawid)
+    def verify_exists(self, grouped_exists, callback, verifying_status):
+        count = len(grouped_exists)
         added = 0
         update_interval = datetime.timedelta(seconds=30)
         next_update = datetime.datetime.utcnow() + update_interval
         _get_child_logger().info("glance: Adding %s per-owner exists to queue." % count)
         while added < count:
-            for exists in exists_grouped_by_owner_and_rawid.values():
+            for exists in grouped_exists.values():
                 for exist in exists:
-                    exist.status = models.ImageExists.VERIFYING
+                    exist.status = verifying_status
                     exist.save()
                 result = self.pool.apply_async(_verify, args=(exists,),
                                                callback=callback)
@@ -173,6 +171,22 @@ class GlanceVerifier(Verifier):
                     _get_child_logger().info(msg)
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
+
+    def verify_for_range(self, ending_max, callback=None):
+        unsent_exists_grouped_by_owner_and_rawid = \
+            models.ImageExists.find_and_group_by_owner_and_raw_id(
+                ending_max=ending_max,
+                status=models.ImageExists.SENT_UNVERIFIED)
+        unsent_count = self.verify_exists(unsent_exists_grouped_by_owner_and_rawid,
+                                        None, models.ImageExists.SENT_VERIFYING)
+        exists_grouped_by_owner_and_rawid = \
+            models.ImageExists.find_and_group_by_owner_and_raw_id(
+                ending_max=ending_max,
+                status=models.ImageExists.PENDING)
+        count = self.verify_exists(exists_grouped_by_owner_and_rawid, callback,
+                                 models.ImageExists.VERIFYING)
+
+        return count+unsent_count
 
     def send_verified_notification(self, exist, connection, exchange,
                                    routing_keys=None):

@@ -54,33 +54,34 @@ def _verify_field_mismatch(exists, launch):
     if not base_verifier._verify_date_field(
             launch.launched_at, exists.launched_at, same_second=True):
         raise FieldMismatch('launched_at', exists.launched_at,
-                            launch.launched_at)
+                            launch.launched_at, exists.instance)
 
     if getattr(launch, flavor_field_name) != \
             getattr(exists, flavor_field_name):
         raise FieldMismatch(flavor_field_name,
                             getattr(exists, flavor_field_name),
-                            getattr(launch, flavor_field_name))
+                            getattr(launch, flavor_field_name),
+                            exists.instance)
 
     if launch.tenant != exists.tenant:
-        raise FieldMismatch('tenant', exists.tenant,
-                            launch.tenant)
+        raise FieldMismatch('tenant', exists.tenant, launch.tenant,
+                            exists.instance)
 
     if launch.rax_options != exists.rax_options:
         raise FieldMismatch('rax_options', exists.rax_options,
-                            launch.rax_options)
+                            launch.rax_options, exists.instance)
 
     if launch.os_architecture != exists.os_architecture:
         raise FieldMismatch('os_architecture', exists.os_architecture,
-                            launch.os_architecture)
+                            launch.os_architecture, exists.instance)
 
     if launch.os_version != exists.os_version:
         raise FieldMismatch('os_version', exists.os_version,
-                            launch.os_version)
+                            launch.os_version, exists.instance)
 
     if launch.os_distro != exists.os_distro:
         raise FieldMismatch('os_distro', exists.os_distro,
-                            launch.os_distro)
+                            launch.os_distro, exists.instance)
 
 
 def _verify_for_launch(exist, launch=None,
@@ -147,12 +148,12 @@ def _verify_for_delete(exist, delete=None,
         if not base_verifier._verify_date_field(
                 delete.launched_at, exist.launched_at, same_second=True):
             raise FieldMismatch('launched_at', exist.launched_at,
-                                delete.launched_at)
+                                delete.launched_at, exist.instance)
 
         if not base_verifier._verify_date_field(
                 delete.deleted_at, exist.deleted_at, same_second=True):
-            raise FieldMismatch(
-                'deleted_at', exist.deleted_at, delete.deleted_at)
+            raise FieldMismatch('deleted_at', exist.deleted_at,
+                                delete.deleted_at, exist.instance)
 
 
 def _verify_basic_validity(exist):
@@ -164,11 +165,14 @@ def _verify_basic_validity(exist):
     }
     for (field_name, field_value) in fields.items():
         if field_value is None:
-            raise NullFieldException(field_name, exist.id)
-    base_verifier._is_hex_owner_id('tenant', exist.tenant, exist.id)
-    base_verifier._is_like_date('launched_at', exist.launched_at, exist.id)
+            raise NullFieldException(field_name, exist.id, exist.instance)
+    base_verifier._is_hex_owner_id(
+        'tenant', exist.tenant, exist.id, exist.instance)
+    base_verifier._is_like_date(
+        'launched_at', exist.launched_at, exist.id, exist.instance)
     if exist.deleted_at is not None:
-        base_verifier._is_like_date('deleted_at', exist.deleted_at, exist.id)
+        base_verifier._is_like_date(
+            'deleted_at', exist.deleted_at, exist.id, exist.instance)
 
 
 def _verify_optional_validity(exist):
@@ -178,11 +182,15 @@ def _verify_optional_validity(exist):
               exist.os_distro: 'os_distro'}
     for (field_value, field_name) in fields.items():
         if field_value == '':
-            raise NullFieldException(field_name, exist.id)
-    base_verifier._is_int_in_char('rax_options', exist.rax_options, exist.id)
-    base_verifier._is_alphanumeric('os_architecture', exist.os_architecture, exist.id)
-    base_verifier._is_alphanumeric('os_distro', exist.os_distro, exist.id)
-    base_verifier._is_alphanumeric('os_version', exist.os_version, exist.id)
+            raise NullFieldException(field_name, exist.id, exist.instance)
+    base_verifier._is_int_in_char(
+        'rax_options', exist.rax_options, exist.id, exist.instance)
+    base_verifier._is_alphanumeric(
+        'os_architecture', exist.os_architecture, exist.id, exist.instance)
+    base_verifier._is_alphanumeric(
+        'os_distro', exist.os_distro, exist.id, exist.instance)
+    base_verifier._is_alphanumeric(
+        'os_version', exist.os_version, exist.id, exist.instance)
 
 
 def _verify_validity(exist, validation_level):
@@ -290,9 +298,7 @@ class NovaVerifier(base_verifier.Verifier):
                 message_service.send_notification(
                     json_body[1], key, connection, exchange)
 
-    def verify_for_range(self, ending_max, callback=None):
-        exists = models.InstanceExists.find(
-            ending_max=ending_max, status=models.InstanceExists.PENDING)
+    def verify_exists(self, callback, exists, verifying_status):
         count = exists.count()
         added = 0
         update_interval = datetime.timedelta(seconds=30)
@@ -300,7 +306,7 @@ class NovaVerifier(base_verifier.Verifier):
         _get_child_logger().info("nova: Adding %s exists to queue." % count)
         while added < count:
             for exist in exists[0:1000]:
-                exist.update_status(models.InstanceExists.VERIFYING)
+                exist.update_status(verifying_status)
                 exist.save()
                 validation_level = self.config.validation_level()
                 result = self.pool.apply_async(
@@ -314,6 +320,20 @@ class NovaVerifier(base_verifier.Verifier):
                     _get_child_logger().info(msg)
                     next_update = datetime.datetime.utcnow() + update_interval
         return count
+
+    def verify_for_range(self, ending_max, callback=None):
+        sent_unverified_exists = models.InstanceExists.find(
+            ending_max=ending_max, status=
+            models.InstanceExists.SENT_UNVERIFIED)
+        sent_unverified_count = self.verify_exists(None,
+                                                   sent_unverified_exists,
+                                                   models.InstanceExists.
+                                                   SENT_VERIFYING)
+        exists = models.InstanceExists.find(
+            ending_max=ending_max, status=models.InstanceExists.PENDING)
+        count = self.verify_exists(callback, exists,
+                                   models.InstanceExists.VERIFYING)
+        return count+sent_unverified_count
 
     def reconcile_failed(self):
         for failed_exist in self.failed:

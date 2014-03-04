@@ -256,12 +256,18 @@ class InstanceExists(models.Model):
     VERIFIED = 'verified'
     RECONCILED = 'reconciled'
     FAILED = 'failed'
+    SENT_UNVERIFIED = 'sent_unverified'
+    SENT_FAILED = 'sent_failed'
+    SENT_VERIFYING = 'sent_verifying'
     STATUS_CHOICES = [
         (PENDING, 'Pending Verification'),
         (VERIFYING, 'Currently Being Verified'),
         (VERIFIED, 'Passed Verification'),
         (RECONCILED, 'Passed Verification After Reconciliation'),
         (FAILED, 'Failed Verification'),
+        (SENT_UNVERIFIED, 'Unverified but sent by Yagi'),
+        (SENT_FAILED, 'Failed Verification but sent by Yagi'),
+        (SENT_VERIFYING, 'Currently being verified but sent by Yagi')
     ]
 
     instance = models.CharField(max_length=50, null=True,
@@ -321,13 +327,34 @@ class InstanceExists(models.Model):
         self.save()
 
     def mark_failed(self, reason=None):
-        self.status = InstanceExists.FAILED
+        if self.status == InstanceExists.SENT_VERIFYING:
+            self.status = InstanceExists.SENT_FAILED
+        else:
+            self.status = InstanceExists.FAILED
         if reason:
             self.fail_reason = reason
         self.save()
 
     def update_status(self, new_status):
         self.status = new_status
+
+    @staticmethod
+    def mark_exists_as_sent_unverified(message_ids):
+        absent_exists = []
+        exists_not_pending = []
+        for message_id in message_ids:
+            try:
+                exists = InstanceExists.objects.get(message_id=message_id)
+                if exists.status == InstanceExists.PENDING:
+                    exists.status = InstanceExists.SENT_UNVERIFIED
+                    exists.save()
+                else:
+                    exists_not_pending.append(message_id)
+            except Exception:
+                absent_exists.append(message_id)
+        return absent_exists, exists_not_pending
+
+
 
 
 class Timing(models.Model):
@@ -458,11 +485,17 @@ class ImageExists(models.Model):
     VERIFYING = 'verifying'
     VERIFIED = 'verified'
     FAILED = 'failed'
+    SENT_UNVERIFIED = 'sent_unverified'
+    SENT_FAILED = 'sent_failed'
+    SENT_VERIFYING = 'sent_verifying'
     STATUS_CHOICES = [
         (PENDING, 'Pending Verification'),
         (VERIFYING, 'Currently Being Verified'),
         (VERIFIED, 'Passed Verification'),
         (FAILED, 'Failed Verification'),
+        (SENT_UNVERIFIED, 'Unverified but sent by Yagi'),
+        (SENT_FAILED, 'Failed Verification but sent by Yagi'),
+        (SENT_VERIFYING, 'Currently being verified but sent by Yagi')
     ]
 
     uuid = models.CharField(max_length=50, db_index=True, null=True)
@@ -513,10 +546,31 @@ class ImageExists(models.Model):
         self.save()
 
     def mark_failed(self, reason=None):
-        self.status = InstanceExists.FAILED
+        if self.status == ImageExists.SENT_VERIFYING:
+            self.status = ImageExists.SENT_FAILED
+        else:
+            self.status = ImageExists.FAILED
         if reason:
             self.fail_reason = reason
         self.save()
+
+    @staticmethod
+    def mark_exists_as_sent_unverified(message_ids):
+        absent_exists = []
+        exists_not_pending = []
+        for message_id in message_ids:
+            exists_list = ImageExists.objects.filter(message_id=message_id)
+            if exists_list:
+                for exists in exists_list:
+                    if exists.status == ImageExists.PENDING:
+                        exists.status = ImageExists.SENT_UNVERIFIED
+                        exists.save()
+                    else:
+                        exists_not_pending.append(message_id)
+            else :
+                absent_exists.append(message_id)
+        return absent_exists, exists_not_pending
+
 
 
 def get_model_fields(model):
