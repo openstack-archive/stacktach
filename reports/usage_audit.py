@@ -70,42 +70,31 @@ def _audit_for_exists(exists_query):
     return report
 
 
-def _verifier_audit_for_day(beginning, ending, exists_model):
+def _verified_audit_base(base_query, exists_model):
     summary = {}
 
-    filters = {
-        'raw__when__gte': beginning,
-        'raw__when__lte': ending,
-        'audit_period_ending': F('audit_period_beginning') + (60*60*24)
-    }
-    periodic_exists = exists_model.objects.filter(**filters)
-
+    periodic_range = Q(audit_period_ending=(F('audit_period_beginning') +
+                                            (60*60*24)))
+    periodic_exists = exists_model.objects.filter(base_query & periodic_range)
     summary['periodic'] = _audit_for_exists(periodic_exists)
 
-    filters = {
-        'raw__when__gte': beginning,
-        'raw__when__lte': ending,
-        'audit_period_ending__lt': F('audit_period_beginning') + (60*60*24)
-    }
-    instant_exists = exists_model.objects.filter(**filters)
-
+    instant_range = Q(audit_period_ending__lt=(F('audit_period_beginning') +
+                                               (60*60*24)))
+    instant_exists = exists_model.objects.filter(base_query & instant_range)
     summary['instantaneous'] = _audit_for_exists(instant_exists)
 
-    filters = {
-        'raw__when__gte': beginning,
-        'raw__when__lte': ending,
-        'status': exists_model.FAILED
-    }
-    failed = exists_model.objects.filter(**filters)
-    detail = []
-    for exist in failed:
-        detail.append(['Exist', exist.id, exist.fail_reason])
+    failed_query = Q(status=exists_model.FAILED)
+    failed = exists_model.objects.filter(base_query & failed_query)
+    detail = [['Exist', e.id, e.fail_reason] for e in failed]
     return summary, detail
 
 
-def _verifier_audit_for_day_ums(beginning, ending, exists_model, ums_offset):
-    summary = {}
+def _verifier_audit_for_day(beginning, ending, exists_model):
+    base_query = Q(raw__when__gte=beginning, raw__when__lte=ending)
+    return _verified_audit_base(base_query, exists_model)
 
+
+def _verifier_audit_for_day_ums(beginning, ending, exists_model, ums_offset):
     # NOTE(apmelton):
     # This is the UMS query we're trying to match.
     # where (
@@ -119,20 +108,7 @@ def _verifier_audit_for_day_ums(beginning, ending, exists_model, ums_offset):
            Q(raw__when__gt=beginning + ums_offset,
              audit_period_beginning__lt=ending))
 
-    periodic_range = Q(audit_period_ending=(F('audit_period_beginning') +
-                                            (60*60*24)))
-    periodic_exists = exists_model.objects.filter(ums & periodic_range)
-    summary['periodic'] = _audit_for_exists(periodic_exists)
-
-    instant_range = Q(audit_period_ending__lt=(F('audit_period_beginning') +
-                                               (60*60*24)))
-    instant_exists = exists_model.objects.filter(ums & instant_range)
-    summary['instantaneous'] = _audit_for_exists(instant_exists)
-
-    failed_query = Q(status=exists_model.FAILED)
-    failed = exists_model.objects.filter(ums & failed_query)
-    detail = [['Exist', e.id, e.fail_reason] for e in failed]
-    return summary, detail
+    return _verified_audit_base(ums, exists_model)
 
 
 def get_previous_period(time, period_length):
