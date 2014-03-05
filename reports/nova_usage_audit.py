@@ -190,14 +190,18 @@ def _launch_audit_for_period(beginning, ending):
     return launch_to_exists_fails, new_launches.count(), len(old_launches_dict)
 
 
-def audit_for_period(beginning, ending):
+def audit_for_period(beginning, ending, ums=False):
     beginning_decimal = dt.dt_to_decimal(beginning)
     ending_decimal = dt.dt_to_decimal(ending)
 
+    if ums:
+        verifier_audit_func = usage_audit._verifier_audit_for_day_ums
+    else:
+        verifier_audit_func = usage_audit._verifier_audit_for_day
+
     (verify_summary,
-     verify_detail) = usage_audit._verifier_audit_for_day(beginning_decimal,
-                                                          ending_decimal,
-                                                          models.InstanceExists)
+     verify_detail) = verifier_audit_func(beginning_decimal, ending_decimal,
+                                          models.InstanceExists)
     detail, new_count, old_count = _launch_audit_for_period(beginning_decimal,
                                                             ending_decimal)
 
@@ -218,14 +222,14 @@ def audit_for_period(beginning, ending):
     return summary, details
 
 
-def store_results(start, end, summary, details):
+def store_results(start, end, summary, details, ums=False):
     values = {
         'json': make_json_report(summary, details),
         'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
         'period_start': start,
         'period_end': end,
         'version': 6,
-        'name': 'nova usage audit'
+        'name': 'nova usage audit' if not ums else 'nova usage audit ums'
     }
 
     report = models.JsonReport(**values)
@@ -267,7 +271,14 @@ if __name__ == '__main__':
                         help="Location of the reconciler config file",
                         type=str,
                         default='/etc/stacktach/reconciler-config.json')
+    parser.add_argument('--ums',
+                        help="Use query to match UMS",
+                        action='store_true')
     args = parser.parse_args()
+
+    if args.ums and args.period_length != 'day':
+        print "UMS query can only be used with period_length of 'day'."
+        sys.exit(0)
 
     stacklog.set_default_logger_name('nova_usage_audit')
     parent_logger = stacklog.get_logger('nova_usage_audit', is_parent=True)
@@ -286,9 +297,9 @@ if __name__ == '__main__':
 
     start, end = usage_audit.get_previous_period(time, args.period_length)
 
-    summary, details = audit_for_period(start, end)
+    summary, details = audit_for_period(start, end, ums=args.ums)
 
     if not args.store:
         print make_json_report(summary, details)
     else:
-        store_results(start, end, summary, details)
+        store_results(start, end, summary, details, ums=args.ums)

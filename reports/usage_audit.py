@@ -1,5 +1,6 @@
 import datetime
 from django.db.models import F
+from django.db.models import Q
 from stacktach import models
 
 
@@ -100,6 +101,39 @@ def _verifier_audit_for_day(beginning, ending, exists_model):
     for exist in failed:
         detail.append(['Exist', exist.id, exist.fail_reason])
     return summary, detail
+
+
+def _verifier_audit_for_day_ums(beginning, ending, exists_model):
+    summary = {}
+
+    # NOTE(apmelton):
+    # This is the UMS query we're trying to match.
+    # where (
+    #     (created_date between sysdate-1||'12.00.00.000000000 AM' and
+    #                           sysdate-1||'04.00.00.000000000 AM' and
+    #      audit_period_begin_timestamp >= sysdate-1||'12.00.00.000000000 AM')
+    # OR (created_date > sysdate-1||'04.00.00.000000000 AM' and
+    #     audit_period_begin_timestamp < sysdate||'12.00.00.000000000 AM' ))
+    ums = (Q(raw__when__gte=beginning, raw__when__lte=beginning + (4*60*60),
+             audit_period_beginning__gte=beginning) |
+           Q(raw__when__gt=beginning + (4*60*60),
+             audit_period_beginning__lt=ending))
+
+    periodic_range = Q(audit_period_ending=(F('audit_period_beginning') +
+                                            (60*60*24)))
+    periodic_exists = exists_model.objects.filter(ums & periodic_range)
+    summary['periodic'] = _audit_for_exists(periodic_exists)
+
+    instant_range = Q(audit_period_ending__lt=(F('audit_period_beginning') +
+                                               (60*60*24)))
+    instant_exists = exists_model.objects.filter(ums & instant_range)
+    summary['instantaneous'] = _audit_for_exists(instant_exists)
+
+    failed_query = Q(status=exists_model.FAILED)
+    failed = exists_model.objects.filter(ums & failed_query)
+    detail = [['Exist', e.id, e.fail_reason] for e in failed]
+    return summary, detail
+
 
 def get_previous_period(time, period_length):
     if period_length == 'day':
