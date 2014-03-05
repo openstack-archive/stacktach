@@ -103,7 +103,7 @@ def _verifier_audit_for_day(beginning, ending, exists_model):
     return summary, detail
 
 
-def _verifier_audit_for_day_ums(beginning, ending, exists_model):
+def _verifier_audit_for_day_ums(beginning, ending, exists_model, ums_offset):
     summary = {}
 
     # NOTE(apmelton):
@@ -114,9 +114,9 @@ def _verifier_audit_for_day_ums(beginning, ending, exists_model):
     #      audit_period_begin_timestamp >= sysdate-1||'12.00.00.000000000 AM')
     # OR (created_date > sysdate-1||'04.00.00.000000000 AM' and
     #     audit_period_begin_timestamp < sysdate||'12.00.00.000000000 AM' ))
-    ums = (Q(raw__when__gte=beginning, raw__when__lte=beginning + (4*60*60),
+    ums = (Q(raw__when__gte=beginning, raw__when__lte=beginning + ums_offset,
              audit_period_beginning__gte=beginning) |
-           Q(raw__when__gt=beginning + (4*60*60),
+           Q(raw__when__gt=beginning + ums_offset,
              audit_period_beginning__lt=ending))
 
     periodic_range = Q(audit_period_ending=(F('audit_period_beginning') +

@@ -65,6 +65,8 @@ select stacktach_instancereconcile.id,
                 stacktach_instancereconcile.deleted_at > %s)
         ) and stacktach_instancereconcile.launched_at < %s;"""
 
+DEFAULT_UMS_OFFSET = 4 * 60 * 60  # 4 Hours
+
 reconciler = None
 
 
@@ -190,12 +192,14 @@ def _launch_audit_for_period(beginning, ending):
     return launch_to_exists_fails, new_launches.count(), len(old_launches_dict)
 
 
-def audit_for_period(beginning, ending, ums=False):
+def audit_for_period(beginning, ending, ums=False, ums_offset=0):
     beginning_decimal = dt.dt_to_decimal(beginning)
     ending_decimal = dt.dt_to_decimal(ending)
 
     if ums:
-        verifier_audit_func = usage_audit._verifier_audit_for_day_ums
+        def verifier_audit_func(start, end, model):
+            return usage_audit._verifier_audit_for_day_ums(start, end, model,
+                                                           ums_offset)
     else:
         verifier_audit_func = usage_audit._verifier_audit_for_day
 
@@ -272,8 +276,13 @@ if __name__ == '__main__':
                         type=str,
                         default='/etc/stacktach/reconciler-config.json')
     parser.add_argument('--ums',
-                        help="Use query to match UMS",
+                        help="Use query to match UMS, "
+                             "period length of 'day' required.",
                         action='store_true')
+    parser.add_argument('--ums-offset',
+                        help="UMS' fencepost offset in seconds. Default: 4 days",
+                        type=int,
+                        default=DEFAULT_UMS_OFFSET)
     args = parser.parse_args()
 
     if args.ums and args.period_length != 'day':
@@ -297,7 +306,8 @@ if __name__ == '__main__':
 
     start, end = usage_audit.get_previous_period(time, args.period_length)
 
-    summary, details = audit_for_period(start, end, ums=args.ums)
+    summary, details = audit_for_period(start, end, ums=args.ums,
+                                        ums_offset=args.ums_offset)
 
     if not args.store:
         print make_json_report(summary, details)
