@@ -20,6 +20,7 @@
 
 import argparse
 import datetime
+import functools
 import json
 import sys
 import os
@@ -197,9 +198,9 @@ def audit_for_period(beginning, ending, ums=False, ums_offset=0):
     ending_decimal = dt.dt_to_decimal(ending)
 
     if ums:
-        def verifier_audit_func(start, end, model):
-            return usage_audit._verifier_audit_for_day_ums(start, end, model,
-                                                           ums_offset)
+        verifier_audit_func = functools.partial(
+            usage_audit._verifier_audit_for_day_ums, ums_offset=ums_offset
+        )
     else:
         verifier_audit_func = usage_audit._verifier_audit_for_day
 

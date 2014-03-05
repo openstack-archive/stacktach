@@ -94,7 +94,7 @@ def _verifier_audit_for_day(beginning, ending, exists_model):
     return _verified_audit_base(base_query, exists_model)
 
 
-def _verifier_audit_for_day_ums(beginning, ending, exists_model, ums_offset):
+def _verifier_audit_for_day_ums(beginning, ending, exists_model, ums_offset=0):
     # NOTE(apmelton):
     # This is the UMS query we're trying to match.
     # where (
