@@ -3,6 +3,7 @@ from operator import itemgetter
 
 BASE_IMAGE = 0x1
 SNAPSHOT_IMAGE = 0x2
+IMPORT_IMAGE = 0x3
 
 LINUX_IMAGE = 0x10
 WINDOWS_IMAGE = 0x20
@@ -48,7 +49,8 @@ def get_numeric_code(payload, default=0):
         num |= BASE_IMAGE
     if image_type == 'snapshot':
         num |= SNAPSHOT_IMAGE
-
+    if image_type == 'import':
+        num |= IMPORT_IMAGE
     os_type = meta.get('os_type', payload.get('os_type', ''))
     if os_type == 'linux':
         num |= LINUX_IMAGE
