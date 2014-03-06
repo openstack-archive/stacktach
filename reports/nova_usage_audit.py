@@ -227,14 +227,14 @@ def audit_for_period(beginning, ending, ums=False, ums_offset=0):
     return summary, details
 
 
-def store_results(start, end, summary, details, ums=False):
+def store_results(start, end, summary, details):
     values = {
         'json': make_json_report(summary, details),
         'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
         'period_start': start,
         'period_end': end,
         'version': 6,
-        'name': 'nova usage audit' if not ums else 'nova usage audit ums'
+        'name': 'nova usage audit'
     }
 
     report = models.JsonReport(**values)
@@ -313,4 +313,4 @@ if __name__ == '__main__':
     if not args.store:
         print make_json_report(summary, details)
     else:
-        store_results(start, end, summary, details, ums=args.ums)
+        store_results(start, end, summary, details)
