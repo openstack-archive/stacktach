@@ -1184,6 +1184,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.rax_options = 'a'
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(WrongTypeException) as wt:
@@ -1207,6 +1208,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.rax_options = ''
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(NullFieldException) as nf:
@@ -1230,6 +1232,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.os_architecture = 'x64,'
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(WrongTypeException) as wt:
@@ -1252,6 +1255,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.os_architecture = ''
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(NullFieldException) as nf:
@@ -1275,6 +1279,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.os_distro = 'com.microsoft.server,'
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(WrongTypeException) as wt:
@@ -1299,6 +1304,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.os_distro = ''
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(NullFieldException) as nf:
@@ -1322,6 +1328,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.os_version = '2008.2,'
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(WrongTypeException) as wt:
@@ -1345,6 +1352,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.os_version = ''
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         with self.assertRaises(NullFieldException) as nf:
@@ -1363,6 +1371,7 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
 
         exist = self._create_mock_exist()
+        exist.is_image_type_import().AndReturn(False)
         self.mox.ReplayAll()
 
         nova_verifier._verify_validity(exist, 'all')
@@ -1397,6 +1406,19 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
 
         exist = self._create_mock_exist()
         exist.deleted_at = None
+        exist.is_image_type_import().AndReturn(False)
+        self.mox.ReplayAll()
+
+        nova_verifier._verify_validity(exist, 'all')
+        self.mox.VerifyAll()
+
+    def test_should_verify_null_os_distro_if_image_type_is_import(self):
+        self.mox.StubOutWithMock(config, 'flavor_field_name')
+        config.flavor_field_name().AndReturn('dummy_flavor_field_name')
+
+        exist = self._create_mock_exist()
+        exist.os_distro = ""
+        exist.is_image_type_import().AndReturn(True)
         self.mox.ReplayAll()
 
         nova_verifier._verify_validity(exist, 'all')

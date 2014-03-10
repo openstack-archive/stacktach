@@ -176,10 +176,12 @@ def _verify_basic_validity(exist):
 
 
 def _verify_optional_validity(exist):
+    is_image_type_import = exist.is_image_type_import()
     fields = {exist.rax_options: 'rax_options',
               exist.os_architecture: 'os_architecture',
-              exist.os_version: 'os_version',
-              exist.os_distro: 'os_distro'}
+              exist.os_version: 'os_version'}
+    if not is_image_type_import:
+        fields.update({exist.os_distro: 'os_distro'})
     for (field_value, field_name) in fields.items():
         if field_value == '':
             raise NullFieldException(field_name, exist.id, exist.instance)
@@ -187,8 +189,9 @@ def _verify_optional_validity(exist):
         'rax_options', exist.rax_options, exist.id, exist.instance)
     base_verifier._is_alphanumeric(
         'os_architecture', exist.os_architecture, exist.id, exist.instance)
-    base_verifier._is_alphanumeric(
-        'os_distro', exist.os_distro, exist.id, exist.instance)
+    if not is_image_type_import:
+        base_verifier._is_alphanumeric(
+            'os_distro', exist.os_distro, exist.id, exist.instance)
     base_verifier._is_alphanumeric(
         'os_version', exist.os_version, exist.id, exist.instance)
 

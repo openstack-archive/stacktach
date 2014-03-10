@@ -338,6 +338,9 @@ class InstanceExists(models.Model):
     def update_status(self, new_status):
         self.status = new_status
 
+    def is_image_type_import(self):
+        return (self.raw.image_type & 0xf) == 3
+
     @staticmethod
     def mark_exists_as_sent_unverified(message_ids):
         absent_exists = []
