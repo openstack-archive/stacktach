@@ -143,6 +143,13 @@ class Consumer(kombu.mixins.ConsumerMixin):
         self.should_stop = True
         shutdown_soon = True
 
+    def on_connection_revived(self):
+        _get_child_logger().debug("The connection to RabbitMQ was revived.")
+
+    def on_connection_error(self, exc, interval):
+        _get_child_logger().error("RabbitMQ Broker connection error: %r. "
+                                  "Trying again in %s seconds.", exc, interval)
+
 
 def continue_running():
     return not shutdown_soon
