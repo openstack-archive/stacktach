@@ -181,7 +181,7 @@ stacky/timings/uuid/
    Retrieve all timings for a given instance. Timings are the time
    deltas between related .start and .end notifications. For example,
    the time difference between ``compute.instance.run_instance.start``
-   and ``compute.instance.run_instance.end``.
+   and ``compute.instance.run_instance.end``. This url works only for nova.
 
    The first column of the response will be
 
@@ -217,7 +217,7 @@ stacky/timings/uuid/
       ]
 
   :query uuid: UUID of desired instance.
-  :query service: ``nova`` or ``glance``. default="nova"
+
 
 stacky/summary
 ==============
@@ -226,7 +226,7 @@ stacky/summary
 
    Returns timing summary information for each event type
    collected. Only notifications with ``.start``/``.end`` pairs
-   are considered.
+   are considered. This url works only for nova.
 
    This includes: ::
 
@@ -261,7 +261,6 @@ stacky/summary
       ]
 
   :query uuid: UUID of desired instance.
-  :query service: ``nova`` or ``glance``. default="nova"
   :query limit: the number of timings to return.
   :query offset: offset into query result set to start from.
 
@@ -275,7 +274,7 @@ stacky/request
 
    The ``?`` column will be ``E`` if the event came from the ``.error``
    queue. ``State`` and ``State'`` are the current state and the previous
-   state, respectively.
+   state, respectively. This url works only for nova.
 
    **Example request**:
 
@@ -708,101 +707,3 @@ stacky/search
   :query value: notification values to find.
   :query when_min: unixtime to start search
   :query when_max: unixtime to end search
-
-stacky/usage/launches
-=====================
-
-.. http:get:: http://example.com/stacky/launches/
-
-   Return a list of all instance launches.
-
-      **Example request**:
-
-   .. sourcecode:: http
-
-      GET /stacky/usages/launches/  HTTP/1.1
-      Host: example.com
-      Accept: application/json
-
-   **Example response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Vary: Accept
-      Content-Type: text/json
-
-      [
-        ["UUID", "Launched At", "Instance Type Id", "Instance Flavor Id"],
-        [
-          ... usage launch records ...
-        ]
-      ]
-
-  :query instance: desired instance UUID (optional)
-
-stacky/usage/deletes
-====================
-
-.. http:get:: http://example.com/stacky/deletes/
-
-   Return a list of all instance deletes.
-
-      **Example request**:
-
-   .. sourcecode:: http
-
-      GET /stacky/usages/deletes/  HTTP/1.1
-      Host: example.com
-      Accept: application/json
-
-   **Example response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Vary: Accept
-      Content-Type: text/json
-
-      [
-        ["UUID", "Launched At", "Deleted At"]
-        [
-          ... usage deleted records ...
-        ]
-      ]
-
-  :query instance: desired instance UUID (optional)
-
-
-stacky/usage/exists
-===================
-
-.. http:get:: http://example.com/stacky/exists/
-
-   Return a list of all instance exists notifications.
-
-      **Example request**:
-
-   .. sourcecode:: http
-
-      GET /stacky/usages/exists/  HTTP/1.1
-      Host: example.com
-      Accept: application/json
-
-   **Example response**:
-
-   .. sourcecode:: http
-
-      HTTP/1.1 200 OK
-      Vary: Accept
-      Content-Type: text/json
-
-      [
-        ["UUID", "Launched At", "Deleted At", "Instance Type Id",
-         "Instance Flavor Id", "Message ID", "Status"]
-        [
-          ... usage exists records ...
-        ]
-      ]
-
-  :query instance: desired instance UUID (optional)

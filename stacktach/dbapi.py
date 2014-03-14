@@ -1,24 +1,21 @@
-# Copyright (c) 2012 - Rackspace Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 import decimal
+import datetime
 import functools
 import json
 from datetime import datetime
@@ -284,24 +281,29 @@ def _find_exists_with_message_id(msg_id, exists_model, service):
                 .get(message_id=msg_id)]
 
 
-def _ping_processing_with_service(pings, service):
+def _ping_processing_with_service(pings, service, version=1):
     exists_model = _exists_model_factory(service)['klass']
     with transaction.commit_on_success():
-        for msg_id, status_code in pings.items():
-            try:
-                exists = _find_exists_with_message_id(msg_id, exists_model,
-                                                      service)
-                for exists in exists:
-                    exists.send_status = status_code
-                    exists.save()
-            except exists_model.DoesNotExist:
-                msg = "Could not find Exists record with message_id = '%s' for %s"
-                msg = msg % (msg_id, service)
-                raise NotFoundException(message=msg)
-            except exists_model.MultipleObjectsReturned:
-                msg = "Multiple Exists records with message_id = '%s' for %s"
-                msg = msg % (msg_id, service)
-                raise APIException(message=msg)
+            for msg_id, status_info in pings.items():
+                try:
+                    exists = _find_exists_with_message_id(msg_id, exists_model,
+                                                          service)
+                    for exists in exists:
+                        if version == 1:
+                            exists.send_status = status_info
+                        elif version == 2:
+                            exists.send_status = status_info.get("status", 0)
+                            exists.event_id = status_info.get("event_id", "")
+                        exists.save()
+                except exists_model.DoesNotExist:
+                    msg = "Could not find Exists record with message_id = '%s' for %s"
+                    msg = msg % (msg_id, service)
+                    raise NotFoundException(message=msg)
+                except exists_model.MultipleObjectsReturned:
+                    msg = "Multiple Exists records with message_id = '%s' for %s"
+                    msg = msg % (msg_id, service)
+                    print msg
+                    raise APIException(message=msg)
 
 
 def _exists_send_status_batch(request):
@@ -314,13 +316,13 @@ def _exists_send_status_batch(request):
             nova_pings = messages
             if nova_pings:
                 _ping_processing_with_service(nova_pings, service)
-        if version == 1:
-            nova_pings = messages['nova']
-            glance_pings = messages['glance']
+        if version == 1 or version == 2:
+            nova_pings = messages.get('nova', {})
+            glance_pings = messages.get('glance', {})
             if nova_pings:
-                _ping_processing_with_service(nova_pings, 'nova')
+                _ping_processing_with_service(nova_pings, 'nova', version)
             if glance_pings:
-                _ping_processing_with_service(glance_pings, 'glance')
+                _ping_processing_with_service(glance_pings, 'glance', version)
     else:
         msg = "'messages' missing from request body"
         raise BadRequestException(message=msg)
@@ -513,3 +515,102 @@ def repair_stacktach_down(request):
                             content_type="application/json")
     return response
 
+
+def _update_tenant_info_cache(tenant_info):
+    tenant_id = tenant_info['tenant']
+    try:
+        tenant = models.TenantInfo.objects\
+                                  .select_for_update()\
+                                  .get(tenant=tenant_id)
+    except models.TenantInfo.DoesNotExist:
+        tenant = models.TenantInfo(tenant=tenant_id)
+    tenant.name = tenant_info['name']
+    tenant.last_updated = datetime.utcnow()
+    tenant.save()
+
+    types = set()
+    for type_name, type_value in tenant_info['types'].items():
+        try:
+            tenant_type = models.TenantType.objects\
+                                           .get(name=type_name,
+                                                value=type_value)
+        except models.TenantType.DoesNotExist:
+            tenant_type = models.TenantType(name=type_name,
+                                            value=type_value)
+            tenant_type.save()
+        types.add(tenant_type)
+    tenant.types = list(types)
+    tenant.save()
+
+def _batch_update_tenant_info(info_list):
+    tenant_info = dict((str(info['tenant']), info) for info in info_list)
+    tenant_ids = set(tenant_info)
+    old_tenants = set(t['tenant'] for t in 
+                      models.TenantInfo.objects
+                               .filter(tenant__in=list(tenant_ids))
+                               .values('tenant'))
+    new_tenants = []
+    now = datetime.utcnow()
+    for tenant in (tenant_ids - old_tenants):
+        new_tenants.append(models.TenantInfo(tenant=tenant, 
+                                             name=tenant_info[tenant]['name'],
+                                             last_updated=now))
+    if new_tenants:
+        models.TenantInfo.objects.bulk_create(new_tenants)
+    tenants = models.TenantInfo.objects.filter(tenant__in=list(tenant_ids))
+    tenants.update(last_updated=now)
+
+    types = dict(((tt.name,tt.value),tt) for tt in models.TenantType.objects.all())
+    TypeXref = models.TenantInfo.types.through
+
+    changed_tenant_dbids = []
+    new_type_xrefs = []
+    for tenant in tenants:
+        info = tenant_info[tenant.tenant]
+        new_types = set()
+        for type_name, type_value in info['types'].items():
+            ttype = types.get((type_name, type_value))
+            if ttype is None:
+                ttype = models.TenantType(name=type_name,
+                                                value=type_value)
+                ttype.save()
+                types[(type_name,type_value)] = ttype
+            new_types.add(ttype)
+        cur_types = set(tenant.types.all())
+        if new_types != cur_types:
+            if cur_types:
+                changed_tenant_dbids.append(tenant.id)
+            for ttype in new_types:
+                new_type_xrefs.append(TypeXref(tenantinfo_id=tenant.id, tenanttype_id=ttype.id))
+    TypeXref.objects.filter(tenantinfo_id__in=changed_tenant_dbids).delete()
+    TypeXref.objects.bulk_create(new_type_xrefs)
+
+
+@api_call
+def batch_update_tenant_info(request):
+    if request.method not in ['PUT', 'POST']:
+        raise BadRequestException(message="Invalid method")
+
+    if request.body is None or request.body == '':
+        raise BadRequestException(message="Request body required")
+
+    body = json.loads(request.body)
+    if body.get('tenants') is not None:
+        tenants = body['tenants']
+        _batch_update_tenant_info(tenants)
+    else:
+        msg = "'tenants' missing from request body"
+        raise BadRequestException(message=msg)
+
+@api_call
+def update_tenant_info(request, tenant_id):
+    if request.method not in ['PUT', 'POST']:
+        raise BadRequestException(message="Invalid method")
+
+    if request.body is None or request.body == '':
+        raise BadRequestException(message="Request body required")
+
+    body = json.loads(request.body)
+    if body['tenant'] != tenant_id:
+        raise BadRequestException(message="Invalid tenant: %s != %s" % (body['tenant'], tenant_id)) 
+    _update_tenant_info_cache(body)

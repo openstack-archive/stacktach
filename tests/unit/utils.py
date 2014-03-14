@@ -1,23 +1,19 @@
-# Copyright (c) 2012 - Rackspace Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 import datetime
 import decimal
 
@@ -43,6 +39,7 @@ DECIMAL_DUMMY_TIME = dt.dt_to_decimal(DUMMY_TIME)
 MESSAGE_ID_1 = "7f28f81b-29a2-43f2-9ba1-ccb3e53ab6c8"
 MESSAGE_ID_2 = "4d596126-0f04-4329-865f-7b9a7bd69bcf"
 MESSAGE_ID_3 = "4d596126-0f04-4329-865f-797387adf45c"
+MESSAGE_ID_4 = "4d596126-0f04-4329-865f-797387adf45e"
 
 BANDWIDTH_PUBLIC_OUTBOUND = 1697240969
 
@@ -73,6 +70,9 @@ SIZE_2 = 4567
 
 CREATED_AT_1 = decimal.Decimal("10.1")
 CREATED_AT_2 = decimal.Decimal("11.1")
+
+IMAGE_OWNER_1 = "owner_1"
+IMAGE_OWNER_2 = "owner_2"
 
 TIMESTAMP_1 = "2013-06-20 17:31:57.939614"
 SETTLE_TIME = 5
@@ -201,3 +201,10 @@ def make_verifier_config(notifs):
                                     GLANCE_VERIFIER_EVENT_TYPE,
                                     FLAVOR_FIELD_NAME)
         return config
+
+
+def mock_datetime_utcnow(mox, time):
+    mox.StubOutWithMock(datetime, 'datetime')
+    datetime.datetime.utcnow().AndReturn(time)
+    mox.ReplayAll()
+

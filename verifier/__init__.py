@@ -1,22 +1,19 @@
-# Copyright (c) 2012 - Rackspace Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 import datetime
 
 
@@ -46,16 +43,22 @@ class AmbiguousResults(VerificationException):
 
 
 class FieldMismatch(VerificationException):
-    def __init__(self, field_name, expected, actual, uuid):
+    def __init__(self, field_name, entity_1, entity_2, uuid):
+        #instance fields for testing ease
         self.field_name = field_name
-        self.expected = expected
-        self.actual = actual
+        self.entity_1 = entity_1
+        self.entity_2 = entity_2
+        self.uuid = uuid
+
         self.reason = \
-            "Failed at {failed_at} UTC for {uuid}: Expected {field_name} " \
-            "to be '{expected}' got '{actual}'".\
-            format(failed_at=datetime.datetime.utcnow(), uuid=uuid,
-                   field_name=field_name, expected=expected,
-                   actual=actual)
+            "Failed at {failed_at} UTC for {uuid}: Data mismatch for " \
+            "'{field_name}' - '{name_1}' contains '{value_1}' but '{name_2}' " \
+            "contains '{value_2}'".\
+            format(failed_at=datetime.datetime.utcnow(), uuid=self.uuid,
+                   field_name=self.field_name, name_1=entity_1['name'],
+                   value_1=self.entity_1['value'],
+                   name_2=self.entity_2['name'],
+                   value_2=self.entity_2['value'])
 
 
 class NullFieldException(VerificationException):
@@ -70,11 +73,16 @@ class NullFieldException(VerificationException):
 
 class WrongTypeException(VerificationException):
     def __init__(self, field_name, value, exist_id, uuid):
+        #made instance fields to ease testing
         self.field_name = field_name
+        self.value = value
+        self.exist_id = exist_id
+        self.uuid = uuid
+
         self.reason = \
             "Failed at {failed_at} UTC for {uuid}: " \
             "{{{field_name}: {value}}} was of incorrect type for " \
             "exist id {exist_id}".format(
-                failed_at=datetime.datetime.utcnow(), uuid=uuid,
-                field_name=field_name, value=value, exist_id=exist_id)
-
+                failed_at=datetime.datetime.utcnow(), uuid=self.uuid,
+                field_name=self.field_name, value=self.value,
+                exist_id=self.exist_id)

@@ -10,18 +10,28 @@
 
 . /lib/lsb/init-functions
 
-WORKDIR=/srv/www/stacktach/app
+if [ -f /etc/default/stacktach ] 
+then
+	. /etc/default/stacktach
+fi
+
+WORKDIR=${STACKTACH_INSTALL_DIR:-/srv/www/stacktach/app}
 DAEMON=/usr/bin/python
 ARGS=$WORKDIR/worker/start_workers.py
 PIDFILE=/var/run/stacktach.pid
 
-export DJANGO_SETTINGS_MODULE="settings"
+export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-settings}"
 
 case "$1" in
   start)
     echo "Starting stacktach workers"
     cd $WORKDIR
-    /sbin/start-stop-daemon --start --pidfile $PIDFILE --make-pidfile -b --exec $DAEMON $ARGS
+    if id -un stacktach >/dev/null 2>&1
+    then
+	    /sbin/start-stop-daemon --start --pidfile $PIDFILE --chuid stacktach --make-pidfile -b --exec $DAEMON $ARGS
+    else
+	    /sbin/start-stop-daemon --start --pidfile $PIDFILE --make-pidfile -b --exec $DAEMON $ARGS
+    fi
     ;;
   stop)
     echo "Stopping stacktach workers"

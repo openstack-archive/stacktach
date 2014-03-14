@@ -1,23 +1,19 @@
-# Copyright (c) 2013 - Rackspace Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 import argparse
 import datetime
 import functools
@@ -29,6 +25,7 @@ sys.path.append(os.environ.get('STACKTACH_INSTALL_DIR', '/stacktach'))
 
 import usage_audit
 
+from stacktach.models import InstanceUsage
 from stacktach import datetime_to_decimal as dt
 from stacktach import models
 from stacktach.reconciler import Reconciler
@@ -96,6 +93,14 @@ def _get_exists(beginning, ending):
     return models.InstanceExists.objects.filter(**filters)
 
 
+def cell_and_compute(instance, launched_at):
+    usage = InstanceUsage.find(instance, launched_at)[0]
+    deployment = usage.latest_deployment_for_request_id()
+    cell = (deployment and deployment.name) or '-'
+    compute = usage.host() or '-'
+    return cell, compute
+
+
 def _audit_launches_to_exists(launches, exists, beginning):
     fails = []
     for (instance, launches) in launches.items():
@@ -114,16 +119,22 @@ def _audit_launches_to_exists(launches, exists, beginning):
                     if reconciler:
                         args = (expected['id'], beginning)
                         rec = reconciler.missing_exists_for_instance(*args)
+                    launched_at = dt.dt_from_decimal(expected['launched_at'])
                     msg = "Couldn't find exists for launch (%s, %s)"
-                    msg = msg % (instance, expected['launched_at'])
-                    fails.append(['Launch', expected['id'], msg, 'Y' if rec else 'N'])
+                    msg = msg % (instance, launched_at)
+                    cell, compute = cell_and_compute(instance, launched_at)
+                    fails.append(['Launch', expected['id'], msg,
+                                  'Y' if rec else 'N', cell, compute])
         else:
             rec = False
             if reconciler:
                 args = (launches[0]['id'], beginning)
                 rec = reconciler.missing_exists_for_instance(*args)
             msg = "No exists for instance (%s)" % instance
-            fails.append(['Launch', '-', msg, 'Y' if rec else 'N'])
+            launched_at = dt.dt_from_decimal(launches[0]['launched_at'])
+            cell, compute = cell_and_compute(instance, launched_at)
+            fails.append(['-', msg, 'Y' if rec else 'N',
+                          cell, compute])
     return fails
 
 
@@ -233,7 +244,7 @@ def store_results(start, end, summary, details):
         'created': dt.dt_to_decimal(datetime.datetime.utcnow()),
         'period_start': start,
         'period_end': end,
-        'version': 6,
+        'version': 7,
         'name': 'nova usage audit'
     }
 
@@ -242,10 +253,15 @@ def store_results(start, end, summary, details):
 
 
 def make_json_report(summary, details):
-    report = [{'summary': summary},
-              ['Object', 'ID', 'Error Description', 'Reconciled?']]
-    report.extend(details['exist_fails'])
-    report.extend(details['launch_fails'])
+    report = {
+        'summary': summary,
+        'exist_fail_headers': ['Exists Row ID', 'Error Description', 'Cell',
+                               'Compute'],
+        'exist_fails': details['exist_fails'],
+        'launch_fail_headers': ['Launch Row ID', 'Error Description',
+                                'Reconciled?', 'Cell', 'Compute'],
+        'launch_fails': details['launch_fails']
+    }
     return json.dumps(report)
 
 

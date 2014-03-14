@@ -1,23 +1,19 @@
-# Copyright (c) 2012 - Rackspace Inc.
-#
-# Permission is hereby granted, free of charge, to any person obtaining a copy
-# of this software and associated documentation files (the "Software"), to
-# deal in the Software without restriction, including without limitation the
-# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-# sell copies of the Software, and to permit persons to whom the Software is
-# furnished to do so, subject to the following conditions:
-#
-# The above copyright notice and this permission notice shall be included in
-# all copies or substantial portions of the Software.
-#
-# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-# IN THE SOFTWARE.
-
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+# 
+#   http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
 import datetime
 import json
 import os
@@ -53,35 +49,54 @@ def _verify_field_mismatch(exists, launch):
     flavor_field_name = config.flavor_field_name()
     if not base_verifier._verify_date_field(
             launch.launched_at, exists.launched_at, same_second=True):
-        raise FieldMismatch('launched_at', exists.launched_at,
-                            launch.launched_at, exists.instance)
+        raise FieldMismatch(
+            'launched_at',
+            {'name': 'exists', 'value': exists.launched_at},
+            {'name': 'launches', 'value': launch.launched_at},
+            exists.instance)
 
     if getattr(launch, flavor_field_name) != \
             getattr(exists, flavor_field_name):
-        raise FieldMismatch(flavor_field_name,
-                            getattr(exists, flavor_field_name),
-                            getattr(launch, flavor_field_name),
-                            exists.instance)
+        raise FieldMismatch(
+            flavor_field_name,
+            {'name': 'exists', 'value': getattr(exists, flavor_field_name)},
+            {'name': 'launches', 'value': getattr(launch, flavor_field_name)},
+            exists.instance)
 
     if launch.tenant != exists.tenant:
-        raise FieldMismatch('tenant', exists.tenant, launch.tenant,
-                            exists.instance)
+        raise FieldMismatch(
+            'tenant',
+            {'name': 'exists', 'value': exists.tenant},
+            {'name': 'launches', 'value': launch.tenant},
+            exists.instance)
 
     if launch.rax_options != exists.rax_options:
-        raise FieldMismatch('rax_options', exists.rax_options,
-                            launch.rax_options, exists.instance)
+        raise FieldMismatch(
+            'rax_options',
+            {'name': 'exists', 'value': exists.rax_options},
+            {'name': 'launches', 'value': launch.rax_options},
+            exists.instance)
 
     if launch.os_architecture != exists.os_architecture:
-        raise FieldMismatch('os_architecture', exists.os_architecture,
-                            launch.os_architecture, exists.instance)
+        raise FieldMismatch(
+            'os_architecture',
+            {'name': 'exists', 'value': exists.os_architecture},
+            {'name': 'launches', 'value': launch.os_architecture},
+            exists.instance)
 
     if launch.os_version != exists.os_version:
-        raise FieldMismatch('os_version', exists.os_version,
-                            launch.os_version, exists.instance)
+        raise FieldMismatch(
+            'os_version',
+            {'name': 'exists', 'value': exists.os_version},
+            {'name': 'launches', 'value': launch.os_version},
+            exists.instance)
 
     if launch.os_distro != exists.os_distro:
-        raise FieldMismatch('os_distro', exists.os_distro,
-                            launch.os_distro, exists.instance)
+        raise FieldMismatch(
+            'os_distro',
+            {'name': 'exists', 'value': exists.os_distro},
+            {'name': 'launches', 'value': launch.os_distro},
+            exists.instance)
 
 
 def _verify_for_launch(exist, launch=None,
@@ -147,13 +162,19 @@ def _verify_for_delete(exist, delete=None,
     if delete:
         if not base_verifier._verify_date_field(
                 delete.launched_at, exist.launched_at, same_second=True):
-            raise FieldMismatch('launched_at', exist.launched_at,
-                                delete.launched_at, exist.instance)
+            raise FieldMismatch(
+                'launched_at',
+                {'name': 'exists', 'value': exist.launched_at},
+                {'name': 'deletes', 'value': delete.launched_at},
+                exist.instance)
 
         if not base_verifier._verify_date_field(
                 delete.deleted_at, exist.deleted_at, same_second=True):
-            raise FieldMismatch('deleted_at', exist.deleted_at,
-                                delete.deleted_at, exist.instance)
+            raise FieldMismatch(
+                'deleted_at',
+                {'name': 'exists', 'value': exist.deleted_at},
+                {'name': 'deletes', 'value': delete.deleted_at},
+                exist.instance)
 
 
 def _verify_basic_validity(exist):
@@ -178,10 +199,11 @@ def _verify_basic_validity(exist):
 def _verify_optional_validity(exist):
     is_image_type_import = exist.is_image_type_import()
     fields = {exist.rax_options: 'rax_options',
-              exist.os_architecture: 'os_architecture',
-              exist.os_version: 'os_version'}
+              exist.os_architecture: 'os_architecture'
+              }
     if not is_image_type_import:
-        fields.update({exist.os_distro: 'os_distro'})
+        fields.update({exist.os_distro: 'os_distro',
+                       exist.os_version: 'os_version'})
     for (field_value, field_name) in fields.items():
         if field_value == '':
             raise NullFieldException(field_name, exist.id, exist.instance)
@@ -192,8 +214,8 @@ def _verify_optional_validity(exist):
     if not is_image_type_import:
         base_verifier._is_alphanumeric(
             'os_distro', exist.os_distro, exist.id, exist.instance)
-    base_verifier._is_alphanumeric(
-        'os_version', exist.os_version, exist.id, exist.instance)
+        base_verifier._is_alphanumeric(
+            'os_version', exist.os_version, exist.id, exist.instance)
 
 
 def _verify_validity(exist, validation_level):
