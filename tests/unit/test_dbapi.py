@@ -19,7 +19,6 @@
 # IN THE SOFTWARE.
 
 import datetime
-from decimal import Decimal
 import json
 
 from django.db.models import Count
@@ -36,6 +35,7 @@ from utils import INSTANCE_ID_1
 from utils import MESSAGE_ID_1
 from utils import MESSAGE_ID_2
 from utils import MESSAGE_ID_3
+from utils import MESSAGE_ID_4
 
 
 class DBAPITestCase(StacktachBaseTestCase):
@@ -638,6 +638,71 @@ class DBAPITestCase(StacktachBaseTestCase):
         exists2 = self.mox.CreateMockAnything()
         results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
         exists2.save()
+        trans_obj.__exit__(None, None, None)
+        self.mox.ReplayAll()
+
+        resp = dbapi.exists_send_status(fake_request, 'batch')
+        self.assertEqual(resp.status_code, 200)
+        self.mox.VerifyAll()
+
+    def test_send_status_batch_accepts_post_for_nova_and_glance_when_version_is_2(
+            self):
+        fake_request = self.mox.CreateMockAnything()
+        fake_request.method = 'POST'
+        fake_request.GET = {'service': 'glance'}
+        messages = {
+            'nova': {MESSAGE_ID_3: {'status': 201,
+                                    'event_id':
+                                        '95347e4d-4737-4438-b774-6a9219d78d2a'},
+                     MESSAGE_ID_4: {'status': 201,
+                                    'event_id':
+                                        '895347e4d-4737-4438-b774-6a9219d78d2a'}
+            },
+            'glance': {MESSAGE_ID_1: {'status': 201,
+                                      'event_id':
+                                          '95347e4d-4737-4438-b774-6a9219d78d2a'},
+                       MESSAGE_ID_2: {'status': 201,
+                                      'event_id':
+                                          '895347e4d-4737-4438-b774-6a9219d78d2a'}
+            }
+        }
+        body_dict = {'version': 2, 'messages': messages}
+        body = json.dumps(body_dict)
+        fake_request.body = body
+        self.mox.StubOutWithMock(transaction, 'commit_on_success')
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
+        results1 = self.mox.CreateMockAnything()
+        results2 = self.mox.CreateMockAnything()
+        models.InstanceExists.objects.select_for_update().AndReturn(results1)
+        exists1 = self.mox.CreateMockAnything()
+        results1.get(message_id=MESSAGE_ID_4).AndReturn(exists1)
+        exists1.save()
+        models.InstanceExists.objects.select_for_update().AndReturn(results2)
+        exists2 = self.mox.CreateMockAnything()
+        results2.get(message_id=MESSAGE_ID_3).AndReturn(exists2)
+        exists2.save()
+        trans_obj.__exit__(None, None, None)
+        trans_obj = self.mox.CreateMockAnything()
+        transaction.commit_on_success().AndReturn(trans_obj)
+        trans_obj.__enter__()
+        results1 = self.mox.CreateMockAnything()
+        models.ImageExists.objects.select_for_update().AndReturn(results1)
+        exists1A = self.mox.CreateMockAnything()
+        exists1B = self.mox.CreateMockAnything()
+        results1.filter(message_id=MESSAGE_ID_2).AndReturn(
+            [exists1A, exists1B])
+        exists1A.save()
+        exists1B.save()
+        results2 = self.mox.CreateMockAnything()
+        models.ImageExists.objects.select_for_update().AndReturn(results2)
+        exists2A = self.mox.CreateMockAnything()
+        exists2B = self.mox.CreateMockAnything()
+        results2.filter(message_id=MESSAGE_ID_1).AndReturn(
+            [exists2A, exists2B])
+        exists2A.save()
+        exists2B.save()
         trans_obj.__exit__(None, None, None)
         self.mox.ReplayAll()
 

@@ -89,6 +89,54 @@ Uses the provided message_id's and http status codes to update image and instanc
         ]
         "version": 1
       }
+
+  **Example V2 request**:
+
+   .. sourcecode:: http
+
+      PUT db/confirm/usage/exists/batch/ HTTP/1.1
+      Host: example.com
+      Accept: application/json
+
+      {
+        "messages":
+        [
+          {
+            "nova":
+            [
+              {"nova_message_id1":
+                  {
+                    "event_id": "AH_event_id_1",
+                    "status": 201
+                  }
+              },
+              {"nova_message_id2":
+                  {
+                    "event_id": "AH_event_id_2",
+                    "status": 201
+                  }
+              }
+            ],
+            "glance":
+            [
+              {"glance_message_id1":
+                   {
+                    "event_id": "AH_event_id_3",
+                    "status": 201},
+                    }
+              },
+              {"glance_message_id2":
+                   {
+                    "event_id": "AH_event_id_3",
+                    "status": 201
+                    }
+              }
+            ]
+          }
+        ]
+        "version": 2
+      }
+
   **Example response**:
 
    .. sourcecode:: http

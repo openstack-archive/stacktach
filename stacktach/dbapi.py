@@ -284,24 +284,29 @@ def _find_exists_with_message_id(msg_id, exists_model, service):
                 .get(message_id=msg_id)]
 
 
-def _ping_processing_with_service(pings, service):
+def _ping_processing_with_service(pings, service, version=1):
     exists_model = _exists_model_factory(service)['klass']
     with transaction.commit_on_success():
-        for msg_id, status_code in pings.items():
-            try:
-                exists = _find_exists_with_message_id(msg_id, exists_model,
-                                                      service)
-                for exists in exists:
-                    exists.send_status = status_code
-                    exists.save()
-            except exists_model.DoesNotExist:
-                msg = "Could not find Exists record with message_id = '%s' for %s"
-                msg = msg % (msg_id, service)
-                raise NotFoundException(message=msg)
-            except exists_model.MultipleObjectsReturned:
-                msg = "Multiple Exists records with message_id = '%s' for %s"
-                msg = msg % (msg_id, service)
-                raise APIException(message=msg)
+            for msg_id, status_info in pings.items():
+                try:
+                    exists = _find_exists_with_message_id(msg_id, exists_model,
+                                                          service)
+                    for exists in exists:
+                        if version == 1:
+                            exists.send_status = status_info
+                        elif version == 2:
+                            exists.send_status = status_info.get("status", 0)
+                            exists.event_id = status_info.get("event_id", "")
+                        exists.save()
+                except exists_model.DoesNotExist:
+                    msg = "Could not find Exists record with message_id = '%s' for %s"
+                    msg = msg % (msg_id, service)
+                    raise NotFoundException(message=msg)
+                except exists_model.MultipleObjectsReturned:
+                    msg = "Multiple Exists records with message_id = '%s' for %s"
+                    msg = msg % (msg_id, service)
+                    print msg
+                    raise APIException(message=msg)
 
 
 def _exists_send_status_batch(request):
@@ -314,13 +319,13 @@ def _exists_send_status_batch(request):
             nova_pings = messages
             if nova_pings:
                 _ping_processing_with_service(nova_pings, service)
-        if version == 1:
-            nova_pings = messages['nova']
-            glance_pings = messages['glance']
+        if version == 1 or version == 2:
+            nova_pings = messages.get('nova', {})
+            glance_pings = messages.get('glance', {})
             if nova_pings:
-                _ping_processing_with_service(nova_pings, 'nova')
+                _ping_processing_with_service(nova_pings, 'nova', version)
             if glance_pings:
-                _ping_processing_with_service(glance_pings, 'glance')
+                _ping_processing_with_service(glance_pings, 'glance', version)
     else:
         msg = "'messages' missing from request body"
         raise BadRequestException(message=msg)
