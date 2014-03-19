@@ -1,0 +1,10 @@
+static usr/share/stacktach/
+templates usr/share/stacktach/
+manage.py usr/share/stacktach/
+urls.py usr/share/stacktach/
+settings.py usr/share/stacktach/
+worker usr/share/stacktach/
+etc/*.py etc/stacktach/
+etc/*.json etc/stacktach/
+etc/nginx/stacktach etc/nginx/sites-available/
+etc/init/stacktach.conf etc/init/
