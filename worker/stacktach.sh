@@ -10,12 +10,17 @@
 
 . /lib/lsb/init-functions
 
-WORKDIR=/srv/www/stacktach/app
+if [ -f /etc/default/stacktach ] 
+then
+	. /etc/default/stacktach
+fi
+
+WORKDIR=${STACKTACH_INSTALL_DIR:-/srv/www/stacktach/app}
 DAEMON=/usr/bin/python
 ARGS=$WORKDIR/worker/start_workers.py
 PIDFILE=/var/run/stacktach.pid
 
-export DJANGO_SETTINGS_MODULE="settings"
+export DJANGO_SETTINGS_MODULE="${DJANGO_SETTINGS_MODULE:-settings}"
 
 case "$1" in
   start)
