@@ -1412,12 +1412,13 @@ class NovaVerifierValidityTestCase(StacktachBaseTestCase):
         nova_verifier._verify_validity(exist, 'all')
         self.mox.VerifyAll()
 
-    def test_should_verify_null_os_distro_if_image_type_is_import(self):
+    def test_should_verify_in_spite_of_null_os_distro_and_os_version_if_image_type_is_import(self):
         self.mox.StubOutWithMock(config, 'flavor_field_name')
         config.flavor_field_name().AndReturn('dummy_flavor_field_name')
 
         exist = self._create_mock_exist()
         exist.os_distro = ""
+        exist.os_version = ""
         exist.is_image_type_import().AndReturn(True)
         self.mox.ReplayAll()
 
