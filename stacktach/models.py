@@ -175,11 +175,14 @@ class InstanceUsage(models.Model):
     rax_options = models.TextField(null=True, blank=True)
 
     def deployment(self):
-        raws = RawData.objects.filter(request_id=self.request_id)
-        if raws.count() == 0:
-            return False
-        raw = raws[0]
-        return raw.deployment
+        return self.latest_raw_for_request_id().deployment.name
+
+    def latest_raw_for_request_id(self):
+        return RawData.objects.filter(
+            request_id=self.request_id).order_by('-id')[0]
+
+    def host(self):
+        return self.latest_raw_for_request_id().host
 
     @staticmethod
     def find(instance, launched_at):
