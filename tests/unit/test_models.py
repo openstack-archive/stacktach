@@ -20,12 +20,11 @@
 from datetime import datetime
 
 import unittest
-from django.db.models import Q
 import mox
-from stacktach.models import RawData, GlanceRawData, GenericRawData, ImageDeletes, InstanceExists, ImageExists
-from tests.unit.utils import IMAGE_UUID_1
-from stacktach import datetime_to_decimal as dt, models
 from stacktach.models import RawData, GlanceRawData, GenericRawData
+from stacktach.models import ImageDeletes, InstanceExists, ImageExists
+from tests.unit.utils import IMAGE_UUID_1
+from stacktach import datetime_to_decimal as dt
 from tests.unit import StacktachBaseTestCase
 
 
