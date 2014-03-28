@@ -44,7 +44,6 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'StackTach'
-copyright = u'2014, Sandy Walsh'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -165,7 +164,7 @@ html_static_path = ['_static']
 #html_show_sphinx = True
 
 # If true, "(C) Copyright ..." is shown in the HTML footer. Default is True.
-#html_show_copyright = True
+html_show_copyright = False
 
 # If true, an OpenSearch description file will be output, and all pages will
 # contain a <link> tag referring to it.  The value of this option must be the
@@ -241,7 +240,7 @@ man_pages = [
 #  dir menu entry, description, category)
 texinfo_documents = [
   ('index', 'StackTach', u'StackTach Documentation',
-   u'Sandy Walsh', 'StackTach', 'One line description of project.',
+   u'Sandy Walsh', 'StackTach', 'Usage, monitoring and billing for OpenStack.',
    'Miscellaneous'),
 ]
 
