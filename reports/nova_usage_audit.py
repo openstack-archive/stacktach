@@ -95,7 +95,10 @@ def _get_exists(beginning, ending):
 
 def cell_and_compute(instance, launched_at):
     usage = InstanceUsage.find(instance, launched_at)[0]
-    deployment = usage.latest_deployment_for_request_id()
+    try:
+        deployment = usage.latest_deployment_for_request_id()
+    except IndexError:
+        deployment = None
     cell = (deployment and deployment.name) or '-'
     compute = usage.host() or '-'
     return cell, compute
