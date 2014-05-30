@@ -185,8 +185,10 @@ class InstanceUsage(models.Model):
         return raw and raw.deployment
 
     def latest_raw_for_request_id(self):
-        return self.request_id and RawData.objects.filter(
-            request_id=self.request_id).order_by('-id')[0]
+        raw = []
+        if self.request_id:
+            raw = RawData.objects.filter(request_id=self.request_id).order_by('-id')
+        return (len(raw) > 0 and raw[0]) or None
 
     def host(self):
         raw = self.latest_raw_for_request_id()
