@@ -1,0 +1,8 @@
+Verified+2: Jenkins
+Code-Review+2: Sandy Walsh <sandy.walsh@rackspace.com>
+Workflow+1: Sandy Walsh <sandy.walsh@rackspace.com>
+Submitted-by: Jenkins
+Submitted-at: Thu, 03 Jul 2014 14:53:43 +0000
+Reviewed-on: https://review.openstack.org/104095
+Project: stackforge/stacktach
+Branch: refs/heads/stable
