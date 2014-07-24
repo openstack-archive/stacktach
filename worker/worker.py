@@ -35,6 +35,7 @@ except ImportError:
 
 from pympler.process import ProcessMemoryInfo
 
+from django.db import connection as db_connection
 from stacktach import db
 from stacktach import message_service
 from stacktach import stacklog
@@ -171,6 +172,8 @@ def continue_running():
 def exit_or_sleep(exit=False):
     if exit:
         sys.exit(1)
+    #so django 1.6+ will properly reconnect
+    db_connection.close()
     time.sleep(5)
 
 
