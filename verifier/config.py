@@ -21,7 +21,7 @@ config_filename = os.environ.get('STACKTACH_VERIFIER_CONFIG',
                                  'stacktach_verifier_config.json')
 try:
     from local_settings import *
-    config_filename = config_filename
+    config_filename = STACKTACH_VERIFIER_CONFIG
 except ImportError:
     pass
 
