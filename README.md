@@ -10,6 +10,7 @@ Watch the video here: http://www.youtube.com/watch?v=pZgwDHZ3wm0
 OpenStack has the ability to publish notifications to a RabbitMQ exchange as they occur. So, rather than pouring through reams of logs across multiple servers, you can now watch requests travel through the system from a single location.
 
 A detailed description of the notifications published by OpenStack [is available here](http://wiki.openstack.org/SystemUsageData)
+Test commit
 
 ## Documentation
 http://stacktach.readthedocs.org/
