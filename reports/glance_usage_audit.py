@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -100,9 +100,9 @@ def audit_for_period(beginning, ending):
 
 def _verifier_audit_for_day(beginning, ending, exists_model):
     summary = {}
-    period = 60*60*24-0.000001
+    period = 60*60*24
     if args.period_length == 'hour':
-        period = 60*60-0.000001
+        period = 60*60
     filters = {
         'raw__when__gte': beginning,
         'raw__when__lte': ending,
@@ -126,7 +126,8 @@ def _verifier_audit_for_day(beginning, ending, exists_model):
 
 def _audit_for_exists(exists_query):
     (verified, reconciled,
-     fail, pending, verifying) = usage_audit._status_queries(exists_query)
+     fail, pending, verifying, sent_unverified,
+     sent_failed, sent_verifying) = usage_audit._status_queries(exists_query)
 
     (success, unsent, redirect,
      client_error, server_error) = usage_audit._send_status_queries(verified)
@@ -137,6 +138,9 @@ def _audit_for_exists(exists_query):
         'failed': fail.count(),
         'pending': pending.count(),
         'verifying': verifying.count(),
+        'sent_unverified': sent_unverified.count(),
+        'sent_failed': sent_failed.count(),
+        'sent_verifying': sent_verifying.count(),
         'send_status': {
             'success': success.count(),
             'unsent': unsent.count(),
