@@ -12,7 +12,7 @@ The idea behind StackTach's Usage Verification is to track changes through insta
 
 Configuring Usage Verification
 ******************************
-Usage Verification in StackTach is done by a separate verifier process. A sample configuration file can be found at ``./etc/sample_stacktach_verifier_config.sjon``
+Usage Verification in StackTach is done by a separate verifier process. A sample configuration file can be found at ``./etc/sample_stacktach_verifier_config.json``
 
 The default config provides most all settings that are required for the verifier. ::
 
