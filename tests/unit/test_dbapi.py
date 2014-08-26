@@ -506,7 +506,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         fake_request.body = body
 
         info_values = self.mox.CreateMockAnything()
-        models.TenantInfo.objects.filter(tenant__in=['test_old', 'test_new']).AndReturn(info_values)
+        models.TenantInfo.objects.filter(tenant__in=mox.SameElementsAs(['test_old', 'test_new'])).AndReturn(info_values)
         info_values.values('tenant').AndReturn([dict(tenant='test_old')])
         models.TenantInfo.objects.bulk_create(mox.And(
             Length(1), mox.IsA(list), mox.In(mox.And(
@@ -517,7 +517,7 @@ class DBAPITestCase(StacktachBaseTestCase):
                      ))))
 
         fake_tenants = self.mox.CreateMockAnything()
-        models.TenantInfo.objects.filter(tenant__in=['test_old', 'test_new'])\
+        models.TenantInfo.objects.filter(tenant__in=mox.SameElementsAs(['test_old', 'test_new']))\
                 .AndReturn(fake_tenants)
         fake_tenants.update(last_updated=TEST_DATE)
         fake_tenants.__iter__().AndReturn(iter(TEST_OBJECTS))
