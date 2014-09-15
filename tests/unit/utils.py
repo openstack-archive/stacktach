@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -22,10 +22,10 @@ TENANT_ID_2 = 'testtenantid2'
 
 from stacktach import datetime_to_decimal as dt
 
-IMAGE_UUID_1 = "12345678-6352-4dbc-8271-96cc54bf14cd"
+IMAGE_UUID_1 = "1111aaaa-6352-4dbc-8271-96cc54bf14cd"
 
-INSTANCE_ID_1 = "08f685d9-6352-4dbc-8271-96cc54bf14cd"
-INSTANCE_ID_2 = "515adf96-41d3-b86d-5467-e584edc61dab"
+INSTANCE_ID_1 = "2222bbbb-6352-4dbc-8271-96cc54bf14cd"
+INSTANCE_ID_2 = "3333cccc-41d3-b86d-5467-e584edc61dab"
 
 INSTANCE_FLAVOR_ID_1 = "1"
 INSTANCE_FLAVOR_ID_2 = "performance2-120"
@@ -36,16 +36,16 @@ INSTANCE_TYPE_ID_2 = '54321'
 DUMMY_TIME = datetime.datetime.utcnow()
 DECIMAL_DUMMY_TIME = dt.dt_to_decimal(DUMMY_TIME)
 
-MESSAGE_ID_1 = "7f28f81b-29a2-43f2-9ba1-ccb3e53ab6c8"
-MESSAGE_ID_2 = "4d596126-0f04-4329-865f-7b9a7bd69bcf"
-MESSAGE_ID_3 = "4d596126-0f04-4329-865f-797387adf45c"
-MESSAGE_ID_4 = "4d596126-0f04-4329-865f-797387adf45e"
+MESSAGE_ID_1 = "4444dddd-29a2-43f2-9ba1-ccb3e53ab6c8"
+MESSAGE_ID_2 = "5555eeee-0f04-4329-865f-7b9a7bd69bcf"
+MESSAGE_ID_3 = "6666ffff-0f04-4329-865f-797387adf45c"
+MESSAGE_ID_4 = "7777aaaa-0f04-4329-865f-797387adf45e"
 
 BANDWIDTH_PUBLIC_OUTBOUND = 1697240969
 
-REQUEST_ID_1 = 'req-611a4d70-9e47-4b27-a95e-27996cc40c06'
-REQUEST_ID_2 = 'req-a951dec0-52ee-425d-9f56-d68bd1ad00ac'
-REQUEST_ID_3 = 'req-039a33f7-5849-4406-8166-4db8cd085f52'
+REQUEST_ID_1 = 'req-8888bbbb-9e47-4b27-a95e-27996cc40c06'
+REQUEST_ID_2 = 'req-9999cccc-52ee-425d-9f56-d68bd1ad00ac'
+REQUEST_ID_3 = 'req-0000dddd-5849-4406-8166-4db8cd085f52'
 
 RAX_OPTIONS_1 = '1'
 RAX_OPTIONS_2 = '2'
