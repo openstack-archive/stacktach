@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -284,8 +284,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.assertEqual(nf.field_name, 'image_size')
             self.assertEqual(
                 nf.reason, "Failed at 2014-01-02 03:04:05 UTC for "
-                "12345678-6352-4dbc-8271-96cc54bf14cd: image_size field was "
-                "null for exist id 23")
+                "%s: image_size field was "
+                "null for exist id 23" % IMAGE_UUID_1)
         self.mox.VerifyAll()
 
     def test_should_verify_that_created_at_in_exist_is_not_null(self):
@@ -305,8 +305,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         self.assertEqual(exception.field_name, 'created_at')
         self.assertEqual(exception.reason,
                          "Failed at 2014-01-01 01:02:03 UTC for "
-                         "12345678-6352-4dbc-8271-96cc54bf14cd: created_at "
-                         "field was null for exist id 23")
+                         "%s: created_at "
+                         "field was null for exist id 23" % IMAGE_UUID_1)
         self.mox.VerifyAll()
 
     def test_should_verify_that_uuid_in_exist_is_not_null(self):
@@ -348,8 +348,8 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
             self.assertEqual(
                 nf.reason,
                 "Failed at 2014-01-01 01:02:03 UTC for "
-                "12345678-6352-4dbc-8271-96cc54bf14cd: owner field was null "
-                "for exist id 23")
+                "%s: owner field was null "
+                "for exist id 23" % IMAGE_UUID_1)
         self.mox.VerifyAll()
 
     def test_should_verify_that_uuid_value_is_uuid_like(self):
@@ -536,14 +536,12 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         exist3.save()
         exist4.save()
         exist5.save()
-        self.pool.apply_async(glance_verifier._verify,
-                              args=([exist4],), callback=None)
-        self.pool.apply_async(glance_verifier._verify, args=([exist5],),
-                              callback=None)
-        self.pool.apply_async(glance_verifier._verify,
-                              args=([exist1, exist2],), callback=None)
-        self.pool.apply_async(glance_verifier._verify, args=([exist3],),
-                              callback=None)
+        for value in sent_results.values():
+            self.pool.apply_async(glance_verifier._verify,
+                                  args=(value,), callback=None)
+        for value in results.values():
+            self.pool.apply_async(glance_verifier._verify,
+                                  args=(value,), callback=None)
         self.mox.ReplayAll()
 
         self.glance_verifier.verify_for_range(when_max)
@@ -579,10 +577,9 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         exist1.save()
         exist2.save()
         exist3.save()
-        self.pool.apply_async(glance_verifier._verify, args=([exist1, exist2],),
-                              callback=callback)
-        self.pool.apply_async(glance_verifier._verify, args=([exist3],),
-                              callback=callback)
+        for value in results.values():
+            self.pool.apply_async(glance_verifier._verify, args=(value,),
+                                  callback=callback)
         self.mox.ReplayAll()
         self.glance_verifier.verify_for_range(
             when_max, callback=callback)

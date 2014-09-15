@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -430,7 +430,7 @@ class DBAPITestCase(StacktachBaseTestCase):
 
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'PUT'
-        body_dict = dict(tenant=TEST_TENANT, 
+        body_dict = dict(tenant=TEST_TENANT,
                          name='test name',
                          types=dict(test_type='thingy'))
         body = json.dumps(body_dict)
@@ -459,7 +459,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         TEST_DATE='test date time'
 
         mock_t1 = self.mox.CreateMock(models.TenantInfo)
-        mock_t1.id = 1 
+        mock_t1.id = 1
         mock_t1.tenant = 'test_old'
         mock_t1.name = 'test old name'
         mock_t1.types = self.mox.CreateMockAnything()
@@ -467,7 +467,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         mock_t1.last_updated = TEST_DATE
 
         mock_t2 = self.mox.CreateMock(models.TenantInfo)
-        mock_t2.id = 2 
+        mock_t2.id = 2
         mock_t2.tenant = 'test_new'
         mock_t2.name = 'test new name'
         mock_t2.last_updated = TEST_DATE
@@ -496,17 +496,17 @@ class DBAPITestCase(StacktachBaseTestCase):
 
         fake_request = self.mox.CreateMockAnything()
         fake_request.method = 'PUT'
-        body_dict = dict(tenants=[dict(tenant='test_old', 
+        body_dict = dict(tenants=[dict(tenant='test_old',
                                        name='test old name',
                                        types=dict(test_type='thingy')),
-                                  dict(tenant='test_new', 
+                                  dict(tenant='test_new',
                                        name='test new name',
                                        types=dict(test_type='whatzit'))])
         body = json.dumps(body_dict)
         fake_request.body = body
 
         info_values = self.mox.CreateMockAnything()
-        models.TenantInfo.objects.filter(tenant__in=['test_old', 'test_new']).AndReturn(info_values)
+        models.TenantInfo.objects.filter(tenant__in=mox.SameElementsAs(['test_old', 'test_new'])).AndReturn(info_values)
         info_values.values('tenant').AndReturn([dict(tenant='test_old')])
         models.TenantInfo.objects.bulk_create(mox.And(
             Length(1), mox.IsA(list), mox.In(mox.And(
@@ -517,7 +517,7 @@ class DBAPITestCase(StacktachBaseTestCase):
                      ))))
 
         fake_tenants = self.mox.CreateMockAnything()
-        models.TenantInfo.objects.filter(tenant__in=['test_old', 'test_new'])\
+        models.TenantInfo.objects.filter(tenant__in=mox.SameElementsAs(['test_old', 'test_new']))\
                 .AndReturn(fake_tenants)
         fake_tenants.update(last_updated=TEST_DATE)
         fake_tenants.__iter__().AndReturn(iter(TEST_OBJECTS))
@@ -679,22 +679,18 @@ class DBAPITestCase(StacktachBaseTestCase):
         trans_obj = self.mox.CreateMockAnything()
         transaction.commit_on_success().AndReturn(trans_obj)
         trans_obj.__enter__()
-        results1 = self.mox.CreateMockAnything()
-        models.InstanceExists.objects.select_for_update().AndReturn(results1)
-        exists1 = self.mox.CreateMockAnything()
-        results1.get(message_id=MESSAGE_ID_2).AndReturn(exists1)
-        exists1.save()
-        results2 = self.mox.CreateMockAnything()
-        models.InstanceExists.objects.select_for_update().AndReturn(results2)
-        exists2 = self.mox.CreateMockAnything()
-        results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
-        exists2.save()
+        for uuid, code in messages.items():
+            results = self.mox.CreateMockAnything()
+            models.InstanceExists.objects.select_for_update().AndReturn(results)
+            exists = self.mox.CreateMockAnything()
+            results.get(message_id=uuid).AndReturn(exists)
+            exists.save()
         trans_obj.__exit__(None, None, None)
         self.mox.ReplayAll()
 
         resp = dbapi.exists_send_status(fake_request, 'batch')
         self.assertEqual(resp.status_code, 200)
-        exists1.send_status = 200
+        exists.send_status = 200
         self.mox.VerifyAll()
 
     def test_send_status_batch_accepts_post_for_nova_and_glance_when_version_is_1(
@@ -719,25 +715,20 @@ class DBAPITestCase(StacktachBaseTestCase):
         results1.get(message_id=MESSAGE_ID_3).AndReturn(exists1)
         exists1.save()
         trans_obj.__exit__(None, None, None)
+
         trans_obj = self.mox.CreateMockAnything()
         transaction.commit_on_success().AndReturn(trans_obj)
         trans_obj.__enter__()
-        results1 = self.mox.CreateMockAnything()
-        models.ImageExists.objects.select_for_update().AndReturn(results1)
-        exists1A = self.mox.CreateMockAnything()
-        exists1B = self.mox.CreateMockAnything()
-        results1.filter(message_id=MESSAGE_ID_2).AndReturn(
-            [exists1A, exists1B])
-        exists1A.save()
-        exists1B.save()
-        results2 = self.mox.CreateMockAnything()
-        models.ImageExists.objects.select_for_update().AndReturn(results2)
-        exists2A = self.mox.CreateMockAnything()
-        exists2B = self.mox.CreateMockAnything()
-        results2.filter(message_id=MESSAGE_ID_1).AndReturn(
-            [exists2A, exists2B])
-        exists2A.save()
-        exists2B.save()
+
+        for uuid, code in messages['glance'].items():
+            query = self.mox.CreateMockAnything()
+            models.ImageExists.objects.select_for_update().AndReturn(query)
+            existsA = self.mox.CreateMockAnything()
+            existsB = self.mox.CreateMockAnything()
+            query.filter(message_id=uuid).AndReturn([existsA, existsB])
+            existsA.save()
+            existsB.save()
+
         trans_obj.__exit__(None, None, None)
         self.mox.ReplayAll()
 
@@ -757,16 +748,12 @@ class DBAPITestCase(StacktachBaseTestCase):
         trans_obj = self.mox.CreateMockAnything()
         transaction.commit_on_success().AndReturn(trans_obj)
         trans_obj.__enter__()
-        results1 = self.mox.CreateMockAnything()
-        models.InstanceExists.objects.select_for_update().AndReturn(results1)
-        exists1 = self.mox.CreateMockAnything()
-        results1.get(message_id=MESSAGE_ID_2).AndReturn(exists1)
-        exists1.save()
-        results2 = self.mox.CreateMockAnything()
-        models.InstanceExists.objects.select_for_update().AndReturn(results2)
-        exists2 = self.mox.CreateMockAnything()
-        results2.get(message_id=MESSAGE_ID_1).AndReturn(exists2)
-        exists2.save()
+        for uuid, code in messages.items():
+            results = self.mox.CreateMockAnything()
+            models.InstanceExists.objects.select_for_update().AndReturn(results)
+            exists = self.mox.CreateMockAnything()
+            results.get(message_id=uuid).AndReturn(exists)
+            exists.save()
         trans_obj.__exit__(None, None, None)
         self.mox.ReplayAll()
 
@@ -799,39 +786,29 @@ class DBAPITestCase(StacktachBaseTestCase):
         body = json.dumps(body_dict)
         fake_request.body = body
         self.mox.StubOutWithMock(transaction, 'commit_on_success')
+
         trans_obj = self.mox.CreateMockAnything()
         transaction.commit_on_success().AndReturn(trans_obj)
         trans_obj.__enter__()
-        results1 = self.mox.CreateMockAnything()
-        results2 = self.mox.CreateMockAnything()
-        models.InstanceExists.objects.select_for_update().AndReturn(results1)
-        exists1 = self.mox.CreateMockAnything()
-        results1.get(message_id=MESSAGE_ID_4).AndReturn(exists1)
-        exists1.save()
-        models.InstanceExists.objects.select_for_update().AndReturn(results2)
-        exists2 = self.mox.CreateMockAnything()
-        results2.get(message_id=MESSAGE_ID_3).AndReturn(exists2)
-        exists2.save()
+        for uuid, code in messages['nova'].items():
+            results = self.mox.CreateMockAnything()
+            models.InstanceExists.objects.select_for_update().AndReturn(results)
+            exists = self.mox.CreateMockAnything()
+            results.get(message_id=uuid).AndReturn(exists)
+            exists.save()
         trans_obj.__exit__(None, None, None)
+
         trans_obj = self.mox.CreateMockAnything()
         transaction.commit_on_success().AndReturn(trans_obj)
         trans_obj.__enter__()
-        results1 = self.mox.CreateMockAnything()
-        models.ImageExists.objects.select_for_update().AndReturn(results1)
-        exists1A = self.mox.CreateMockAnything()
-        exists1B = self.mox.CreateMockAnything()
-        results1.filter(message_id=MESSAGE_ID_2).AndReturn(
-            [exists1A, exists1B])
-        exists1A.save()
-        exists1B.save()
-        results2 = self.mox.CreateMockAnything()
-        models.ImageExists.objects.select_for_update().AndReturn(results2)
-        exists2A = self.mox.CreateMockAnything()
-        exists2B = self.mox.CreateMockAnything()
-        results2.filter(message_id=MESSAGE_ID_1).AndReturn(
-            [exists2A, exists2B])
-        exists2A.save()
-        exists2B.save()
+        for uuid, code in messages['glance'].items():
+            results = self.mox.CreateMockAnything()
+            models.ImageExists.objects.select_for_update().AndReturn(results)
+            existsA = self.mox.CreateMockAnything()
+            existsB = self.mox.CreateMockAnything()
+            results.filter(message_id=uuid).AndReturn([existsA, existsB])
+            existsA.save()
+            existsB.save()
         trans_obj.__exit__(None, None, None)
         self.mox.ReplayAll()
 
