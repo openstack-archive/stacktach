@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -284,26 +284,26 @@ def _find_exists_with_message_id(msg_id, exists_model, service):
 def _ping_processing_with_service(pings, service, version=1):
     exists_model = _exists_model_factory(service)['klass']
     with transaction.commit_on_success():
-            for msg_id, status_info in pings.items():
-                try:
-                    exists = _find_exists_with_message_id(msg_id, exists_model,
-                                                          service)
-                    for exists in exists:
-                        if version == 1:
-                            exists.send_status = status_info
-                        elif version == 2:
-                            exists.send_status = status_info.get("status", 0)
-                            exists.event_id = status_info.get("event_id", "")
-                        exists.save()
-                except exists_model.DoesNotExist:
-                    msg = "Could not find Exists record with message_id = '%s' for %s"
-                    msg = msg % (msg_id, service)
-                    raise NotFoundException(message=msg)
-                except exists_model.MultipleObjectsReturned:
-                    msg = "Multiple Exists records with message_id = '%s' for %s"
-                    msg = msg % (msg_id, service)
-                    print msg
-                    raise APIException(message=msg)
+        for msg_id, status_info in pings.items():
+            try:
+                rexists = _find_exists_with_message_id(msg_id, exists_model,
+                                                  service)
+                for exists in rexists:
+                    if version == 1:
+                        exists.send_status = status_info
+                    elif version == 2:
+                        exists.send_status = status_info.get("status", 0)
+                        exists.event_id = status_info.get("event_id", "")
+                    exists.save()
+            except exists_model.DoesNotExist:
+                msg = "Could not find Exists record with message_id = '%s' for %s"
+                msg = msg % (msg_id, service)
+                raise NotFoundException(message=msg)
+            except exists_model.MultipleObjectsReturned:
+                msg = "Multiple Exists records with message_id = '%s' for %s"
+                msg = msg % (msg_id, service)
+                print msg
+                raise APIException(message=msg)
 
 
 def _exists_send_status_batch(request):
@@ -545,14 +545,14 @@ def _update_tenant_info_cache(tenant_info):
 def _batch_update_tenant_info(info_list):
     tenant_info = dict((str(info['tenant']), info) for info in info_list)
     tenant_ids = set(tenant_info)
-    old_tenants = set(t['tenant'] for t in 
+    old_tenants = set(t['tenant'] for t in
                       models.TenantInfo.objects
                                .filter(tenant__in=list(tenant_ids))
                                .values('tenant'))
     new_tenants = []
     now = datetime.utcnow()
     for tenant in (tenant_ids - old_tenants):
-        new_tenants.append(models.TenantInfo(tenant=tenant, 
+        new_tenants.append(models.TenantInfo(tenant=tenant,
                                              name=tenant_info[tenant]['name'],
                                              last_updated=now))
     if new_tenants:
@@ -612,5 +612,5 @@ def update_tenant_info(request, tenant_id):
 
     body = json.loads(request.body)
     if body['tenant'] != tenant_id:
-        raise BadRequestException(message="Invalid tenant: %s != %s" % (body['tenant'], tenant_id)) 
+        raise BadRequestException(message="Invalid tenant: %s != %s" % (body['tenant'], tenant_id))
     _update_tenant_info_cache(body)
