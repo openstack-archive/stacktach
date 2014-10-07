@@ -2,11 +2,15 @@ server {
 	listen   80;
 	server_name localhost;
 
-	location / {
-		proxy_pass http://127.0.0.1:8000/;
-	}
+    location / { try_files $uri @stacktach; }
 
-	location /static {
-		root /usr/share/stacktach/;
-	}
+    location @stacktach {
+        include uwsgi_params;
+        uwsgi_pass unix:/var/tmp/stacktach.sock;
+    }
+
+    location /static {
+	    add_header Cache-Control public;
+	    alias /usr/share/stacktach/static/;
+    }
 }

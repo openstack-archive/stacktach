@@ -1,13 +1,9 @@
 import os
 import signal
 import sys
-
 from multiprocessing import Process
 
-POSSIBLE_TOPDIR = os.path.normpath(os.path.join(os.path.abspath(sys.argv[0]),
-                                   os.pardir, os.pardir))
-if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
-    sys.path.insert(0, POSSIBLE_TOPDIR)
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 from stacktach import db, stacklog
 from django.db import close_connection
