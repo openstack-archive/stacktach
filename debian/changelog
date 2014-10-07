@@ -1,5 +1,8 @@
-stacktach (1.0) precise-havana; urgency=low
+stacktach (2.0-prealpha20141007) trusty; urgency=low
 
-  * Initial
+  * web interface
+  * workers
+  * local settings
+  * init script
 
- -- Vladimir Eremin <yottatsa@yandex-team.ru>  Wed, 19 Mar 2014 15:03:53 +0400
+ -- Vladimir Eremin <yottatsa@yandex-team.ru>  Tue, 07 Oct 2014 16:59:37 +0400

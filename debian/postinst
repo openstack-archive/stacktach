@@ -24,6 +24,9 @@ case "$1" in
 	    adduser --system stacktach --ingroup stacktach ||:
 	    mkdir -p /var/log/stacktach
 	    chown stacktach. /var/log/stacktach
+	    mkdir -p /usr/lib/python2.7/dist-packages/stacktach
+	    ln -fs /etc/stacktach/local_settings.py /usr/lib/python2.7/dist-packages/stacktach/local_settings.py
+	    update-rc.d stacktach.sh defaults
     ;;
 
     abort-upgrade|abort-remove|abort-deconfigure)

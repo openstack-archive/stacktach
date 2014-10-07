@@ -24,6 +24,8 @@ import traceback
 import sys
 import time
 
+import django.conf
+
 LOGGERS = {}
 LOGGER_QUEUE_MAP = {}
 default_logger_location = '/var/log/stacktach/%s.log'
@@ -103,14 +105,19 @@ def info(msg, name=None):
 def _create_timed_rotating_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
-    handler = TimedRotatingFileHandlerWithCurrentTimestamp(
-        default_logger_location % name, when='midnight', interval=1,
-        backupCount=6)
+    if django.conf.settings.DEBUG == False:
+        handler = TimedRotatingFileHandlerWithCurrentTimestamp(
+            default_logger_location % name, when='midnight', interval=1,
+            backupCount=6)
+    else:
+        handler = logging.StreamHandler()
+
     formatter = logging.Formatter(
         '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    logger.handlers[0].doRollover()
+    if django.conf.settings.DEBUG == False:
+        logger.handlers[0].doRollover()
     return logger
 
 
