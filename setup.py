@@ -18,8 +18,11 @@
 #!/usr/bin/env python
 
 from setuptools import setup
+from pip.req import parse_requirements
+install_reqs = parse_requirements('etc/pip-requires.txt')
 
 setup(
     setup_requires=['pbr'],
+    install_requires=[str(ir.req) for ir in install_reqs],
     pbr=True,
 )

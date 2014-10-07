@@ -17,15 +17,9 @@
 
 
 import json
-import os
+import stacktach.settings
 
-config_filename = os.environ.get('STACKTACH_DEPLOYMENTS_FILE',
-                                 'stacktach_worker_config.json')
-try:
-    from local_settings import *
-    config_filename = STACKTACH_DEPLOYMENTS_FILE
-except ImportError:
-    pass
+config_filename = stacktach.settings.STACKTACH_DEPLOYMENTS_FILE
 
 config = None
 with open(config_filename, "r") as f:

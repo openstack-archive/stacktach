@@ -19,6 +19,8 @@ import re
 import sys
 import unittest
 
+import django.conf
+
 
 def setup_sys_path():
     sys.path = [os.path.abspath(os.path.dirname('stacktach'))] + sys.path
@@ -35,6 +37,7 @@ def setup_environment():
     os.environ['STACKTACH_DB_USERNAME'] = ''
     os.environ['STACKTACH_DB_PASSWORD'] = ''
     os.environ['STACKTACH_INSTALL_DIR'] = ''
+    django.conf.settings.DEBUG=False
 
 
 setup_sys_path()
