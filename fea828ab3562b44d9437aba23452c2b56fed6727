@@ -1,0 +1,10 @@
+Verified+2: Jenkins
+Code-Review+2: Monsyne Dragon <mdragon@rackspace.com>
+Workflow+1: Monsyne Dragon <mdragon@rackspace.com>
+Code-Review+2: Sandy Walsh <sandy.walsh@rackspace.com>
+Workflow+1: Sandy Walsh <sandy.walsh@rackspace.com>
+Submitted-by: Jenkins
+Submitted-at: Fri, 10 Oct 2014 18:39:30 +0000
+Reviewed-on: https://review.openstack.org/127617
+Project: stackforge/stacktach
+Branch: refs/heads/master
