@@ -240,6 +240,11 @@ def _process_usage_for_updates(raw, notification):
                      INSTANCE_EVENT['resize_revert_end'],
                      INSTANCE_EVENT['rescue_end']]:
         usage.launched_at = utils.str_time_to_unix(notification.launched_at)
+        if usage.instance_type_id is None:
+            usage.instance_type_id = notification.instance_type_id
+        if usage.instance_flavor_id is None:
+            usage.instance_flavor_id = notification.instance_flavor_id
+
 
     if raw.event in [INSTANCE_EVENT['resize_revert_end'],
                      INSTANCE_EVENT['resize_finish_start'],

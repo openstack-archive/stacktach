@@ -529,6 +529,8 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         usage = self.mox.CreateMockAnything()
         usage.launched_at = None
+        usage.instance_type_id = None
+        usage.instance_flavor_id = None
         views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
                                                    request_id=REQUEST_ID_1) \
             .AndReturn((usage, True))
@@ -543,6 +545,8 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         self.assertEquals(usage.os_version, OS_VERSION_1)
         self.assertEquals(usage.os_distro, OS_DISTRO_1)
         self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEquals(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEquals(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
 
         self.mox.VerifyAll()
 
