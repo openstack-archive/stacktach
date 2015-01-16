@@ -1,0 +1,9 @@
+Verified+2: Jenkins
+Code-Review+1: Josh Kearney <josh@jk0.org>
+Code-Review+2: Monsyne Dragon <mdragon@rackspace.com>
+Workflow+1: Monsyne Dragon <mdragon@rackspace.com>
+Submitted-by: Jenkins
+Submitted-at: Fri, 16 Jan 2015 20:04:20 +0000
+Reviewed-on: https://review.openstack.org/147970
+Project: stackforge/stacktach
+Branch: refs/heads/stable
