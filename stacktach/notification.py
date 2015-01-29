@@ -61,14 +61,26 @@ class Notification(object):
 
     @property
     def instance(self):
-        # instance UUID's seem to hide in a lot of odd places.
-        instance = self.payload.get('instance_id', None)
-        instance = self.payload.get('instance_uuid', instance)
-        if not instance:
-            instance = self.payload.get('exception', {}).get('kwargs', {}).get('uuid')
-        if not instance:
-            instance = self.payload.get('instance', {}).get('uuid')
-        return instance
+        instance_id_pathes = (
+            ('args', 'instance', 'uuid'),
+            ('managed_resource_id',),
+            ('port', 'device_id'),
+            ('request_spec', 'instance_properties', 'uuid'),
+            ('exception', 'kwargs', 'uuid'),
+            ('instance', 'uuid'),
+            ('instance_id',),
+            ('instance_uuid',),
+        )
+        for path in instance_id_pathes:
+            try:
+                instance = reduce(dict.get, path, self.payload)
+            except TypeError:
+                continue
+
+            if instance:
+                return instance
+        else:
+            return None
 
     @property
     def message_id(self):

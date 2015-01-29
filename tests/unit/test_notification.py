@@ -417,6 +417,111 @@ class NotificationTestCase(StacktachBaseTestCase):
     def tearDown(self):
         self.mox.UnsetStubs()
 
+    def test_extract_instance_id_from_all_possible_places(self):
+
+        deployment = "1"
+        routing_key = "notifications.info"
+        bodies = [
+            {"event_type": "image.upload",
+             "_context_request_id": REQUEST_ID_1,
+             "_context_project_id": TENANT_ID_1,
+             "timestamp": TIMESTAMP_1,
+             "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+             "message_id": MESSAGE_ID_1,
+             "payload": {
+                "instance_id": INSTANCE_ID_1,
+                "status": "saving",
+                "container_format": "ovf",
+                "tenant": "5877054"
+             }
+            },
+            {"event_type": "dns.record.create",
+             "_context_request_id": REQUEST_ID_1,
+             "_context_project_id": TENANT_ID_1,
+             "timestamp": TIMESTAMP_1,
+             "publisher_id": "dns-api01-r2961.global.preprod-ord.ohthree.com",
+             "message_id": MESSAGE_ID_1,
+             "payload": {
+                "name": "foo.example.com.",
+                "type": "A",
+                "data": "127.0.0.1",
+                "managed_resource_id": INSTANCE_ID_1,
+             }
+            },
+            {"event_type": "port.create.end",
+             "_context_request_id": REQUEST_ID_1,
+             "_context_project_id": TENANT_ID_1,
+             "timestamp": TIMESTAMP_1,
+             "publisher_id": "network-api01-r2961.global.preprod-ord.ohthree.com",
+             "message_id": MESSAGE_ID_1,
+             "payload": {
+                 "port": {
+                    "device_owner": "compute:nova",
+                    "device_id": INSTANCE_ID_1,
+                    "status": "DOWN",
+                 }
+             }
+             },
+            {"event_type": "scheduler.run_instance.end",
+             "_context_request_id": REQUEST_ID_1,
+             "_context_project_id": TENANT_ID_1,
+             "timestamp": TIMESTAMP_1,
+             "publisher_id": "compute-api01-r2961.global.preprod-ord.ohthree.com",
+             "message_id": MESSAGE_ID_1,
+             "payload": {
+                "request_spec": {
+                    "block_device_mapping": [],
+                    "image": {},
+                    "instance_properties": {
+                        "uuid": INSTANCE_ID_1
+                        },
+                    "instance_type": {},
+                }
+             }
+            },
+            {"event_type": "run_instance",
+             "_context_request_id": REQUEST_ID_1,
+             "_context_project_id": TENANT_ID_1,
+             "timestamp": TIMESTAMP_1,
+             "publisher_id": "compute-api01-r2961.global.preprod-ord.ohthree.com",
+             "message_id": MESSAGE_ID_1,
+             "payload": {
+                 "args": {
+                     "context": {},
+                     "filter_properties": {},
+                     "injected_files": {},
+                     "instance": {
+                         "uuid": INSTANCE_ID_1,
+                     },
+                     "is_first_time": True,
+                     "legacy_bdm_in_spec": False,
+                     "node": "",
+                     "request_spec": {},
+                     "requested_networks": [],
+                 },
+                 "exception": {},
+             }
+            },
+        ]
+
+        for body in bodies:
+            json_body = json.dumps([routing_key, body])
+            notification = Notification(body, deployment, routing_key, json_body)
+            self.assertEquals(notification.instance, INSTANCE_ID_1)
+
+        body = {
+            "event_type": "image.upload",
+            "_context_request_id": REQUEST_ID_1,
+            "_context_project_id": TENANT_ID_1,
+            "timestamp": TIMESTAMP_1,
+            "publisher_id": "glance-api01-r2961.global.preprod-ord.ohthree.com",
+            "message_id": MESSAGE_ID_1,
+            "payload": {}
+        }
+        json_body = json.dumps([routing_key, body])
+        notification = Notification(body, deployment, routing_key, json_body)
+        self.assertEquals(notification.instance, None)
+
     def test_save_should_persist_generic_rawdata_to_database(self):
         body = {
             "event_type": "image.upload",
