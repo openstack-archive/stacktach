@@ -33,7 +33,10 @@ INSTANCE_FLAVOR_ID_2 = "performance2-120"
 INSTANCE_TYPE_ID_1 = "12345"
 INSTANCE_TYPE_ID_2 = '54321'
 
+one_hr = datetime.timedelta(hours=1)
 DUMMY_TIME = datetime.datetime.utcnow()
+EARLIER_DUMMY_TIME = DUMMY_TIME - one_hr
+LATER_DUMMY_TIME = DUMMY_TIME + one_hr
 DECIMAL_DUMMY_TIME = dt.dt_to_decimal(DUMMY_TIME)
 
 MESSAGE_ID_1 = "4444dddd-29a2-43f2-9ba1-ccb3e53ab6c8"

@@ -5,9 +5,9 @@
 # to you under the Apache License, Version 2.0 (the
 # "License"); you may not use this file except in compliance
 # with the License.  You may obtain a copy of the License at
-# 
+#
 #   http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing,
 # software distributed under the License is distributed on an
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -33,6 +33,8 @@ from utils import REQUEST_ID_1
 from utils import TENANT_ID_1
 from utils import INSTANCE_TYPE_ID_1
 from utils import DUMMY_TIME
+from utils import EARLIER_DUMMY_TIME
+from utils import LATER_DUMMY_TIME
 from utils import INSTANCE_TYPE_ID_2
 from stacktach import stacklog, models
 from stacktach import notification
@@ -681,6 +683,63 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
         self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
+        self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_updates_finish_resize_end_earlier_update(self):
+        notification = self._create_mock_notification()
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.finish_resize.end'
+
+        usage = self.mox.CreateMockAnything()
+        usage.launched_at = utils.decimal_utc(EARLIER_DUMMY_TIME)
+        usage.instance_type_id = INSTANCE_TYPE_ID_2
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_2
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+            .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_updates(raw, notification)
+
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
+        self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEquals(usage.os_architecture, OS_ARCH_1)
+        self.assertEquals(usage.os_version, OS_VERSION_1)
+        self.assertEquals(usage.os_distro, OS_DISTRO_1)
+        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+
+        self.mox.VerifyAll()
+
+    def test_process_usage_for_updates_finish_resize_end_later_update(self):
+        notification = self._create_mock_notification()
+        raw = self.mox.CreateMockAnything()
+        raw.event = 'compute.instance.finish_resize.end'
+
+        usage = self.mox.CreateMockAnything()
+        usage.launched_at = utils.decimal_utc(LATER_DUMMY_TIME)
+        usage.instance_type_id = INSTANCE_TYPE_ID_2
+        usage.instance_flavor_id = INSTANCE_FLAVOR_ID_2
+        views.STACKDB.get_or_create_instance_usage(instance=INSTANCE_ID_1,
+                                                   request_id=REQUEST_ID_1) \
+            .AndReturn((usage, True))
+        views.STACKDB.save(usage)
+        self.mox.ReplayAll()
+
+        views._process_usage_for_updates(raw, notification)
+
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(usage.launched_at, utils.decimal_utc(LATER_DUMMY_TIME))
         self.assertEquals(usage.tenant, TENANT_ID_1)
         self.assertEquals(usage.os_architecture, OS_ARCH_1)
         self.assertEquals(usage.os_version, OS_VERSION_1)

@@ -43,7 +43,7 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
     def test_should_create_verifier_with_reconciler(self):
         config = make_verifier_config(False)
         rec = self.mox.CreateMockAnything()
-        verifier = base_verifier.Verifier(config, pool=None, reconciler=rec)
+        verifier = base_verifier.Verifier(config, pool=self.pool, reconciler=rec)
         self.assertEqual(verifier.reconciler, rec)
 
     def test_clean_results_full(self):
