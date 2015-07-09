@@ -51,7 +51,7 @@ def _get_child_logger():
 
 class Consumer(kombu.mixins.ConsumerMixin):
     def __init__(self, name, connection, deployment, durable, queue_arguments,
-                 exchange, topics, connect_max_retries=10):
+                 exchange, topics, connect_max_retries=10, stats=None):
         self.connect_max_retries = connect_max_retries
         self.retry_attempts = 0
         self.connection = connection
@@ -65,6 +65,10 @@ class Consumer(kombu.mixins.ConsumerMixin):
         self.total_processed = 0
         self.topics = topics
         self.exchange = exchange
+        if stats is not None:
+            self.stats = stats
+        else:
+            self.stats = dict()
         signal.signal(signal.SIGTERM, self._shutdown)
 
     def _create_exchange(self, name, type, exclusive=False, auto_delete=False):
@@ -130,6 +134,9 @@ class Consumer(kombu.mixins.ConsumerMixin):
                       "%3d/%4d msgs @ %6dk/msg" %
                       (self.name, self.exchange, diff, idiff, self.processed,
                       self.total_processed, per_message))
+            self.stats['timestamp'] = utc
+            self.stats['total_processed'] = self.total_processed
+            self.stats['processed'] = self.processed
             self.last_vsz = self.pmi.vsz
             self.processed = 0
 
@@ -177,7 +184,7 @@ def exit_or_sleep(exit=False):
     time.sleep(5)
 
 
-def run(deployment_config, deployment_id, exchange):
+def run(deployment_config, deployment_id, exchange, stats=None):
     name = deployment_config['name']
     host = deployment_config.get('rabbit_host', 'localhost')
     port = deployment_config.get('rabbit_port', 5672)
@@ -211,7 +218,7 @@ def run(deployment_config, deployment_id, exchange):
                 try:
                     consumer = Consumer(name, conn, deployment, durable,
                                         queue_arguments, exchange,
-                                        topics[exchange])
+                                        topics[exchange], stats=stats)
                     consumer.run()
                 except Exception as e:
                     logger.error("!!!!Exception!!!!")

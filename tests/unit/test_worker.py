@@ -181,6 +181,7 @@ class ConsumerTestCase(StacktachBaseTestCase):
         self.mox.StubOutWithMock(db, 'get_deployment')
         deployment = self.mox.CreateMockAnything()
         deployment.id = 1
+        stats = self.mox.CreateMockAnything()
         db.get_deployment(deployment.id).AndReturn(deployment)
         self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
         params = dict(hostname=config['rabbit_host'],
@@ -199,11 +200,11 @@ class ConsumerTestCase(StacktachBaseTestCase):
         exchange = 'nova'
         consumer = worker.Consumer(config['name'], conn, deployment,
                                    config['durable_queue'], {}, exchange,
-                                   self._test_topics())
+                                   self._test_topics(), stats=stats)
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config, deployment.id, exchange)
+        worker.run(config, deployment.id, exchange, stats)
         self.mox.VerifyAll()
 
     def test_run_queue_args(self):
@@ -233,6 +234,7 @@ class ConsumerTestCase(StacktachBaseTestCase):
         deployment = self.mox.CreateMockAnything()
         deployment.id = 1
         db.get_deployment(deployment.id).AndReturn(deployment)
+        stats = self.mox.CreateMockAnything()
         self.mox.StubOutWithMock(kombu.connection, 'BrokerConnection')
         params = dict(hostname=config['rabbit_host'],
                       port=config['rabbit_port'],
@@ -251,9 +253,9 @@ class ConsumerTestCase(StacktachBaseTestCase):
         consumer = worker.Consumer(config['name'], conn, deployment,
                                    config['durable_queue'],
                                    config['queue_arguments'], exchange,
-                                   self._test_topics())
+                                   self._test_topics(), stats=stats)
         consumer.run()
         worker.continue_running().AndReturn(False)
         self.mox.ReplayAll()
-        worker.run(config, deployment.id, exchange)
+        worker.run(config, deployment.id, exchange, stats)
         self.mox.VerifyAll()

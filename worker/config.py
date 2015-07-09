@@ -38,3 +38,11 @@ def deployments():
 
 def topics():
     return config['topics']
+
+
+def workers():
+    if 'workers' in config:
+        return config['workers']
+    else:
+        return dict()
+
