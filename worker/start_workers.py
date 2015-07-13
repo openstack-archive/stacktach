@@ -48,7 +48,7 @@ def is_alive(proc_info):
     process = proc_info['process']
     if not proc_info['pid'] or process is None:
         return False
-    return process.is_alive():
+    return process.is_alive()
 
 
 def needs_restart(proc_info):
