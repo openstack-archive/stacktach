@@ -37,7 +37,7 @@ def log_warn(msg):
     if LOG is None:
         LOG = stacklog.get_logger()
     if LOG is not None:
-        LOG.warn(msg)
+        LOG.warning(msg)
 
 
 def start_kpi_tracking(lifecycle, raw):
