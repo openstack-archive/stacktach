@@ -24,7 +24,7 @@
     data into Stacktach's image_usage and image_deletes tables.
 """
 
-import __builtin__
+import six.moves.builtins as __builtin__
 setattr(__builtin__, '_', lambda x: x)
 import datetime
 import os

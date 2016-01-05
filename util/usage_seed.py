@@ -26,7 +26,7 @@
     on active compute hosts.
 """
 
-import __builtin__
+import six.moves.builtins as __builtin__
 setattr(__builtin__, '_', lambda x: x)
 import datetime
 import os
