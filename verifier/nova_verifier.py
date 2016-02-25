@@ -298,10 +298,6 @@ def _verify(exist, validation_level):
 
 
 class NovaVerifier(base_verifier.Verifier):
-    def __init__(self, config, pool=None, reconciler=None):
-        super(NovaVerifier, self).__init__(config,
-                                           pool=pool,
-                                           reconciler=reconciler)
 
     def send_verified_notification(self, exist, connection, exchange,
                                    routing_keys=None):
