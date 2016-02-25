@@ -184,6 +184,7 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         start = datetime.datetime.utcnow()
         self.mox.StubOutWithMock(self.verifier_without_notifications, '_utcnow')
         self.verifier_without_notifications._utcnow().AndReturn(start)
+        self.verifier_without_notifications._utcnow().AndReturn(start)
         settle_offset = {SETTLE_UNITS: SETTLE_TIME}
         ending_max = start - datetime.timedelta(**settle_offset)
         self.mox.StubOutWithMock(self.verifier_without_notifications, 'verify_for_range')
@@ -230,6 +231,7 @@ class BaseVerifierTestCase(StacktachBaseTestCase):
         self.verifier_with_notifications._keep_running().AndReturn(True)
         start = datetime.datetime.utcnow()
         self.mox.StubOutWithMock(self.verifier_with_notifications, '_utcnow')
+        self.verifier_with_notifications._utcnow().AndReturn(start)
         self.verifier_with_notifications._utcnow().AndReturn(start)
         settle_offset = {SETTLE_UNITS: SETTLE_TIME}
         ending_max = start - datetime.timedelta(**settle_offset)

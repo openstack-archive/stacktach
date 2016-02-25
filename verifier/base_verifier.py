@@ -108,13 +108,17 @@ def _is_alphanumeric(attr_name, attr_value, exist_id, instance_uuid):
 
 
 class Verifier(object):
-    def __init__(self, config, pool=None, reconciler=None):
+    def __init__(self, config, pool=None, reconciler=None, stats=None):
         self.config = config
         self.pool = pool or multiprocessing.Pool(config.pool_size())
         self.enable_notifications = config.enable_notifications()
         self.reconciler = reconciler
         self.results = []
         self.failed = []
+        if stats is None:
+            self.stats = {}
+        else:
+            self.stats = stats
 
     def clean_results(self):
         pending = []
@@ -147,6 +151,7 @@ class Verifier(object):
         settle_units = self.config.settle_units()
         settle_time = self.config.settle_time()
         while self._keep_running():
+            self.stats['timestamp'] = self._utcnow()
             with transaction.commit_on_success():
                 now = self._utcnow()
                 kwargs = {settle_units: settle_time}
@@ -175,6 +180,7 @@ class Verifier(object):
                 def callback(result):
                     attempt = 0
                     while attempt < 2:
+                        self.stats['timestamp'] = self._utcnow()
                         try:
                             (verified, exist) = result
                             if verified:
@@ -198,6 +204,10 @@ class Verifier(object):
                             logger.exception(msg)
                             break
                         attempt += 1
+                    self.stats['timestamp'] = self._utcnow()
+                    total = self.stats.get('total_processed', 0) + 1
+                    self.stats['total_processed'] = total
+
                 try:
                     self._run(callback=callback)
                 except Exception, e:

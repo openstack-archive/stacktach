@@ -66,6 +66,10 @@ def pool_size():
     return config['pool_size']
 
 
+def process_timeout(default=0):
+    return config.get('process_timeout', default)
+
+
 def durable_queue():
     return config['rabbit']['durable_queue']
 

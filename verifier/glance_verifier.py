@@ -158,8 +158,8 @@ def _verify(exists):
 
 
 class GlanceVerifier(Verifier):
-    def __init__(self, config, pool=None):
-        super(GlanceVerifier, self).__init__(config, pool=pool)
+    def __init__(self, config, pool=None, stats=None):
+        super(GlanceVerifier, self).__init__(config, pool=pool, stats=stats)
 
     def verify_exists(self, grouped_exists, callback, verifying_status):
         count = len(grouped_exists)
