@@ -20,6 +20,7 @@ import os
 import signal
 import sys
 import time
+import datetime
 
 from multiprocessing import Process, Manager
 
@@ -119,7 +120,6 @@ def start_proc(proc_info):
     stats['processed'] = 0
     args = (proc_info['exchange'], stats)
     process = Process(target=make_and_start_verifier, args=args)
-    process.daemon = True
     process.start()
     proc_info['pid'] = process.pid
     proc_info['process'] = process
