@@ -211,10 +211,13 @@ class Verifier(object):
                 try:
                     self._run(callback=callback)
                 except Exception, e:
-                    print e
-                    raise e
+                    msg = "ERROR during Verification %s: %s" % (exchange_name,
+                                                                e)
+                    logger.exception(msg)
+                    return True
         else:
             self._run()
+        return False
 
     def verify_for_range(self, ending_max, callback=None):
         pass
