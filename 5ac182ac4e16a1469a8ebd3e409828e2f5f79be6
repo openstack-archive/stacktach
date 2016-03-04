@@ -1,0 +1,8 @@
+Code-Review+2: Monsyne Dragon <mdragon@rackspace.com>
+Workflow+1: Monsyne Dragon <mdragon@rackspace.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 04 Mar 2016 22:51:14 +0000
+Reviewed-on: https://review.openstack.org/288735
+Project: openstack/stacktach
+Branch: refs/heads/master
