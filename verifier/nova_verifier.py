@@ -356,6 +356,16 @@ class NovaVerifier(base_verifier.Verifier):
                                    models.InstanceExists.VERIFYING)
         return count+sent_unverified_count
 
+    def run_startup(self):
+        logger = _get_child_logger()
+        exists = models.InstanceExists.find(
+            ending_max=self._utcnow(), status=models.InstanceExists.VERIFYING)
+        count = exists.count()
+        if count > 0:
+            msg = "nova: Cleaning up %s exists stuck in VERIFYING status..." % count
+            logger.info(msg)
+            exists.update(status=models.InstanceExists.PENDING)
+
     def reconcile_failed(self):
         for failed_exist in self.failed:
             self.reconciler.failed_validation(failed_exist)

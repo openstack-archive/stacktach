@@ -166,6 +166,7 @@ class Verifier(object):
 
     def run(self):
         logger = _get_child_logger()
+        self.run_startup()
         if self.enable_notifications:
             exchange_name = self.exchange()
             exchange = message_service.create_exchange(
@@ -218,6 +219,9 @@ class Verifier(object):
         else:
             self._run()
         return False
+
+    def run_startup(self):
+        pass
 
     def verify_for_range(self, ending_max, callback=None):
         pass
