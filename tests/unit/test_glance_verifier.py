@@ -526,9 +526,11 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         results = {'owner1': [exist1, exist2], 'owner2': [exist3]}
         sent_results = {'owner1': [exist4], 'owner2': [exist5]}
         models.ImageExists.find_and_group_by_owner_and_raw_id(
+            batchsize=1000,
             ending_max=when_max,
             status=models.ImageExists.SENT_UNVERIFIED).AndReturn(sent_results)
         models.ImageExists.find_and_group_by_owner_and_raw_id(
+            batchsize=1000,
             ending_max=when_max,
             status=models.ImageExists.PENDING).AndReturn(results)
         exist1.save()
@@ -569,9 +571,11 @@ class GlanceVerifierTestCase(StacktachBaseTestCase):
         exist3 = self.mox.CreateMockAnything()
         results = {'owner1': [exist1, exist2], 'owner2': [exist3]}
         models.ImageExists.find_and_group_by_owner_and_raw_id(
+            batchsize=1000,
             ending_max=when_max,
-            status=models.ImageExists.SENT_UNVERIFIED).AndReturn([])
+            status=models.ImageExists.SENT_UNVERIFIED).AndReturn({})
         models.ImageExists.find_and_group_by_owner_and_raw_id(
+            batchsize=1000,
             ending_max=when_max,
             status=models.ImageExists.PENDING).AndReturn(results)
         exist1.save()

@@ -18,6 +18,7 @@ import datetime
 import decimal
 import os
 import re
+import signal
 import sys
 import time
 import multiprocessing
@@ -108,6 +109,7 @@ def _is_alphanumeric(attr_name, attr_value, exist_id, instance_uuid):
 
 
 class Verifier(object):
+
     def __init__(self, config, pool=None, reconciler=None, stats=None):
         self.config = config
         self.pool = pool or multiprocessing.Pool(config.pool_size())
@@ -115,10 +117,14 @@ class Verifier(object):
         self.reconciler = reconciler
         self.results = []
         self.failed = []
+        self.batchsize = config.batchsize()
         if stats is None:
             self.stats = {}
         else:
             self.stats = stats
+        self.update_interval = datetime.timedelta(seconds=30)
+        self.next_update = datetime.datetime.utcnow() + self.update_interval
+        self._do_run = True
 
     def clean_results(self):
         pending = []
@@ -140,8 +146,39 @@ class Verifier(object):
         errored = finished - successful
         return len(self.results), successful, errored
 
+    def check_results(self, new_added, force=False):
+        tick_time = self.config.tick_time()
+        if ((datetime.datetime.utcnow() > self.next_update)
+            or force or (len(self.results) > self.batchsize)):
+            values = ((self.exchange(), new_added,) + self.clean_results())
+            msg = "%s: N: %s, P: %s, S: %s, E: %s" % values
+            _get_child_logger().info(msg)
+            while len(self.results) > (self.batchsize * 0.75):
+                msg = "%s: Waiting on event processing. Pending: %s" % (
+                      self.exchange(), len(self.results))
+                _get_child_logger().info(msg)
+                time.sleep(tick_time)
+                self.clean_results()
+            self.next_update = datetime.datetime.utcnow() + self.update_interval
+
+    def handle_signal(self, signal_number):
+        log = _get_child_logger()
+        if signal_number in (signal.SIGTERM, signal.SIGKILL):
+            self._do_run = False
+            log.info("%s verifier cleaning up for shutdown." % self.exchange())
+        if signal_number == signal.SIGUSR1:
+            info = """
+            %s verifier:
+                PID: %s     Parent PID:
+                Last watchdog check: %s
+                # of items processed: %s
+            """ % (self.exchange(), os.getpid(), os.getppid(),
+                   self.stats['timestamp'],
+                   self.stats.get('total_processed',0))
+            log.info(info)
+
     def _keep_running(self):
-        return True
+        return self._do_run
 
     def _utcnow(self):
         return datetime.datetime.utcnow()
@@ -157,11 +194,9 @@ class Verifier(object):
                 kwargs = {settle_units: settle_time}
                 ending_max = now - datetime.timedelta(**kwargs)
                 new = self.verify_for_range(ending_max, callback=callback)
-                values = ((self.exchange(), new,) + self.clean_results())
+                self.check_results(new, force=True)
                 if self.reconciler:
                     self.reconcile_failed()
-                msg = "%s: N: %s, P: %s, S: %s, E: %s" % values
-                _get_child_logger().info(msg)
             time.sleep(tick_time)
 
     def run(self):

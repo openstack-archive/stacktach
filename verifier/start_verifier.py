@@ -74,6 +74,13 @@ def make_and_start_verifier(exchange, stats=None):
         verifier = glance_verifier.GlanceVerifier(verifier_config,
                                                   stats=stats)
 
+    def sig_handler(signal_number, frame):
+        verifier.handle_signal(signal_number)
+
+    signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGTERM, sig_handler)
+    signal.signal(signal.SIGUSR1, sig_handler)
+
     verifier.run()
 
 
@@ -148,10 +155,21 @@ def stop_all():
         processes[pname]['pid'] = 0
 
 
-def kill_time(signal, frame):
+def signal_all(signal_number):
+    procs = sorted(processes.keys())
+    for pname in procs:
+        if is_alive(processes[pname]):
+            pid = processes[pname]['pid']
+            os.kill(pid, signal_number)
+
+
+def kill_time(signal_number, frame):
     global RUNNING
-    RUNNING = False
-    stop_all()
+    if signal_number in (signal.SIGTERM, signal.SIGKILL):
+        RUNNING = False
+        stop_all()
+    if signal_number == signal.SIGUSR1:
+        signal_all(signal.SIGUSR1)
 
 
 if __name__ == '__main__':
@@ -166,6 +184,7 @@ if __name__ == '__main__':
 
     signal.signal(signal.SIGINT, kill_time)
     signal.signal(signal.SIGTERM, kill_time)
+    signal.signal(signal.SIGUSR1, kill_time)
 
     logger.info("Starting Verifiers...")
     while RUNNING:

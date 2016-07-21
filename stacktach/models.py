@@ -563,11 +563,13 @@ class ImageExists(models.Model):
         self.status = new_status
 
     @staticmethod
-    def find_and_group_by_owner_and_raw_id(ending_max, status):
+    def find_and_group_by_owner_and_raw_id(ending_max, status, batchsize=None):
         params = {'audit_period_ending__lte': dt.dt_to_decimal(ending_max),
                   'status': status}
         ordered_exists = ImageExists.objects.select_related().\
             filter(**params).order_by('owner')
+        if batchsize:
+            ordered_exists = ordered_exists[:batchsize]
         result = {}
         for exist in ordered_exists:
             key = "%s-%s" % (exist.owner, exist.raw_id)

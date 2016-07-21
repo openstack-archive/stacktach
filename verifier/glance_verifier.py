@@ -158,42 +158,35 @@ def _verify(exists):
 
 
 class GlanceVerifier(Verifier):
-    def __init__(self, config, pool=None, stats=None):
-        super(GlanceVerifier, self).__init__(config, pool=pool, stats=stats)
 
     def verify_exists(self, grouped_exists, callback, verifying_status):
         count = len(grouped_exists)
         added = 0
-        update_interval = datetime.timedelta(seconds=30)
-        next_update = datetime.datetime.utcnow() + update_interval
         _get_child_logger().info("glance: Adding %s per-owner exists to queue." % count)
-        while added < count:
-            for exists in grouped_exists.values():
-                for exist in exists:
-                    exist.status = verifying_status
-                    exist.save()
-                result = self.pool.apply_async(_verify, args=(exists,),
-                                               callback=callback)
-                self.results.append(result)
-                added += 1
-                if datetime.datetime.utcnow() > next_update:
-                    values = ((added,) + self.clean_results())
-                    msg = "glance: N: %s, P: %s, S: %s, E: %s" % values
-                    _get_child_logger().info(msg)
-                    next_update = datetime.datetime.utcnow() + update_interval
+        for exists in grouped_exists.values():
+            for exist in exists:
+                exist.status = verifying_status
+                exist.save()
+            result = self.pool.apply_async(_verify, args=(exists,),
+                                           callback=callback)
+            self.results.append(result)
+            added += 1
+            self.check_results(added)
         return count
 
     def verify_for_range(self, ending_max, callback=None):
         unsent_exists_grouped_by_owner_and_rawid = \
             models.ImageExists.find_and_group_by_owner_and_raw_id(
                 ending_max=ending_max,
-                status=models.ImageExists.SENT_UNVERIFIED)
+                status=models.ImageExists.SENT_UNVERIFIED,
+                batchsize=self.batchsize)
         unsent_count = self.verify_exists(unsent_exists_grouped_by_owner_and_rawid,
                                         None, models.ImageExists.SENT_VERIFYING)
         exists_grouped_by_owner_and_rawid = \
             models.ImageExists.find_and_group_by_owner_and_raw_id(
                 ending_max=ending_max,
-                status=models.ImageExists.PENDING)
+                status=models.ImageExists.PENDING,
+                batchsize=self.batchsize)
         count = self.verify_exists(exists_grouped_by_owner_and_rawid, callback,
                                  models.ImageExists.VERIFYING)
 

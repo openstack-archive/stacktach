@@ -105,6 +105,8 @@ def nova_event_type():
 def glance_event_type():
     return config.get('glance_event_type', 'image.exists.verified')
 
+def batchsize():
+    return config.get('batchsize', 1000)
 
 def flavor_field_name():
     return config['flavor_field_name']

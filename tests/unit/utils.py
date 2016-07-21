@@ -193,7 +193,7 @@ class FakeVerifierConfig(object):
         self.nova_event_type = lambda: nova_event_type
         self.glance_event_type = lambda: glance_event_type
         self.flavor_field_name = lambda: flavor_field_name
-
+        self.batchsize = lambda: 1000
 
 def make_verifier_config(notifs):
         topics = {'exchange': ['notifications.info']}

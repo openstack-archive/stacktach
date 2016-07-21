@@ -322,36 +322,31 @@ class NovaVerifier(base_verifier.Verifier):
     def verify_exists(self, callback, exists, verifying_status):
         count = exists.count()
         added = 0
-        update_interval = datetime.timedelta(seconds=30)
-        next_update = datetime.datetime.utcnow() + update_interval
         _get_child_logger().info("nova: Adding %s exists to queue." % count)
-        while added < count:
-            for exist in exists[0:1000]:
-                exist.update_status(verifying_status)
-                exist.save()
-                validation_level = self.config.validation_level()
-                result = self.pool.apply_async(
-                    _verify, args=(exist, validation_level),
-                    callback=callback)
-                self.results.append(result)
-                added += 1
-                if datetime.datetime.utcnow() > next_update:
-                    values = ((added,) + self.clean_results())
-                    msg = "nova: N: %s, P: %s, S: %s, E: %s" % values
-                    _get_child_logger().info(msg)
-                    next_update = datetime.datetime.utcnow() + update_interval
+        for exist in exists:
+            exist.update_status(verifying_status)
+            exist.save()
+            validation_level = self.config.validation_level()
+            result = self.pool.apply_async(
+                _verify, args=(exist, validation_level),
+                callback=callback)
+            self.results.append(result)
+            added += 1
+            self.check_results(added)
         return count
 
     def verify_for_range(self, ending_max, callback=None):
         sent_unverified_exists = models.InstanceExists.find(
             ending_max=ending_max, status=
             models.InstanceExists.SENT_UNVERIFIED)
+        sent_unverified_exists = sent_unverified_exists[:self.batchsize]
         sent_unverified_count = self.verify_exists(None,
                                                    sent_unverified_exists,
                                                    models.InstanceExists.
                                                    SENT_VERIFYING)
         exists = models.InstanceExists.find(
             ending_max=ending_max, status=models.InstanceExists.PENDING)
+        exists = exists[:self.batchsize]
         count = self.verify_exists(callback, exists,
                                    models.InstanceExists.VERIFYING)
         return count+sent_unverified_count
