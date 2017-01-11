@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # StackTach documentation build configuration file, created by
 # sphinx-quickstart on Tue Jan 14 14:34:29 2014.
