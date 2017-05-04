@@ -6,6 +6,7 @@
     "enable_notifications": true,
     "validation_level": "all",
     "flavor_field_name": "instance_type_id",
+    "exponential_backoff_limit": 10,
     "rabbit": {
         "durable_queue": false,
         "host": "10.0.0.1",
