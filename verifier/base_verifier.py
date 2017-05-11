@@ -22,6 +22,8 @@ import signal
 import sys
 import time
 import multiprocessing
+import random
+import librabbitmq
 
 from django.db import transaction
 from stacktach import message_service
@@ -169,7 +171,7 @@ class Verifier(object):
         if signal_number == signal.SIGUSR1:
             info = """
             %s verifier:
-                PID: %s     Parent PID:
+                PID: %s     Parent PID: %s
                 Last watchdog check: %s
                 # of items processed: %s
             """ % (self.exchange(), os.getpid(), os.getppid(),
@@ -215,7 +217,8 @@ class Verifier(object):
                 "librabbitmq", self.config.virtual_host()) as conn:
                 def callback(result):
                     attempt = 0
-                    while attempt < 2:
+                    retry_limit = self.config.get_exponential_limit()
+                    while attempt < retry_limit:
                         self.stats['timestamp'] = self._utcnow()
                         try:
                             (verified, exist) = result
@@ -225,7 +228,7 @@ class Verifier(object):
                                     routing_keys=routing_keys)
                             break
                         except exceptions.ObjectDoesNotExist:
-                            if attempt < 1:
+                            if attempt < retry_limit-1:
                                 logger.warn("ObjectDoesNotExist in callback, "
                                          "attempting to reconnect and try "
                                          "again.")
@@ -234,12 +237,19 @@ class Verifier(object):
                             else:
                                 logger.error("ObjectDoesNotExist in callback "
                                           "again, giving up.")
+                                # Avoiding unnecessary sleep()
+                                break
+                        except librabbitmq.ConnectionError as e:
+                            logger.error("ConnectionEror found while trying to connect to RabbitMQ. \
+                                          Attempting the {}th time.".format(attempt))
                         except Exception, e:
                             msg = "ERROR in Callback %s: %s" % (exchange_name,
                                                                 e)
                             logger.exception(msg)
                             break
                         attempt += 1
+                        # Exponentially timed backoff
+                        time.sleep((2 ** attempt) / 1000.0 + (random.randint(0, 1000) / 1000.0))
                     self.stats['timestamp'] = self._utcnow()
                     total = self.stats.get('total_processed', 0) + 1
                     self.stats['total_processed'] = total
