@@ -143,9 +143,14 @@ class Consumer(kombu.mixins.ConsumerMixin):
     def on_nova(self, body, message):
         try:
             self._process(message)
+        except ValueError, e:
+            _get_child_logger().error("Error: %s\nMalformed message body found : \n%s" %
+                                      (e, str(message.body)))
+            # Mark message as read to avoid re-reading the malformed message.
+            message.ack()
         except Exception, e:
-            _get_child_logger().debug("Problem: %s\nFailed message body:\n%s" %
-                      (e, json.loads(str(message.body))))
+            _get_child_logger().error("Problem: %s\nFailed message body:\n%s" %
+                      (e, str(message.body)))
             raise
 
     def _shutdown(self, signal, stackframe = False):
