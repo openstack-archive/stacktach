@@ -110,3 +110,6 @@ def batchsize():
 
 def flavor_field_name():
     return config['flavor_field_name']
+
+def get_exponential_limit():
+    return config.get('exponential_backoff_limit', 10)
