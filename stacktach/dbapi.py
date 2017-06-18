@@ -297,13 +297,12 @@ def _ping_processing_with_service(pings, service, version=1):
                     exists.save()
             except exists_model.DoesNotExist:
                 msg = "Could not find Exists record with message_id = '%s' for %s"
-                msg = msg % (msg_id, service)
-                raise NotFoundException(message=msg)
+                msg %= (msg_id, service)
+                stacklog.error(msg)  # continuing loop
             except exists_model.MultipleObjectsReturned:
                 msg = "Multiple Exists records with message_id = '%s' for %s"
-                msg = msg % (msg_id, service)
-                print msg
-                raise APIException(message=msg)
+                msg %= (msg_id, service)
+                stacklog.error(msg)  # continuing loop
 
 
 def _exists_send_status_batch(request):
