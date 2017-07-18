@@ -18,6 +18,7 @@ import datetime
 import json
 
 import mox
+from mock import MagicMock, patch
 
 import utils
 from utils import BANDWIDTH_PUBLIC_OUTBOUND
@@ -748,36 +749,33 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
-    def test_process_delete(self):
+    @patch('stacktach.views.STACKDB')
+    def test_process_delete(self, stackdb_mock):
         delete_time = datetime.datetime.utcnow()
         terminated_time = delete_time-datetime.timedelta(seconds=1)
         launch_time = delete_time-datetime.timedelta(days=1)
         launch_decimal = utils.decimal_utc(launch_time)
         delete_decimal = utils.decimal_utc(delete_time)
-        notification = self.mox.CreateMockAnything()
+        notification = MagicMock()
         notification.instance = INSTANCE_ID_1
         notification.deleted_at = str(delete_time)
         notification.terminated_at = str(terminated_time)
         notification.launched_at = str(launch_time)
 
-        raw = self.mox.CreateMockAnything()
-        delete = self.mox.CreateMockAnything()
+        raw = MagicMock()
+        delete = MagicMock()
         delete.instance = INSTANCE_ID_1
         delete.launched_at = launch_decimal
         delete.deleted_at = delete_decimal
-        views.STACKDB.get_or_create_instance_delete(
-            instance=INSTANCE_ID_1, deleted_at=delete_decimal,
-            launched_at=launch_decimal)\
-            .AndReturn((delete, True))
-        views.STACKDB.save(delete)
-        self.mox.ReplayAll()
 
+        stack_db_obj = MagicMock()
+        stackdb_mock.get_or_create_instance_delete.return_value = (stack_db_obj, False)
+        from stacktach import views
         views._process_delete(raw, notification)
 
         self.assertEqual(delete.instance, INSTANCE_ID_1)
         self.assertEqual(delete.launched_at, launch_decimal)
         self.assertEqual(delete.deleted_at, delete_decimal)
-        self.mox.VerifyAll()
 
     def test_process_delete_with_only_terminated_at(self):
         delete_time = datetime.datetime.utcnow()
