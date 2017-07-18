@@ -18,6 +18,7 @@ import datetime
 import json
 
 import mox
+from mock import MagicMock, patch
 
 import utils
 from utils import BANDWIDTH_PUBLIC_OUTBOUND
@@ -748,96 +749,93 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.mox.VerifyAll()
 
-    def test_process_delete(self):
+    @patch('stacktach.views.STACKDB')
+    def test_process_delete(self, stackdb_mock):
         delete_time = datetime.datetime.utcnow()
         terminated_time = delete_time-datetime.timedelta(seconds=1)
         launch_time = delete_time-datetime.timedelta(days=1)
         launch_decimal = utils.decimal_utc(launch_time)
-        delete_decimal = utils.decimal_utc(delete_time)
-        notification = self.mox.CreateMockAnything()
+        terminated_decimal = utils.decimal_utc(terminated_time)
+        notification = MagicMock()
         notification.instance = INSTANCE_ID_1
         notification.deleted_at = str(delete_time)
         notification.terminated_at = str(terminated_time)
         notification.launched_at = str(launch_time)
-
-        raw = self.mox.CreateMockAnything()
-        delete = self.mox.CreateMockAnything()
+        raw = MagicMock()
+        delete = MagicMock()
         delete.instance = INSTANCE_ID_1
         delete.launched_at = launch_decimal
-        delete.deleted_at = delete_decimal
-        views.STACKDB.get_or_create_instance_delete(
-            instance=INSTANCE_ID_1, deleted_at=delete_decimal,
-            launched_at=launch_decimal)\
-            .AndReturn((delete, True))
-        views.STACKDB.save(delete)
-        self.mox.ReplayAll()
+        # Since there is a terminated_at arg present, it will be used as the deleted_at value.
+        delete.deleted_at = terminated_decimal
 
+        stack_db_obj = MagicMock()
+        stackdb_mock.get_or_create_instance_delete.return_value = (stack_db_obj, False)
+        from stacktach import views
         views._process_delete(raw, notification)
 
-        self.assertEqual(delete.instance, INSTANCE_ID_1)
-        self.assertEqual(delete.launched_at, launch_decimal)
-        self.assertEqual(delete.deleted_at, delete_decimal)
-        self.mox.VerifyAll()
+        stackdb_mock.get_or_create_instance_delete.assert_called_with(instance=delete.instance,
+                                                                      deleted_at=delete.deleted_at,
+                                                                      launched_at=delete.launched_at)
+        stackdb_mock.save.assert_called_with(stack_db_obj)
 
-    def test_process_delete_with_only_terminated_at(self):
+    @patch('stacktach.views.STACKDB')
+    def test_process_delete_with_only_terminated_at(self, stackdb_mock):
+        # 1. Creating test values
+        terminated_time = datetime.datetime.utcnow()
+        launch_time = terminated_time-datetime.timedelta(days=1)
+        launch_decimal = utils.decimal_utc(launch_time)
+        terminated_decimal = utils.decimal_utc(terminated_time)
+        notification = MagicMock()
+        notification.instance = INSTANCE_ID_1
+        notification.deleted_at = ''
+        notification.terminated_at = str(terminated_time)
+        notification.launched_at = str(launch_time)
+        raw = MagicMock()
+        delete = MagicMock()
+        delete.instance = INSTANCE_ID_1
+        delete.launched_at = launch_decimal
+        # Since there is a terminated_at arg present, it will be used as the deleted_at value.
+        delete.deleted_at = terminated_decimal
+        # 2. Mocking methods
+        stack_db_obj = MagicMock()
+        stackdb_mock.get_or_create_instance_delete.return_value = (stack_db_obj, False)
+        from stacktach import views
+        views._process_delete(raw, notification)
+        # 3. Assert statements
+        stackdb_mock.get_or_create_instance_delete.assert_called_with(instance=delete.instance,
+                                                                      deleted_at=delete.deleted_at,
+                                                                      launched_at=delete.launched_at)
+        stackdb_mock.save.assert_called_with(stack_db_obj)
+
+    @patch('stacktach.views.STACKDB')
+    def test_process_delete_with_only_deleted_at(self, stackdb_mock):
+        # 1. Creating test values
         delete_time = datetime.datetime.utcnow()
         launch_time = delete_time-datetime.timedelta(days=1)
         launch_decimal = utils.decimal_utc(launch_time)
         delete_decimal = utils.decimal_utc(delete_time)
-        notification = self.mox.CreateMockAnything()
+        notification = MagicMock()
         notification.instance = INSTANCE_ID_1
-        notification.deleted_at = ''
-        notification.terminated_at = str(delete_time)
+        notification.deleted_at = str(delete_time)
+        notification.terminated_at = ''
         notification.launched_at = str(launch_time)
 
-        raw = self.mox.CreateMockAnything()
-        delete = self.mox.CreateMockAnything()
+        raw = MagicMock()
+        delete = MagicMock()
         delete.instance = INSTANCE_ID_1
         delete.launched_at = launch_decimal
+        # Since there is no terminated_at arg present, the deleted_at arg will be used as the deleted_at value.
         delete.deleted_at = delete_decimal
-        views.STACKDB.get_or_create_instance_delete(
-            instance=INSTANCE_ID_1, deleted_at=delete_decimal,
-            launched_at=launch_decimal)\
-            .AndReturn((delete, True))
-        views.STACKDB.save(delete)
-        self.mox.ReplayAll()
-
+        # 2. Mocking methods
+        stack_db_obj = MagicMock()
+        stackdb_mock.get_or_create_instance_delete.return_value = (stack_db_obj, False)
+        from stacktach import views
         views._process_delete(raw, notification)
-
-        self.assertEqual(delete.instance, INSTANCE_ID_1)
-        self.assertEqual(delete.launched_at, launch_decimal)
-        self.assertEqual(delete.deleted_at, delete_decimal)
-        self.mox.VerifyAll()
-
-    def test_process_delete_with_neither(self):
-        delete_time = datetime.datetime.utcnow()
-        launch_time = delete_time-datetime.timedelta(days=1)
-        launch_decimal = utils.decimal_utc(launch_time)
-        delete_decimal = utils.decimal_utc(delete_time)
-        notification = self.mox.CreateMockAnything()
-        notification.instance = INSTANCE_ID_1
-        notification.deleted_at = ''
-        notification.terminated_at = str(delete_time)
-        notification.launched_at = str(launch_time)
-
-        raw = self.mox.CreateMockAnything()
-        delete = self.mox.CreateMockAnything()
-        delete.instance = INSTANCE_ID_1
-        delete.launched_at = launch_decimal
-        delete.deleted_at = delete_decimal
-        views.STACKDB.get_or_create_instance_delete(
-            instance=INSTANCE_ID_1, deleted_at=delete_decimal,
-            launched_at=launch_decimal)\
-            .AndReturn((delete, True))
-        views.STACKDB.save(delete)
-        self.mox.ReplayAll()
-
-        views._process_delete(raw, notification)
-
-        self.assertEqual(delete.instance, INSTANCE_ID_1)
-        self.assertEqual(delete.launched_at, launch_decimal)
-        self.assertEqual(delete.deleted_at, delete_decimal)
-        self.mox.VerifyAll()
+        # 3. Assert statements
+        stackdb_mock.get_or_create_instance_delete.assert_called_with(instance=delete.instance,
+                                                                      deleted_at=delete.deleted_at,
+                                                                      launched_at=delete.launched_at)
+        stackdb_mock.save.assert_called_with(stack_db_obj)
 
     def test_process_delete_no_launch(self):
         delete_time = datetime.datetime.utcnow()
