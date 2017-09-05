@@ -12,6 +12,7 @@ if os.path.exists(os.path.join(POSSIBLE_TOPDIR, 'stacktach')):
     sys.path.insert(0, POSSIBLE_TOPDIR)
 
 from stacktach import db, stacklog
+from stacktach import version
 from django.db import close_connection
 
 import worker.worker as worker
@@ -130,7 +131,8 @@ if __name__ == '__main__':
     signal.signal(signal.SIGINT, kill_time)
     signal.signal(signal.SIGTERM, kill_time)
 
-    logger.info("Starting Workers...")
+    ver = "(Version: %s )" % version.get_version()
+    logger.info("Starting Workers %s..." % ver)
     while RUNNING:
         check_or_start_all()
         time.sleep(30)

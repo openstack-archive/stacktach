@@ -1,5 +1,6 @@
 coverage
 hacking
+mock==2.0.0
 mox
 nose
 nose-exclude
