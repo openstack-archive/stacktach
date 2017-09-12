@@ -59,3 +59,28 @@ def is_request_id_like(val):
     if val[0:4] == 'req-':
         val = val[4:]
     return is_uuid_like(val)
+
+
+def get_local_mysqldb_connection():
+    import os
+
+    try:
+        db_engine = STACKTACH_DB_ENGINE
+        db_name = STACKTACH_DB_NAME
+        db_host = STACKTACH_DB_HOST
+        db_username = STACKTACH_DB_USERNAME
+        db_password = STACKTACH_DB_PASSWORD
+        db_port = STACKTACH_DB_PORT
+        install_dir = os.path.expanduser(STACKTACH_INSTALL_DIR)
+    except ImportError:
+        db_engine = os.environ.get('STACKTACH_DB_ENGINE',
+                                   'django.db.backends.mysql')
+        db_name = os.environ['STACKTACH_DB_NAME']
+        db_host = os.environ.get('STACKTACH_DB_HOST', "")
+        db_username = os.environ['STACKTACH_DB_USERNAME']
+        db_password = os.environ['STACKTACH_DB_PASSWORD']
+        db_port = os.environ.get('STACKTACH_DB_PORT', "")
+        install_dir = os.environ['STACKTACH_INSTALL_DIR']
+
+    connection_obj = MySQLdb.connect(user=db_username, host=db_host, passwd=db_password, port=int(db_port), db=db_name)
+    return connection_obj
