@@ -1187,11 +1187,11 @@ class StackyServerTestCase(StacktachBaseTestCase):
 
         self.assertEqual(resp.status_code, 400)
         json_resp = json.loads(resp.content)
-        self.assertEquals(json_resp[0],[u'Error', u'Message'])
-        self.assertEquals(json_resp[1],
-                          [u'Bad Request', u"The requested field"
-        u" 'tenant' does not exist for the corresponding object.\nNote: "
-        u"The field names of database are case-sensitive."])
+        self.assertEqual(json_resp[0],[u'Error', u'Message'])
+        self.assertEqual(json_resp[1],
+                         [u'Bad Request', u"The requested field"
+                                          u" 'tenant' does not exist for the corresponding object.\nNote: "
+                                          u"The field names of database are case-sensitive."])
 
         self.mox.VerifyAll()
 
@@ -1328,7 +1328,7 @@ class JsonReportsSearchAPI(StacktachBaseTestCase):
              '2014-01-01 09:40:00', 'nova usage audit', 4]
         ]
 
-        self.assertEquals(ast.literal_eval(actual_result), expected_result)
+        self.assertEqual(ast.literal_eval(actual_result), expected_result)
         self.mox.VerifyAll()
 
     def test_jsonreports_search_with_limit_offset(self):
@@ -1355,7 +1355,7 @@ class JsonReportsSearchAPI(StacktachBaseTestCase):
              ['5975', '2014-01-18 00:00:00', '2014-01-19 00:00:00',
               '2014-01-01 09:40:00', 'nova usage audit', 4]]
 
-        self.assertEquals(ast.literal_eval(actual_result), expected_result)
+        self.assertEqual(ast.literal_eval(actual_result), expected_result)
         self.mox.VerifyAll()
 
     def test_jsonreports_search_with_invalid_fields(self):
@@ -1450,5 +1450,5 @@ class JsonReportsSearchAPI(StacktachBaseTestCase):
             ["Bad Request", "'1234' value has an invalid format. It must be in "
              "YYYY-MM-DD format."]
         ]
-        self.assertEquals(ast.literal_eval(actual_result), expected_result)
+        self.assertEqual(ast.literal_eval(actual_result), expected_result)
         self.mox.VerifyAll()
