@@ -598,7 +598,7 @@ class NovaVerifierReconcileTestCase(StacktachBaseTestCase):
         with self.assertRaises(VerificationException) as cm:
             nova_verifier._verify_with_reconciled_data(exists)
         exception = cm.exception
-        self.assertEquals(exception.reason, 'Exists without a launched_at')
+        self.assertEqual(exception.reason, 'Exists without a launched_at')
         self.mox.VerifyAll()
 
     def test_verify_with_reconciled_data_ambiguous_results(self):
@@ -620,7 +620,7 @@ class NovaVerifierReconcileTestCase(StacktachBaseTestCase):
         with self.assertRaises(AmbiguousResults) as cm:
             nova_verifier._verify_with_reconciled_data(exists)
         exception = cm.exception
-        self.assertEquals(exception.object_type, 'InstanceReconcile')
+        self.assertEqual(exception.object_type, 'InstanceReconcile')
         self.mox.VerifyAll()
 
     def test_verify_with_reconciled_data_instance_not_found(self):
@@ -638,7 +638,7 @@ class NovaVerifierReconcileTestCase(StacktachBaseTestCase):
         with self.assertRaises(NotFound) as cm:
             nova_verifier._verify_with_reconciled_data(exists)
         exception = cm.exception
-        self.assertEquals(exception.object_type, 'InstanceReconcile')
+        self.assertEqual(exception.object_type, 'InstanceReconcile')
         self.mox.VerifyAll()
 
     def test_verify_with_reconciled_data_reconcile_not_found(self):
@@ -660,7 +660,7 @@ class NovaVerifierReconcileTestCase(StacktachBaseTestCase):
         with self.assertRaises(NotFound) as cm:
             nova_verifier._verify_with_reconciled_data(exists)
         exception = cm.exception
-        self.assertEquals(exception.object_type, 'InstanceReconcile')
+        self.assertEqual(exception.object_type, 'InstanceReconcile')
         self.mox.VerifyAll()
 
 

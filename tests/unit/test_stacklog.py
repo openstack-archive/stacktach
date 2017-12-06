@@ -16,11 +16,11 @@ class StacklogTestCase(StacktachBaseTestCase):
         logger = stacklog.get_logger(logger_name, is_parent=True)
         self.assertIsInstance(
             logger.handlers[0], logging.handlers.TimedRotatingFileHandler)
-        self.assertEquals(logger.handlers[0].when, 'MIDNIGHT')
-        self.assertEquals(logger.handlers[0].interval, 86400)
-        self.assertEquals(logger.handlers[0].backupCount, 6)
+        self.assertEqual(logger.handlers[0].when, 'MIDNIGHT')
+        self.assertEqual(logger.handlers[0].interval, 86400)
+        self.assertEqual(logger.handlers[0].backupCount, 6)
         self.assertEqual(logger.name, 'logger')
-        self.assertEquals(logger.level, logging.DEBUG)
+        self.assertEqual(logger.level, logging.DEBUG)
 
     def test_get_logger_should_create_queue_logger_for_child(self):
         logger_name = 'logger'
@@ -29,15 +29,15 @@ class StacklogTestCase(StacktachBaseTestCase):
         self.assertIsInstance(
             child_logger.handlers[0], stacklog.QueueHandler)
         self.assertEqual(child_logger.name, 'child_logger')
-        self.assertEquals(child_logger.level, logging.DEBUG)
+        self.assertEqual(child_logger.level, logging.DEBUG)
 
     def test_get_logger_should_use_default_name_when_name_not_specified(self):
         logger = stacklog.get_logger(None, is_parent=True)
-        self.assertEquals(logger.name, stacklog.default_logger_name)
+        self.assertEqual(logger.name, stacklog.default_logger_name)
 
         stacklog.set_default_logger_name('default')
         logger = stacklog.get_logger(None, is_parent=True)
-        self.assertEquals(logger.name, 'default')
+        self.assertEqual(logger.name, 'default')
 
     def test_get_logger_raise_exception_when_child_created_before_parent(self):
         with self.assertRaises(stacklog.ParentLoggerDoesNotExist):

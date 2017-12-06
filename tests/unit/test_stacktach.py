@@ -75,7 +75,7 @@ class StacktachRawParsingTestCase(StacktachBaseTestCase):
             mock_notification)
         self.mox.ReplayAll()
 
-        self.assertEquals(
+        self.assertEqual(
             views.process_raw_data(deployment, args, json_args, exchange),
                                   (mock_record, mock_notification))
         self.mox.VerifyAll()
@@ -341,13 +341,13 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         views._process_usage_for_new_launch(raw, notification)
 
-        self.assertEquals(usage.instance_type_id, INSTANCE_TYPE_ID_1)
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
-        self.assertEquals(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
 
         self.mox.VerifyAll()
 
@@ -366,12 +366,12 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         views._process_usage_for_new_launch(raw, notification)
 
-        self.assertEquals(usage.instance_type_id, INSTANCE_TYPE_ID_1)
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -389,13 +389,13 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         views._process_usage_for_new_launch(raw, notification)
 
-        self.assertEquals(usage.instance_type_id, INSTANCE_TYPE_ID_1)
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
-        self.assertEquals(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
         self.mox.VerifyAll()
 
     def test_process_usage_for_new_launch_rebuild_start_when_no_launched_at_in_db(self):
@@ -415,12 +415,12 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         views._process_usage_for_new_launch(raw, notification)
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
-        self.assertEquals(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
 
         self.mox.VerifyAll()
 
@@ -442,11 +442,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         views._process_usage_for_new_launch(raw, notification)
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -465,12 +465,12 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         views._process_usage_for_new_launch(raw, notification)
 
-        self.assertEquals(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -492,10 +492,10 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.assertEqual(usage.launched_at, orig_launched_at)
         self.assertEqual(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -517,10 +517,10 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.assertEqual(usage.launched_at, orig_launched_at)
         self.assertEqual(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -544,12 +544,12 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEqual(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
-        self.assertEquals(usage.instance_type_id, INSTANCE_TYPE_ID_1)
-        self.assertEquals(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
+        self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
 
         self.mox.VerifyAll()
 
@@ -570,10 +570,10 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEqual(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -594,10 +594,10 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         views._process_usage_for_updates(raw, notification)
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
         self.assertEqual(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -630,11 +630,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -657,11 +657,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
 
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
         self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -685,11 +685,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
         self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -713,11 +713,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
         self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
         self.assertEqual(usage.launched_at, utils.decimal_utc(DUMMY_TIME))
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
@@ -741,11 +741,11 @@ class StacktachUsageParsingTestCase(StacktachBaseTestCase):
         self.assertEqual(usage.instance_type_id, INSTANCE_TYPE_ID_1)
         self.assertEqual(usage.instance_flavor_id, INSTANCE_FLAVOR_ID_1)
         self.assertEqual(usage.launched_at, utils.decimal_utc(LATER_DUMMY_TIME))
-        self.assertEquals(usage.tenant, TENANT_ID_1)
-        self.assertEquals(usage.os_architecture, OS_ARCH_1)
-        self.assertEquals(usage.os_version, OS_VERSION_1)
-        self.assertEquals(usage.os_distro, OS_DISTRO_1)
-        self.assertEquals(usage.rax_options, RAX_OPTIONS_1)
+        self.assertEqual(usage.tenant, TENANT_ID_1)
+        self.assertEqual(usage.os_architecture, OS_ARCH_1)
+        self.assertEqual(usage.os_version, OS_VERSION_1)
+        self.assertEqual(usage.os_distro, OS_DISTRO_1)
+        self.assertEqual(usage.rax_options, RAX_OPTIONS_1)
 
         self.mox.VerifyAll()
 
