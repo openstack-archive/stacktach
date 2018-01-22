@@ -150,7 +150,7 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         notification = NovaNotification(body, deployment, routing_key, json_body)
-        self.assertEquals(notification.save(), raw)
+        self.assertEqual(notification.save(), raw)
         self.mox.VerifyAll()
 
     def test_bandwidth_public_out_is_read_from_json(self):
@@ -189,7 +189,7 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
         json_body = json.dumps([routing_key, body])
         notification = NovaNotification(body, deployment, routing_key,
                                         json_body)
-        self.assertEquals(notification.bandwidth_public_out,
+        self.assertEqual(notification.bandwidth_public_out,
                           BANDWIDTH_PUBLIC_OUTBOUND)
 
     def test_bandwidth_public_out_is_set_to_0_if_not_found_in_json(self):
@@ -224,7 +224,7 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
         json_body = json.dumps([routing_key, body])
         notification = NovaNotification(body, deployment, routing_key,
                                         json_body)
-        self.assertEquals(notification.bandwidth_public_out, 0)
+        self.assertEqual(notification.bandwidth_public_out, 0)
 
 
     def test_bandwidth_public_out_is_set_to_blank_object_if_none_in_json(self):
@@ -260,7 +260,7 @@ class NovaNotificationTestCase(StacktachBaseTestCase):
         json_body = json.dumps([routing_key, body])
         notification = NovaNotification(body, deployment, routing_key,
                                         json_body)
-        self.assertEquals(notification.bandwidth_public_out, 0)
+        self.assertEqual(notification.bandwidth_public_out, 0)
 
 
 class GlanceNotificationTestCase(StacktachBaseTestCase):
@@ -310,7 +310,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
 
         notification = GlanceNotification(body, deployment, routing_key,
                                           json_body)
-        self.assertEquals(notification.save(), raw)
+        self.assertEqual(notification.save(), raw)
         self.mox.VerifyAll()
 
     def test_save_should_persist_glance_rawdata_erro_payload_to_database(self):
@@ -345,7 +345,7 @@ class GlanceNotificationTestCase(StacktachBaseTestCase):
 
         notification = GlanceNotification(body, deployment, routing_key,
                                           json_body)
-        self.assertEquals(notification.save(), raw)
+        self.assertEqual(notification.save(), raw)
         self.mox.VerifyAll()
 
     def test_save_usage_should_persist_image_usage(self):
@@ -454,7 +454,7 @@ class NotificationTestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         notification = Notification(body, deployment, routing_key, json_body)
-        self.assertEquals(notification.save(), raw)
+        self.assertEqual(notification.save(), raw)
         self.mox.VerifyAll()
 
 

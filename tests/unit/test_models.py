@@ -30,13 +30,13 @@ from tests.unit import StacktachBaseTestCase
 
 class ModelsTestCase(StacktachBaseTestCase):
     def test_get_name_for_rawdata(self):
-        self.assertEquals(RawData.get_name(), 'RawData')
+        self.assertEqual(RawData.get_name(), 'RawData')
 
     def test_get_name_for_glancerawdata(self):
-        self.assertEquals(GlanceRawData.get_name(), 'GlanceRawData')
+        self.assertEqual(GlanceRawData.get_name(), 'GlanceRawData')
 
     def test_get_name_for_genericrawdata(self):
-        self.assertEquals(GenericRawData.get_name(), 'GenericRawData')
+        self.assertEqual(GenericRawData.get_name(), 'GenericRawData')
 
 
 class ImageDeletesTestCase(unittest.TestCase):
@@ -55,7 +55,7 @@ class ImageDeletesTestCase(unittest.TestCase):
             deleted_at__lte=dt.dt_to_decimal(deleted_max)).AndReturn(delete)
         self.mox.ReplayAll()
 
-        self.assertEquals(ImageDeletes.find(
+        self.assertEqual(ImageDeletes.find(
             IMAGE_UUID_1, deleted_max), delete)
         self.mox.VerifyAll()
 
@@ -65,7 +65,7 @@ class ImageDeletesTestCase(unittest.TestCase):
         ImageDeletes.objects.filter(uuid=IMAGE_UUID_1).AndReturn(delete)
         self.mox.ReplayAll()
 
-        self.assertEquals(ImageDeletes.find(IMAGE_UUID_1, None), delete)
+        self.assertEqual(ImageDeletes.find(IMAGE_UUID_1, None), delete)
         self.mox.VerifyAll()
 
 

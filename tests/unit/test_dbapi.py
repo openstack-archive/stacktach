@@ -95,10 +95,10 @@ class DBAPITestCase(StacktachBaseTestCase):
         filter_args = dbapi._get_filter_args(fake_model, fake_request)
 
         self.mox.VerifyAll()
-        self.assertEquals(filter_args['instance'], INSTANCE_ID_1)
-        self.assertEquals(filter_args.get('launched_at__gte'),
+        self.assertEqual(filter_args['instance'], INSTANCE_ID_1)
+        self.assertEqual(filter_args.get('launched_at__gte'),
                           start_decimal)
-        self.assertEquals(filter_args.get('launched_at__lte'),
+        self.assertEqual(filter_args.get('launched_at__lte'),
                           end_decimal)
 
     def test_get_filter_args_bad_uuid(self):
@@ -167,7 +167,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -188,7 +188,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -209,7 +209,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -229,7 +229,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -250,7 +250,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -270,7 +270,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -290,7 +290,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -312,7 +312,7 @@ class DBAPITestCase(StacktachBaseTestCase):
         self.mox.ReplayAll()
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id')
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 
@@ -340,7 +340,7 @@ class DBAPITestCase(StacktachBaseTestCase):
 
         query_result = dbapi.get_db_objects(fake_model, fake_request, 'id',
                                             custom_filters=custom_filters)
-        self.assertEquals(query_result, result)
+        self.assertEqual(query_result, result)
 
         self.mox.VerifyAll()
 

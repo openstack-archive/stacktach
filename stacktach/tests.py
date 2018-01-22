@@ -56,15 +56,15 @@ class RawDataImageMetaDbTestCase(TransactionTestCase):
 
         for field in get_model_fields(RawData):
             if field.name != 'id':
-                self.assertEquals(getattr(rawdata, field.name),
+                self.assertEqual(getattr(rawdata, field.name),
                                   kwargs[field.name])
 
         raw_image_meta = RawDataImageMeta.objects.filter(raw_id=rawdata.id)[0]
-        self.assertEquals(raw_image_meta.os_architecture,
+        self.assertEqual(raw_image_meta.os_architecture,
                           kwargs['os_architecture'])
-        self.assertEquals(raw_image_meta.os_version, kwargs['os_version'])
-        self.assertEquals(raw_image_meta.os_distro, kwargs['os_distro'])
-        self.assertEquals(raw_image_meta.rax_options, kwargs['rax_options'])
+        self.assertEqual(raw_image_meta.os_version, kwargs['os_version'])
+        self.assertEqual(raw_image_meta.os_distro, kwargs['os_distro'])
+        self.assertEqual(raw_image_meta.rax_options, kwargs['rax_options'])
 
 
 class GlanceTestCase(TransactionTestCase):
@@ -95,7 +95,7 @@ class GlanceTestCase(TransactionTestCase):
 
         for field in get_model_fields(GlanceRawData):
             if field.name != 'id':
-                self.assertEquals(getattr(rawdata, field.name),
+                self.assertEqual(getattr(rawdata, field.name),
                                   kwargs[field.name])
 
     def test_create_glance_usage_should_populate_image_usage(self):
@@ -112,7 +112,7 @@ class GlanceTestCase(TransactionTestCase):
 
         for field in get_model_fields(ImageUsage):
             if field.name != 'id':
-                self.assertEquals(getattr(usage, field.name),
+                self.assertEqual(getattr(usage, field.name),
                                   kwargs[field.name])
 
     def test_create_image_delete_should_populate_image_delete(self):
@@ -127,7 +127,7 @@ class GlanceTestCase(TransactionTestCase):
 
         for field in get_model_fields(ImageDeletes):
             if field.name != 'id':
-                self.assertEquals(getattr(image_delete, field.name),
+                self.assertEqual(getattr(image_delete, field.name),
                                   kwargs[field.name])
 
 
@@ -153,7 +153,7 @@ class GenericRawDataTestCase(TransactionTestCase):
 
         for field in get_model_fields(GenericRawData):
             if field.name != 'id':
-                self.assertEquals(getattr(rawdata, field.name),
+                self.assertEqual(getattr(rawdata, field.name),
                                   kwargs[field.name])
 
 
