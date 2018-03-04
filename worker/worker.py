@@ -95,13 +95,14 @@ class Consumer(kombu.mixins.ConsumerMixin):
 
     def _process(self, message):
         routing_key = message.delivery_info['routing_key']
+        exchange = message.delivery_info['exchange']
 
         body = str(message.body)
         args = (routing_key, json.loads(body))
         asJson = json.dumps(args)
         # save raw and ack the message
         raw, notif = views.process_raw_data(
-            self.deployment, args, asJson, self.exchange)
+            self.deployment, args, asJson, exchange)
 
         self.processed += 1
         message.ack()
