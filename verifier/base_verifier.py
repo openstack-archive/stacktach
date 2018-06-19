@@ -240,7 +240,7 @@ class Verifier(object):
                                 # Avoiding unnecessary sleep()
                                 break
                         except librabbitmq.ConnectionError as e:
-                            logger.error("ConnectionEror found while trying to connect to RabbitMQ. \
+                            logger.error("ConnectionError found while trying to connect to RabbitMQ. \
                                           Attempting the {}th time.".format(attempt))
                         except Exception, e:
                             msg = "ERROR in Callback %s: %s" % (exchange_name,
