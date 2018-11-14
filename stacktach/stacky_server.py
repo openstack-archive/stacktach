@@ -206,7 +206,7 @@ def do_uuid(request):
     uuid = str(request.GET['uuid'])
     service = str(request.GET.get('service', 'nova'))
     if not utils.is_uuid_like(uuid):
-        msg = "%s is not uuid-like" % uuid
+        msg = _("%s is not uuid-like") % uuid
         return error_response(400, 'Bad Request', msg)
     model = _model_factory(service)
     result = []
@@ -231,7 +231,7 @@ def do_uuid(request):
 def do_timings_uuid(request):
     uuid = request.GET['uuid']
     if not utils.is_uuid_like(uuid):
-        msg = "%s is not uuid-like" % uuid
+        msg = _("%s is not uuid-like") % uuid
         return error_response(400, 'Bad Request', msg)
     results = get_timings_for_uuid(request, uuid)
     return rsp(json.dumps(results))
@@ -306,7 +306,7 @@ def do_summary(request):
 def do_request(request):
     request_id = request.GET['request_id']
     if not utils.is_request_id_like(request_id):
-        msg = "%s is not request-id-like" % request_id
+        msg = _("%s is not request-id-like") % request_id
         return error_response(400, 'Bad Request', msg)
 
     model = models.RawData.objects
