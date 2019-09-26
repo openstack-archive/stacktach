@@ -1,3 +1,0 @@
-do 
-python manage.py syncdb 
-to add the JsonReport table

@@ -1,5 +1,0 @@
-export STACKTACH_INSTALL_DIR="/usr/share/stacktach/"
-export STACKTACH_DEPLOYMENTS_FILE="/etc/stacktach/stacktach_worker_config.json"
-export STACKTACH_VERIFIER_CONFIG="/etc/stacktach/stacktach_verifier_config.json"
-
-export DJANGO_SETTINGS_MODULE="settings"
